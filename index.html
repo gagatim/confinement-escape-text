@@ -653,8 +653,10 @@ function viewTeam(){
   const ids=sortedIds().filter(id=>SHOW_LOCKED||SAVE.owned[id]);
   return `<h2>出戰隊伍</h2>
   <div class="teamslots">${[0,1,2].map(i=>{const id=SAVE.team[i];return id?cardTile(id,`showCard('${id}')`):`<div class="slot">空位</div>`;}).join("")}</div>
-  <p class="dim small">點卡片查看技能、加入或移出隊伍。遠征與競技場都使用這支隊伍。</p>
+  <p class="dim small">點卡片查看技能、加入或移出隊伍。遠征與競技場都使用這支隊伍。不要的角色可以在卡片裡「遣散」換金條（R 🪙3／SR 🪙10／SSR 🪙30，每星計算），或用「合成」把 6★ 份的 R 換成 1 名 SR、6★ 份的 SR 換成 1 名 SSR。</p>
   <div class="row"><h3 style="margin-right:auto">收藏（${Object.keys(SAVE.owned).length}/${Object.keys(CARDS).length}）</h3>
+  <button class="mini gold" onclick="openSynth()">🔮 合成</button>
+  <button class="mini" onclick="sellAllR()">💰 一鍵遣散 R 卡</button>
   <label class="small"><input type="checkbox" ${SHOW_LOCKED?"checked":""} onchange="SHOW_LOCKED=this.checked;render()"> 顯示未獲得</label></div>
   <div class="cardgrid">${ids.map(id=>cardTile(id,`showCard('${id}')`)).join("")}</div>`;
 }
@@ -670,7 +672,87 @@ function showCard(id){
     ${skillHtml(c)}
     <div class="row" style="margin-top:12px">
       ${o?(inT?`<button onclick="toggleTeam('${id}')">移出隊伍</button>`:`<button class="pri" onclick="toggleTeam('${id}')" ${SAVE.team.length>=3?"disabled":""}>加入隊伍${SAVE.team.length>=3?"（已滿）":""}</button>`):`<span class="dim">尚未獲得</span>`}
-      <button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
+      <button onclick="closeModal()" style="margin-left:auto">關閉</button></div>
+    ${o?sellHtml(id):""}`);
+}
+// 遣散：每顆星算一張卡的價值。期望值低於抽卡價（約5／抽），不會變成刷錢手段
+const SELL_PRICE={R:3,SR:10,SSR:30};
+function sellBlock(id){
+  if(SAVE.team.includes(id))return "在出戰隊伍中，先移出隊伍才能遣散";
+  if(SAVE.run&&SAVE.run.party.some(m=>!m.ally&&m.id===id))return "正在遠征中，結束後才能遣散";
+  if(Object.keys(SAVE.owned).length<=3)return "至少要保留 3 名角色";
+  return "";
+}
+function sellHtml(id){
+  const o=SAVE.owned[id],p=SELL_PRICE[CARDS[id].r],why=sellBlock(id);
+  return `<div class="sk"><b>💰 遣散</b> <span class="dim small">每 1 星可換 🪙${p}</span>
+    ${why?`<div class="dim small">${why}</div>`:`<div class="row" style="margin-top:6px">
+      ${o.stars>1?`<button class="mini" onclick="sellCard('${id}',1)">降 1 星（🪙+${p}）</button>`:""}
+      <button class="mini" onclick="confirmSell('${id}')">全部遣散（🪙+${p*o.stars}）</button></div>`}</div>`;
+}
+function sellCard(id,n){
+  const o=SAVE.owned[id];if(!o||sellBlock(id))return;
+  n=Math.min(n,o.stars);const g=SELL_PRICE[CARDS[id].r]*n;
+  o.stars-=n;if(o.stars<=0)delete SAVE.owned[id];
+  SAVE.gold+=g;save();SFX.click();toast(`遣散 ${CARDS[id].name}，🪙+${g}`);
+  if(SAVE.owned[id])showCard(id);else closeModal();
+  render();
+}
+function confirmSell(id){
+  const o=SAVE.owned[id],g=SELL_PRICE[CARDS[id].r]*o.stars;
+  openModal(`<h3>遣散 ${CARDS[id].name}？</h3><p class="dim">這張卡（${o.stars}★）會從收藏中移除，換得 🪙${g}。之後抽到會從 1★ 重新開始。</p>
+    <div class="row"><button class="pri" onclick="sellCard('${id}',99)">遣散</button><button onclick="showCard('${id}')">取消</button></div>`);
+}
+// 一鍵：把不在隊伍裡的 R 卡全部遣散（保留至少 3 名角色）
+function sellAllR(go){
+  const ids=Object.keys(SAVE.owned).filter(id=>CARDS[id].r==="R"&&!sellBlock(id));
+  const keep=Math.max(0,3-(Object.keys(SAVE.owned).length-ids.length)),list=ids.slice(keep);
+  const g=list.reduce((a,id)=>a+SELL_PRICE.R*SAVE.owned[id].stars,0);
+  if(!list.length){toast("沒有可以遣散的 R 卡");return;}
+  if(!go)return openModal(`<h3>一鍵遣散 R 卡？</h3><p class="dim">會遣散 ${list.length} 張不在隊伍中的 R 卡：${list.map(id=>CARDS[id].name).join("、")}。共換得 🪙${g}。</p>
+    <div class="row"><button class="pri" onclick="sellAllR(true)">遣散</button><button onclick="closeModal()">取消</button></div>`);
+  list.forEach(id=>delete SAVE.owned[id]);SAVE.gold+=g;save();closeModal();toast(`遣散 ${list.length} 張，🪙+${g}`);render();
+}
+// 合成：投入 6 星份的同稀有度角色（可混搭、可只拆部分星數），換 1 名高一階的隨機角色，60% 優先給還沒擁有的
+const SYN_COST=6,SYN_UP={R:"SR",SR:"SSR"};
+let SYN={tier:"R",pick:{}};
+function synBlock(id){
+  if(SAVE.team.includes(id))return "隊伍中";
+  if(SAVE.run&&SAVE.run.party.some(m=>!m.ally&&m.id===id))return "遠征中";
+  return "";
+}
+function synTotal(){return Object.values(SYN.pick).reduce((a,b)=>a+b,0);}
+function openSynth(tier){
+  if(tier&&tier!==SYN.tier)SYN={tier,pick:{}};
+  const t=SYN.tier,ids=sortedIds().filter(id=>SAVE.owned[id]&&CARDS[id].r===t),n=synTotal();
+  openModal(`<h3>🔮 合成</h3>
+    <div class="row" style="margin-bottom:8px">${Object.keys(SYN_UP).map(k=>`<button class="mini ${k===t?"pri":""}" onclick="openSynth('${k}')">${SYN_COST}★ ${k} → 1 名 ${SYN_UP[k]}</button>`).join("")}</div>
+    <p class="dim small">點角色投入 1 星（再點會繼續加，最多到該角色的星數）。星數全部投入的角色會從收藏移除。隊伍中、遠征中的角色不能投入。</p>
+    <div class="cardgrid">${ids.map(id=>{const o=SAVE.owned[id],u=SYN.pick[id]||0,b=synBlock(id);
+      return `<div class="ccard ${t} ${b?"locked":""}" ${b?"":`onclick="synAdd('${id}')"`}><div class="av">${avatar(id)}</div><div class="nm">${CARDS[id].name}</div>
+        <div class="stars">${starStr(o.stars)}</div><div class="small" style="color:var(--gold)">${b||(u?`投入 ${u}★`:"&nbsp;")}</div></div>`;}).join("")||`<span class="dim">沒有 ${t} 角色</span>`}</div>
+    <div class="row" style="margin-top:10px"><b style="margin-right:auto;color:${n>=SYN_COST?"var(--gold)":"inherit"}">已投入 ${n}/${SYN_COST}★</b>
+      <button onclick="SYN.pick={};openSynth()">清除</button>
+      <button class="pri" onclick="doSynth()" ${n===SYN_COST?"":"disabled"}>合成</button><button onclick="closeModal()">關閉</button></div>`);
+}
+function synAdd(id){
+  const u=SYN.pick[id]||0;
+  if(synTotal()>=SYN_COST){toast(`已經滿 ${SYN_COST}★ 了`);return;}
+  if(u>=SAVE.owned[id].stars){toast("這名角色的星數已經全部投入");return;}
+  SYN.pick[id]=u+1;SFX.click();openSynth();
+}
+function doSynth(){
+  if(synTotal()!==SYN_COST)return;
+  const gone=Object.keys(SYN.pick).filter(id=>SYN.pick[id]>=SAVE.owned[id].stars);
+  if(Object.keys(SAVE.owned).length-gone.length<2){toast("合成後至少要保留 2 名其他角色");return;}
+  Object.entries(SYN.pick).forEach(([id,n])=>{SAVE.owned[id].stars-=n;if(SAVE.owned[id].stars<=0)delete SAVE.owned[id];});
+  const up=SYN_UP[SYN.tier],pool=POOL[up],fresh=pool.filter(id=>!SAVE.owned[id]);
+  const id=fresh.length&&rnd()<.6?pick(fresh):pick(pool),gr=grant(id);
+  SYN.pick={};save();up==="SSR"?SFX.ssr():SFX.sr();render();
+  openModal(`<h3>🔮 合成成功</h3><div class="detail"><div class="av">${avatar(id)}</div><div>
+    <div class="r${up}">${up}</div><h2 style="margin:2px 0">${CARDS[id].name}</h2>
+    <div>${gr.isNew?"NEW!":gr.up?`升至 ${gr.up}★`:`已滿星，🪙+${gr.refund}`}</div></div></div>
+    <div class="row" style="margin-top:12px"><button class="pri" onclick="openSynth()">繼續合成</button><button onclick="showCard('${id}')">查看角色</button><button onclick="closeModal()">關閉</button></div>`);
 }
 function toggleTeam(id){
   if(SAVE.team.includes(id))SAVE.team=SAVE.team.filter(x=>x!==id);

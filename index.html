@@ -153,6 +153,12 @@ b.sA{color:var(--sideA)} b.sB{color:var(--sideB)}
 /* run */
 .runwrap{display:grid;grid-template-columns:150px minmax(0,1fr) 290px;gap:12px;margin-top:12px}
 .tower{display:flex;flex-direction:column;gap:3px}
+.chapters{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:14px}
+.chap{display:flex;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;transition:.2s}
+.chap:hover{border-color:var(--red);transform:translateY(-2px)}
+.chap .ic{font-size:30px;width:40px;text-align:center}
+.chap.lockc{opacity:.45;cursor:default}
+.chap.lockc:hover{border-color:var(--line);transform:none}
 .fl{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:8px;background:var(--panel);border:1px solid var(--line);font-size:13px;position:relative}
 .fl .lb{font-weight:800;width:30px}
 .fl .rm{color:var(--dim);font-size:11px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -377,7 +383,28 @@ const MONSTERS={
     passive:{name:"虛體",desc:"受到的傷害-1。"}},
   warden:{name:"看守魔王",emoji:"😈",r:"SSR",hp:80,atk:7,def:3,spd:3,
     skill:{name:"毒氣噴發",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.7倍傷害並中毒（2點×2回合）。",use(B,u){blog(B,"☣ 魔王的面罩噴出濃稠的綠霧！","bad");foes(B,u).forEach(t=>{hit(B,u,t,.7);if(t.alive)poison(B,t,2,2);});}},
-    passive:{name:"魔王之軀",desc:"受到的傷害-1；生命低於一半時攻擊+3。"}}
+    passive:{name:"魔王之軀",desc:"受到的傷害-1；生命低於一半時攻擊+3。"}},
+  mutant:{name:"失控實驗體",emoji:"🧟",r:"R",hp:20,atk:6,def:1,spd:4,
+    skill:{name:"撕咬",cd:2,t:"enemy",kind:"dmg",desc:"造成1.2倍傷害並使目標中毒（2點×2回合）。",use(B,u,t){hit(B,u,t,1.2);if(t.alive)poison(B,t,2,2);}},
+    passive:{name:"增生組織",desc:"每回合開始恢復2生命。"}},
+  zero:{name:"實驗體零號",emoji:"🧬",r:"SSR",hp:90,atk:7,def:2,spd:4,
+    skill:{name:"狂暴撕裂",cd:3,t:"none",kind:"dmg",desc:"攻擊隨機敵人2次（可能是同一人），每次1.1倍傷害。",use(B,u){blog(B,"🧬 零號的手臂裂開成數條觸手！","bad");for(let i=0;i<2;i++){const f=foes(B,u);if(!f.length)break;hit(B,u,pick(f),1.1);}}},
+    passive:{name:"再生",desc:"受到的傷害-1；每回合開始恢復4生命。"}},
+  guard:{name:"獄警",emoji:"👮",r:"R",hp:22,atk:6,def:2,spd:3,
+    skill:{name:"電擊警棍",cd:3,t:"enemy",kind:"dmg",desc:"造成0.9倍傷害，40%機率暈眩目標1回合。",use(B,u,t){hit(B,u,t,.9);if(t.alive&&rnd()<.4)stun(B,t,1);}},
+    passive:{name:"防暴盾",desc:"受到的傷害-1。"}},
+  chief:{name:"典獄長",emoji:"🎖️",r:"SSR",hp:100,atk:7,def:4,spd:3,
+    skill:{name:"全面鎮壓",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.6倍傷害，每人25%機率暈眩1回合。",use(B,u){blog(B,"🎖 典獄長吹響哨子：「全部趴下！」","bad");foes(B,u).forEach(t=>{hit(B,u,t,.6);if(t.alive&&rnd()<.25)stun(B,t,1);});}},
+    passive:{name:"鐵腕",desc:"受到的傷害-1；生命低於一半時防禦+2。"}},
+  drone:{name:"保全機器人",emoji:"🤖",r:"R",hp:20,atk:6,def:2,spd:5,
+    skill:{name:"雷射掃射",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.6倍傷害。",use(B,u){blog(B,"🤖 紅色雷射掃過整個房間！","bad");foes(B,u).forEach(t=>hit(B,u,t,.6));}},
+    passive:{name:"機械身軀",desc:"免疫中毒。"}},
+  host:{name:"主辦人",emoji:"🎭",r:"SSR",hp:110,atk:8,def:3,spd:5,
+    skill:{name:"規則改寫",cd:3,t:"none",kind:"dmg",desc:"隨機發動一條新規則：全體敵人0.8倍傷害／自身恢復15生命／全體敵人中毒（3點×2回合）。",use(B,u){const k=ri(1,3);
+      if(k===1){blog(B,"🎭「新規則：所有人一起受罰。」","bad");foes(B,u).forEach(t=>hit(B,u,t,.8));}
+      else if(k===2){blog(B,"🎭「新規則：莊家回血。」","bad");heal(B,u,15);}
+      else{blog(B,"🎭「新規則：空氣裡加點料。」","bad");foes(B,u).forEach(t=>poison(B,t,3,2));}}},
+    passive:{name:"莊家優勢",desc:"受到的傷害-1；第一次倒下時以30%生命重新站起。"}}
 };
 const DEF=id=>CARDS[id]||MONSTERS[id];
 const POOL={SSR:[],SR:[],R:[]};
@@ -400,15 +427,44 @@ function cardStats(id,stars=1,scale=1){
 const SAVE_KEY="jbts_textgame_v1";
 function newSave(){
   const s={v:1,gold:150,pity:0,pulls:0,owned:{},team:[],arenaTier:1,firstTen:true,muted:false,
-    stats:{runs:0,escapes:0,best:0,arenaWins:0}};
+    stats:{runs:0,escapes:0,best:0,arenaWins:0},prog:{cleared:0,clears:{},abyssBest:0},run:null};
   const starters=shuffle(POOL.R).slice(0,3);
   starters.forEach(id=>s.owned[id]={stars:1});
   s.team=starters.slice();
   return s;
 }
 function loadSave(){
-  try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));if(s&&s.v===1)return s;}catch(e){}
+  try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));if(s&&s.v===1)return migrate(s);}catch(e){}
   return newSave();
+}
+// 舊存檔補欄位：已逃出過禁閉室就算通關第1章
+function migrate(s){
+  if(!s.prog)s.prog={cleared:s.stats&&s.stats.escapes>0?1:0,clears:{},abyssBest:0};
+  if(s.run===undefined)s.run=null;
+  return s;
+}
+function exportSave(){
+  const code=btoa(unescape(encodeURIComponent(JSON.stringify({...SAVE,run:null}))));
+  openModal(`<h3>匯出存檔</h3><p class="dim small">複製這段代碼，在別的裝置或瀏覽器按「匯入存檔」貼上，就能接著玩。（進行中的遠征不會帶過去）</p>
+    <textarea id="saveCode" readonly style="width:100%;height:120px;font-size:11px">${code}</textarea>
+    <div class="row"><button class="pri" onclick="copySave()">📋 複製</button><button onclick="closeModal()">關閉</button></div>`);
+}
+function copySave(){
+  const t=$("#saveCode");t.select();
+  try{navigator.clipboard.writeText(t.value).then(()=>toast("已複製存檔代碼"),()=>{document.execCommand("copy");toast("已複製存檔代碼");});}
+  catch(e){document.execCommand("copy");toast("已複製存檔代碼");}
+}
+function importSave(){
+  openModal(`<h3>匯入存檔</h3><p class="dim small">貼上匯出的代碼。<b style="color:var(--red)">目前這台裝置的存檔會被覆蓋。</b></p>
+    <textarea id="saveCode" style="width:100%;height:120px;font-size:11px"></textarea>
+    <div class="row"><button class="pri" onclick="doImport()">匯入</button><button onclick="closeModal()">取消</button></div>`);
+}
+function doImport(){
+  try{
+    const s=JSON.parse(decodeURIComponent(escape(atob($("#saveCode").value.trim()))));
+    if(!s||s.v!==1||!s.owned||!s.stats)throw 0;
+    SAVE=migrate(s);SAVE.run=null;RUN=null;save();closeModal();toast("匯入成功！");go("home");
+  }catch(e){toast("代碼格式不對，請確認有完整複製");}
 }
 function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(SAVE));}catch(e){}}
 let SAVE=loadSave();
@@ -483,19 +539,25 @@ function viewHome(){
   <div class="modes">
     <div class="mode" onclick="go('gacha')"><div class="ic">🎴</div><b>招募所</b><p>花金條抽取職業卡。SSR 3%・十連保底 SR・60 抽保底 SSR</p></div>
     <div class="mode" onclick="go('team')"><div class="ic">👥</div><b>隊伍</b><p>已收集 ${own}/${Object.keys(CARDS).length} 名職業，挑 3 人出戰</p></div>
-    <div class="mode" onclick="go('run')"><div class="ic">🪜</div><b>逃殺遠征</b><p>文字冒險主線：選房間、搜物資、躲毒氣、結盟或背叛，搶上直升機</p></div>
+    <div class="mode" onclick="go('run')"><div class="ic">🪜</div><b>逃殺遠征</b><p>文字冒險主線 ${CHAPTERS.length-1} 章＋無盡深淵：選房間、搜物資、躲毒氣、結盟或背叛。目前進度：${progText()}</p></div>
     <div class="mode" onclick="go('arena')"><div class="ic">⚔️</div><b>競技場</b><p>對戰 AI 小隊爬塔，第 ${SAVE.arenaTier} 層。贏了拿金條</p></div>
     <div class="mode" onclick="go('duel')"><div class="ic">🆚</div><b>雙人對決</b><p>同機輪流操作，或建立房間和朋友網路連線互毆</p></div>
   </div>
   <h3>戰績</h3>
   <div class="panel row small">
-    <span>遠征 ${st.runs} 次</span><span>成功逃出 ${st.escapes} 次</span><span>最高到達 ${st.best?FLOORS[st.best].label:"—"}</span>
+    <span>遠征 ${st.runs} 次</span><span>成功逃出 ${st.escapes} 次</span><span>主線 ${progText()}</span>
+    <span>深淵最深 ${SAVE.prog.abyssBest?"D"+SAVE.prog.abyssBest:"—"}</span>
     <span>競技場勝場 ${st.arenaWins}</span><span>總抽數 ${SAVE.pulls}</span>
-    <button class="mini" style="margin-left:auto" onclick="resetSave()">重置存檔</button>
+  </div>
+  <div class="row small" style="margin-top:8px">
+    <span class="dim">存檔會自動保存在這個瀏覽器（遠征中途關掉也能接著玩）。</span>
+    <button class="mini" style="margin-left:auto" onclick="exportSave()">📤 匯出存檔</button>
+    <button class="mini" onclick="importSave()">📥 匯入存檔</button>
+    <button class="mini" onclick="resetSave()">重置存檔</button>
   </div>`;
 }
 function resetSave(){
-  openModal(`<h3>確定重置？</h3><p class="dim">所有卡片與金條都會消失。</p><div class="row"><button class="pri" onclick="SAVE=newSave();save();closeModal();go('home')">重置</button><button onclick="closeModal()">取消</button></div>`);
+  openModal(`<h3>確定重置？</h3><p class="dim">所有卡片與金條都會消失。</p><div class="row"><button class="pri" onclick="SAVE=newSave();RUN=null;save();closeModal();go('home')">重置</button><button onclick="closeModal()">取消</button></div>`);
 }
 
 /* ===================== GACHA ===================== */
@@ -636,6 +698,7 @@ function stat(u,k){
   u.buffs.forEach(b=>{if(b.k===k)v+=b.v;});
   if(k==="atk"&&u.id==="berserker"&&u.hp<u.maxHp/2)v+=4;
   if(k==="atk"&&u.id==="warden"&&u.hp<u.maxHp/2)v+=3;
+  if(k==="def"&&u.id==="chief"&&u.hp<u.maxHp/2)v+=2;
   return Math.max(k==="atk"?1:0,v);
 }
 function blog(B,html,cls=""){B.log.push({html,cls});if(B.log.length>120)B.log.shift();}
@@ -643,7 +706,7 @@ function blog(B,html,cls=""){B.log.push({html,cls});if(B.log.length>120)B.log.sh
 function buff(B,u,k,v,t){u.buffs.push({k,v,t:t+(B.active===u?1:0)});}
 function poison(B,t,d,turns){
   if(!t.alive)return;
-  if(t.id==="chemist"){fx(B,t,"免疫","miss");return;}
+  if(t.id==="chemist"||t.id==="drone"){fx(B,t,"免疫","miss");return;}
   const p=t.st.poison||{d:0,t:0};
   t.st.poison={d:Math.max(p.d,d),t:Math.max(p.t,turns)};
 }
@@ -688,7 +751,7 @@ function hit(B,a,t,mult,o={}){
   if(t.st.guard&&!o.pierce)d*=.5;
   if(B.wall[t.side]){const w=B.units.find(x=>x.uid===B.wall[t.side]);if(w&&w.alive)d*=.5;}
   if(t.id==="fatty")d-=2;
-  if(t.id==="ghost"||t.id==="warden")d-=1;
+  if(["ghost","warden","zero","guard","chief","host"].includes(t.id))d-=1;
   if(t.id==="veteran"&&t.hp<=t.maxHp*.35)d-=4;
   d=Math.max(1,Math.round(d));
   if(t.id==="bomb"&&!o.counter&&rnd()<.25){
@@ -712,6 +775,7 @@ function handleDeath(B,t,killer){
   const pm=B.units.find(x=>x.side===t.side&&x.alive&&x.id==="paramedic"&&x!==t);
   if(pm&&!B.flags["pm"+t.side]){B.flags["pm"+t.side]=1;t.hp=1;blog(B,`🚑 ${nm(pm)} 的黃金十分鐘！${nm(t)} 撐住了最後一口氣。`,"big");return;}
   if(t.id==="exorcist"&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*.3);t.perm.spd=(t.perm.spd||0)+1;blog(B,`${nm(t)} 的臨終祝禱生效，從死亡中歸來！`,"big");fx(B,t,"復活","heal");return;}
+  if(t.id==="host"&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*.3);blog(B,`🎭 ${nm(t)} 拍了拍身上的灰：「我說過，莊家不會輸。」`,"big");fx(B,t,"復活","heal");return;}
   t.hp=0;t.alive=false;t.st={};t.buffs=[];
   blog(B,`✝ ${nm(t)} 倒下了。`,"bad");SFX.death();
   B.units.forEach(x=>{
@@ -841,6 +905,8 @@ async function takeTurn(B,u){
   }
   if(u.id==="vampire")heal(B,u,2);
   if(u.id==="runner")heal(B,u,1);
+  if(u.id==="mutant")heal(B,u,2);
+  if(u.id==="zero")heal(B,u,4);
   if(u.id==="medic"){const h=mates(B,u).filter(m=>m.hp<m.maxHp).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0];if(h)heal(B,h,2);}
   if(u.id==="witch"&&rnd()<.3){const f=foes(B,u);if(f.length){const t=pick(f);poison(B,t,2,2);blog(B,`🧪 女巫的大釜冒泡，${nm(t)} 中毒了。`);}}
   render();
@@ -1274,9 +1340,129 @@ const ROOM_NAME={B701:"停屍間",B601:"酒窖",B602:"配給站",B503:"垃圾場
 const ROOM_EV={停屍間:"morgue",酒窖:"wine",配給站:"ration",垃圾場:"junk",糧倉:"granary",大倉庫:"warehouse",傳送室:"teleport",
   樂透房:"lotto",藥房:"pharmacy",操作室:"respec",手術室:"surgery",餐廳:"canteen",金庫:"vault",控制室:"control",回收站:"recycle",
   武器庫:"armory",水塔:"water",激光室:"laser",基因庫:"gene",停機坪:"helipad"};
+// 第2章以後的地圖：沒有名字的房間是未知房間（隨機事件）
+const FLOORS_LAB=[
+  {label:"L1",rooms:["L101"]},
+  {label:"L2",rooms:["L201","L202","L203","L204"]},
+  {label:"L3",rooms:["L301","L302","L303","L304","L305"]},
+  {label:"L4",rooms:["L401","L402","L403","L404","L405"]},
+  {label:"L5",rooms:["L501","L502","L503","L504","L505","L506"]},
+  {label:"L6",rooms:["L601","L602","L603","L604","L605"]},
+  {label:"L7",rooms:["L701","L702","L703","L704"]},
+  {label:"L8",rooms:["L801","L802","L803","L804"]},
+  {label:"L9",rooms:["L901","L902"]}
+];
+const FLOORS_ISLE=[
+  {label:"P1",rooms:["P101"]},
+  {label:"P2",rooms:["P201","P202","P203","P204"]},
+  {label:"P3",rooms:["P301","P302","P303","P304","P305"]},
+  {label:"P4",rooms:["P401","P402","P403","P404","P405"]},
+  {label:"P5",rooms:["P501","P502","P503","P504","P505","P506"]},
+  {label:"P6",rooms:["P601","P602","P603","P604"]},
+  {label:"P7",rooms:["P701","P702","P703","P704","P705"]},
+  {label:"P8",rooms:["P801","P802","P803","P804"]},
+  {label:"P9",rooms:["P901","P902"]}
+];
+const FLOORS_TOWER=[
+  {label:"T1",rooms:["T101"]},
+  {label:"T2",rooms:["T201","T202","T203","T204"]},
+  {label:"T3",rooms:["T301","T302","T303","T304","T305"]},
+  {label:"T4",rooms:["T401","T402","T403","T404","T405"]},
+  {label:"T5",rooms:["T501","T502","T503","T504","T505","T506"]},
+  {label:"T6",rooms:["T601","T602","T603","T604","T605"]},
+  {label:"T7",rooms:["T701","T702","T703","T704"]},
+  {label:"T8",rooms:["T801","T802","T803","T804"]},
+  {label:"T9",rooms:["T901","T902","T903"]},
+  {label:"T10",rooms:["T1001","T1002"]}
+];
+Object.assign(ROOM_NAME,{
+  L101:"墜機點",L201:"冷凍庫",L203:"隔離病房",L301:"培養室",L304:"員工餐廳",L401:"武器實驗室",L403:"冷凍艙",
+  L501:"監控中心",L503:"黑市",L601:"解剖室",L602:"電梯井",L701:"資料室",L702:"強化艙",L801:"輻射區",L802:"配給站",
+  L901:"基因庫",L902:"逃生艙",
+  P101:"禁閉房",P201:"牢房",P203:"洗衣房",P301:"醫務室",P401:"廚房",P402:"牢房",P405:"黑市",P501:"監視塔",P502:"軍械室",
+  P601:"禮拜堂",P603:"賭場",P701:"典獄長辦公室",P702:"電擊室",P801:"水牢",P802:"牢房",P901:"補給艇",P902:"碼頭",
+  T101:"地下停車場",T201:"員工餐廳",T204:"黑市",T301:"伺服器機房",T303:"賭場",T401:"保全室",T403:"醫療中心",
+  T501:"豪華套房",T504:"研發部",T601:"金庫",T603:"貨梯",T701:"雷射走廊",T703:"樂透房",T801:"冷凍艙",T802:"黑市",
+  T901:"控制中心",T1001:"藏品室",T1002:"頂樓"
+});
+Object.assign(ROOM_EV,{
+  墜機點:"morgue",冷凍庫:"granary",隔離病房:"shade",培養室:"pharmacy",員工餐廳:"canteen",武器實驗室:"armory",冷凍艙:"cryo",
+  監控中心:"control",黑市:"blackmarket",解剖室:"surgery",電梯井:"teleport",資料室:"vault",強化艙:"respec",輻射區:"laser",
+  逃生艙:"helipad",禁閉房:"morgue",牢房:"prisoncell",洗衣房:"warehouse",醫務室:"pharmacy",廚房:"granary",監視塔:"control",
+  軍械室:"armory",禮拜堂:"chapel",賭場:"casino",典獄長辦公室:"vault",電擊室:"laser",水牢:"water",補給艇:"gene",碼頭:"helipad",
+  地下停車場:"morgue",伺服器機房:"control",保全室:"armory",醫療中心:"surgery",豪華套房:"wine",研發部:"respec",貨梯:"teleport",
+  雷射走廊:"laser",控制中心:"control",藏品室:"gene",頂樓:"helipad"
+});
+const ABYSS=4;
+// 深淵的特殊房間（不放傳送、基因庫這類依賴固定樓層的事件）
+const ABYSS_ROOMS={ration:"配給站",pharmacy:"藥房",armory:"武器庫",blackmarket:"黑市",casino:"賭場",surgery:"手術室",cryo:"冷凍艙",
+  lotto:"樂透房",control:"控制室",respec:"操作室",water:"水塔",chapel:"禮拜堂",laser:"激光室",vault:"金庫",warehouse:"大倉庫",
+  granary:"糧倉",prisoncell:"牢房",wine:"酒窖"};
+const FIRST_CLEAR=[50,100,150,300];
+const CHAPTERS=[
+  {name:"禁閉室",sub:"B7 停屍間 → 2F 停機坪",icon:"⛓",floors:FLOORS,minion:"ghost",boss:"warden",bossScale:1,bossHp:n=>48+n*12,
+    veh:"直升機",vehIcon:"🚁",bossLoc:"2F · 202 停機坪",bossRoom:"停機坪",prepLoc:"2F · 201 基因庫",
+    startLoc:"B701 · 停屍間",startTitle:"⚰️ 冰冷的甦醒",
+    intro:it=>["你在停屍間的鐵櫃裡醒來，手腕上綁著號碼牌。旁邊兩個櫃子也砰地彈開——是你的同伴。",
+      "牆上的廣播沙沙作響：<b>「歡迎參加禁閉逃殺。毒氣將從最底層開始上升。停機坪的直升機只有三個座位。」</b>",
+      `你們在屍袋旁摸到了 ${it}。`,"樓梯在頭頂。往上爬吧。"],
+    shade:["燈管忽明忽滅。牆上的影子……自己動了。","你聽見有人在叫你的名字——但那聲音來自天花板。","地上躺著一具屍體。它的影子站了起來。"],
+    prep:"培養槽裡漂浮著標記著各職業的基因樣本。只夠注射一次。",
+    bossTitle:"🚁 停機坪",bossLines:["冷風灌進來。直升機的螺旋槳已經開始轉動。","但機艙前站著一個戴防毒面具的巨大身影——<b style='color:var(--red)'>看守魔王</b>。他的鐵鍊拖在地上，嘩啦作響。"],
+    bossIntro:"「沒有人能離開禁閉室。」",lose:"看守魔王把你們拖回了黑暗裡。",
+    fall:"看守魔王轟然倒下。",escape:"看守魔王轟然倒下。你們衝進機艙，直升機拔地而起。"},
+  {name:"地下研究所",sub:"L1 墜機點 → L9 逃生艙",icon:"🧪",floors:FLOORS_LAB,minion:"mutant",boss:"zero",bossScale:1.05,bossHp:n=>56+n*14,
+    veh:"逃生艙",vehIcon:"🛸",bossLoc:"L9 · L902 逃生艙",bossRoom:"逃生艙",prepLoc:"L9 · L901 基因庫",
+    startLoc:"L101 · 墜機點",startTitle:"🚁 墜落",
+    intro:it=>["直升機沒有飛向自由。它在海上盤旋了一圈，降落在一座鋼鐵平台上——艙門一開，麻醉氣體灌了進來。",
+      "你在一片殘骸中醒來。頭頂的螢幕亮起：<b>「恭喜通過第一關。第二關：地下研究所。逃生艙只有三個座位。」</b>",
+      `你們從墜機殘骸裡拖出了 ${it}。`,"玻璃牆後面，有什麼東西在培養液裡睜開了眼睛。往上爬吧。"],
+    shade:["培養槽的玻璃碎了一地。有什麼東西沿著天花板爬過去。","「救……救我……」那聲音不太像人。","隔離門被從裡面撞得凹了下去。"],
+    prep:"最後一間實驗室。冷藏櫃裡還剩幾管強化血清，只夠用一次。",
+    bossTitle:"🛸 逃生艙",bossLines:["逃生艙的指示燈閃著綠光，倒數已經開始。","艙門前的地板裂開，一團由肌肉和管線纏成的東西站了起來——<b style='color:var(--red)'>實驗體零號</b>。它身上的編號，跟你們手上的一樣。"],
+    bossIntro:"零號發出一聲不像任何生物的嚎叫。",lose:"零號把你們拖進了培養槽。",
+    fall:"零號的身軀崩解成一灘培養液。",escape:"零號的身軀崩解成一灘培養液。你們鑽進逃生艙，它沿著軌道射進了海裡。"},
+  {name:"孤島監獄",sub:"P1 禁閉房 → P9 碼頭",icon:"🏝",floors:FLOORS_ISLE,minion:"guard",boss:"chief",bossScale:1.1,bossHp:n=>62+n*15,
+    veh:"快艇",vehIcon:"🚤",bossLoc:"P9 · P902 碼頭",bossRoom:"碼頭",prepLoc:"P9 · P901 補給艇",
+    startLoc:"P101 · 禁閉房",startTitle:"🌊 漂流",
+    intro:it=>["逃生艙在海上漂了三天，最後被沖上一座孤島。島上只有一座監獄。",
+      "你們被獄警從沙灘拖進禁閉房。擴音器傳來熟悉的聲音：<b>「第三關：孤島監獄。碼頭的快艇只有三個座位。」</b>",
+      `牢房的床板下藏著 ${it}——上一個囚犯留下的。`,"鐵門沒鎖。外面傳來警棍敲欄杆的聲音。往上爬吧。"],
+    shade:["探照燈掃過走廊。「站住！」","警報器響了。腳步聲從兩邊包抄過來。","一個獄警正靠在牆邊抽菸。他看到了你們。"],
+    prep:"一艘停在旁邊的補給艇，艙裡還有幾箱藥品和裝備，只夠帶走一箱。",
+    bossTitle:"🚤 碼頭",bossLines:["海風腥鹹。快艇的引擎已經發動。","碼頭盡頭站著一個穿著筆挺制服的男人，胸前掛滿勳章——<b style='color:var(--red)'>典獄長</b>。「這座島上，我就是法律。」"],
+    bossIntro:"典獄長戴上白手套：「越獄的人，我一個都沒放過。」",lose:"典獄長把你們丟回了水牢。",
+    fall:"典獄長跪倒在碼頭上，勳章散落一地。",escape:"典獄長跪倒在碼頭上，勳章散落一地。你們跳上快艇，孤島在身後越來越小。"},
+  {name:"黑塔",sub:"T1 停車場 → T10 頂樓",icon:"🏢",floors:FLOORS_TOWER,minion:"drone",boss:"host",bossScale:1.15,bossHp:n=>68+n*16,
+    veh:"私人直升機",vehIcon:"🚁",bossLoc:"T10 · T1002 頂樓",bossRoom:"頂樓",prepLoc:"T10 · T1001 藏品室",
+    startLoc:"T101 · 地下停車場",startTitle:"🏙 終點站",
+    intro:it=>["快艇的導航早就被設定好了。它把你們送進一座城市，停在一棟黑色大樓底下。",
+      "大樓所有的螢幕同時亮起一張戴著面具的臉：<b>「歡迎來到禁閉逃殺總部。最後一關。頂樓的直升機——你猜對了，三個座位。」</b>",
+      `停車場的一輛轎車裡留著 ${it}。`,"電梯全部停用。往上爬吧。"],
+    shade:["天花板的監視器轉向你們，紅燈亮起。","走廊盡頭傳來機械關節轉動的聲音。","「偵測到未授權人員。」"],
+    prep:"主辦人的藏品室。玻璃櫃裡陳列著歷屆參賽者的遺物，有些還能用。只能帶走一件。",
+    bossTitle:"🚁 頂樓",bossLines:["城市的夜景在腳下展開。直升機停在停機坪中央。","一個戴著面具的人坐在直升機旁的扶手椅上，慢慢鼓掌——<b style='color:var(--red)'>主辦人</b>。「真精彩。你們是第一組走到這裡的。」"],
+    bossIntro:"主辦人站起身：「那麼，最後一場遊戲。」",lose:"主辦人摘下面具，笑著看你們倒下。",
+    fall:"主辦人的面具裂成兩半。",escape:"主辦人的面具裂成兩半。你們登上直升機，黑塔在身後燃起大火。這場遊戲，終於結束了。"},
+  {name:"無盡深淵",sub:"沒有出口。每 5 層一個守門者，打倒後可以選擇撤離",icon:"🕳",abyss:true,
+    startLoc:"D0 · 深淵入口",startTitle:"🕳 深淵",
+    intro:it=>["禁閉室的停屍間底下還有一道暗門。門後的樓梯一直往下，看不到盡頭。",
+      "牆上用血寫著：<b>「越深，越值錢。」</b>",
+      `你們在門邊撿到了 ${it}。`,"往下走吧。"],
+    shade:["黑暗裡有東西在呼吸。","你們走過的地方，影子沒有跟上來。","深淵在低語。"]}
+];
+const CH=()=>CHAPTERS[RUN.ch];
+const FL=()=>RUN.floors;
+const LAST=()=>RUN.ch===ABYSS?Infinity:RUN.floors.length-1;
+function ensureFloor(i){if(RUN.ch!==ABYSS)return;while(RUN.floors.length<=i)RUN.floors.push({label:"D"+RUN.floors.length});}
+function isBossFloor(i){return RUN.ch===ABYSS?i>0&&i%5===0:i===LAST();}
+function unlocked(c){return c===ABYSS?SAVE.prog.cleared>=1:SAVE.prog.cleared>=c;}
+function progText(){const c=SAVE.prog.cleared;return c>=ABYSS?"全破":`第 ${c+1} 章「${CHAPTERS[c].name}」`;}
 const EV_ICON={rival:"👤",shade:"👻",loot:"📦",empty:"🕸️",gasleak:"☣️",stash:"💰",
   wine:"🍷",ration:"🥫",junk:"🗑️",granary:"🌾",warehouse:"🏭",teleport:"🌀",lotto:"🎰",pharmacy:"💊",respec:"🧬",surgery:"🏥",
-  canteen:"🍽️",vault:"🏦",control:"🖥️",recycle:"♻️",armory:"🔫",water:"💧",laser:"🔴",gene:"🧪",helipad:"🚁",morgue:"⚰️"};
+  canteen:"🍽️",vault:"🏦",control:"🖥️",recycle:"♻️",armory:"🔫",water:"💧",laser:"🔴",gene:"🧪",helipad:"🚁",morgue:"⚰️",
+  cryo:"🧊",prisoncell:"🔒",blackmarket:"🕶️",casino:"🃏",chapel:"🕯️",abyssboss:"💀"};
+const SHOP={pill:4,adrenaline:5,wine:3,rope:6,gasmask:5,knife:5,pistol:8,shotgun:12,rocket:9};
 const EV_HINT={rival:"有人的氣息",shade:"陰冷的低語",loot:"散落的物資",empty:"空蕩蕩",gasleak:"管線嘶嘶作響",stash:"金屬反光"};
 const ITEMS={
   pill:{name:"藥片",icon:"💊",desc:"恢復8生命（隊上有草藥師再+4）",battle:"ally",out:"member"},
@@ -1311,25 +1497,39 @@ function gasIdx(){return Math.floor((RUN.time-1)*.9)-1;}
 function addGold(n){n=Math.round(n*(hasRun("rich")?1.3:1));RUN.gold+=n;return n;}
 function gainItem(id){RUN.items.push(id);return `${ITEMS[id].icon}${ITEMS[id].name}`;}
 
-function startRun(){
+function startRun(c=0){
   const team=SAVE.team.filter(id=>SAVE.owned[id]);
   if(!team.length){toast("先去「隊伍」編隊吧");return;}
-  RUN={active:true,fi:0,time:0,food:3,gold:0,items:[],party:team.map(id=>mkMember(id,SAVE.owned[id].stars)),
-    visited:{},choices:null,scene:null,sel:null,log:[]};
+  if(!unlocked(c)){toast("尚未解鎖");return;}
+  const C=CHAPTERS[c];
+  RUN={active:true,ch:c,fi:0,time:0,food:3,gold:0,items:[],party:team.map(id=>mkMember(id,SAVE.owned[id].stars)),
+    visited:{},choices:null,scene:null,sel:null,log:[],floors:C.abyss?[{label:"D0"}]:C.floors.map(f=>({label:f.label,rooms:f.rooms}))};
   SAVE.stats.runs++;save();
   const it=pick(["pill","knife","wine"]);gainItem(it);
-  RUN.visited[0]="停屍間";
-  setScene("B701 · 停屍間","⚰️ 冰冷的甦醒",[
-    "你在停屍間的鐵櫃裡醒來，手腕上綁著號碼牌。旁邊兩個櫃子也砰地彈開——是你的同伴。",
-    "牆上的廣播沙沙作響：<b>「歡迎參加禁閉逃殺。毒氣將從最底層開始上升。停機坪的直升機只有三個座位。」</b>",
-    `你們在屍袋旁摸到了 ${ITEMS[it].icon}${ITEMS[it].name}。`,
-    "樓梯在頭頂。往上爬吧。"
-  ],[{label:"⬆ 往上爬",cls:"pri",act:toChoose}]);
+  RUN.visited[0]=C.startLoc.split(" · ")[1];
+  setScene(C.startLoc,C.startTitle,C.intro(`${ITEMS[it].icon}${ITEMS[it].name}`),[{label:C.abyss?"⬇ 往下走":"⬆ 往上爬",cls:"pri",act:toChoose}]);
   VIEW="run";render();
 }
+// 遠征存檔：選房間畫面存完整進度；進房間後存「事件中」，重開時跳過該事件（守門者／魔王會重打）
+function persistRun(stage){
+  if(!RUN||!RUN.active)return;
+  const {scene,sel,...rest}=RUN;
+  SAVE.run=JSON.parse(JSON.stringify({...rest,stage}));save();
+}
+function resumeRun(){
+  const s=SAVE.run;if(!s)return;
+  const stage=s.stage;RUN={...s,scene:null,sel:null};delete RUN.stage;VIEW="run";
+  if(stage==="choose"&&RUN.choices){render();return;}
+  if(stage==="post")return abyssPost([]);
+  const l=["記憶斷斷續續……你們在一陣混亂中回過神來。"];
+  if(isBossFloor(RUN.fi))return RUN.ch===ABYSS?abyssBoss(l):helipad(l);
+  aliveMembers().forEach(m=>m.hp=Math.max(1,m.hp-Math.ceil(m.maxHp*.15)));
+  l.push("<span class='dim'>（遠征中途離開：這個房間的事件已經錯過，全員受到少量傷害。）</span>");
+  setScene(FL()[RUN.fi].label+" · "+(RUN.visited[RUN.fi]||""),"🔄 繼續遠征",l,cont());render();
+}
 function setScene(loc,title,lines,opts){RUN.scene={loc,title,lines,opts};RUN.choices=null;}
-function nextLabel(){return FLOORS[RUN.fi+1]?FLOORS[RUN.fi+1].label:"";}
-function cont(extra=[]){return extra.concat([{label:`⬆ 前往 ${nextLabel()}`,cls:"pri",act:toChoose}]);}
+function nextLabel(){ensureFloor(RUN.fi+1);return FL()[RUN.fi+1]?FL()[RUN.fi+1].label:"";}
+function cont(extra=[]){return extra.concat([{label:`${RUN.ch===ABYSS?"⬇":"⬆"} 前往 ${nextLabel()}`,cls:"pri",act:toChoose}]);}
 
 /* ---- 時間流逝：毒氣 ---- */
 function passTime(lines){
@@ -1359,12 +1559,24 @@ function rollUnknown(){
 }
 function toChoose(){
   if(runLost())return endRun(false);
-  const fi=RUN.fi+1,F=FLOORS[fi];
-  if(!F)return;
-  let rooms=fi===8?F.rooms.slice():shuffle(F.rooms).slice(0,3+(hasRun("climb")?1:0));
-  RUN.choices=rooms.map(id=>{const n=ROOM_NAME[id];return {id,name:n||"",ev:n?ROOM_EV[n]:rollUnknown()};});
-  RUN.scene=null;render();
+  const fi=RUN.fi+1;
+  if(RUN.ch===ABYSS){ensureFloor(fi);RUN.choices=abyssChoices(fi);}
+  else{
+    const F=FL()[fi];if(!F)return;
+    const rooms=fi===LAST()?F.rooms.slice():shuffle(F.rooms).slice(0,3+(hasRun("climb")?1:0));
+    RUN.choices=rooms.map(id=>{const n=ROOM_NAME[id];return {id,name:n||"",ev:n?ROOM_EV[n]:rollUnknown()};});
+  }
+  RUN.scene=null;persistRun("choose");render();
 }
+function abyssChoices(fi){
+  if(fi%5===0)return [{id:`D${fi}`,name:"守門者之間",ev:"abyssboss"}];
+  return Array.from({length:3+(hasRun("climb")?1:0)},(_,k)=>{
+    const id=`D${fi}-${k+1}`;
+    if(rnd()<.3){const ev=pick(Object.keys(ABYSS_ROOMS));return {id,name:ABYSS_ROOMS[ev],ev};}
+    return {id,name:"",ev:rollUnknown()};
+  });
+}
+function canRope(){return RUN.items.includes("rope")&&(RUN.ch===ABYSS?(RUN.fi+1)%5!==0:RUN.fi+1<LAST()-1);}
 function canReveal(){return hasRun("reveal");}
 function chooseRoom(i){
   const ch=RUN.choices[i];SFX.click();
@@ -1380,6 +1592,7 @@ function chooseRoom(i){
   }
   passTime(lines);
   if(hasRun("miner")&&rnd()<.4)lines.push(`⛏ 礦工在牆縫敲出了 🪙${addGold(2)}。`);
+  persistRun("event");
   // 盟友信任
   const al=allyMember();
   if(al){
@@ -1393,12 +1606,12 @@ function chooseRoom(i){
 }
 function useRope(){
   const i=RUN.items.indexOf("rope");if(i<0)return;
-  RUN.items.splice(i,1);RUN.fi++;RUN.visited[RUN.fi]="（繩索攀爬）";
+  RUN.items.splice(i,1);RUN.fi++;ensureFloor(RUN.fi);RUN.visited[RUN.fi]="（繩索攀爬）";
   toChoose();
 }
 
 /* ---- 事件 ---- */
-function loc(ch){return `${FLOORS[RUN.fi].label} · ${ch.id}${ch.name?" "+ch.name:""}`;}
+function loc(ch){return `${FL()[RUN.fi].label} · ${ch.id}${ch.name?" "+ch.name:""}`;}
 function restOpt(ch){
   return {label:"🛌 原地休息（全員恢復25%生命，耗時1）",act(){
     const l=["你們靠著牆輪流守夜，閉眼休息了一會兒。"];
@@ -1417,7 +1630,8 @@ function lootLine(n){
 }
 function runEvent(ch,pre){
   const L=pre.slice(),fi=RUN.fi,ev=ch.ev,where=loc(ch);
-  const S=(title,lines,opts)=>{setScene(where,title,L.concat(lines),opts);render();};
+  // 第2章以後重用同一套事件，標題換成這間房間自己的名字
+  const S=(title,lines,opts)=>{if(RUN.ch&&ch.name&&EV_ICON[ev])title=`${EV_ICON[ev]} ${ch.name}`;setScene(where,title,L.concat(lines),opts);render();};
   switch(ev){
   case "wine":{gainItem("wine");gainItem("wine");return S("🍷 酒窖",["一排排落滿灰塵的酒桶。你們拎走了兩瓶還沒壞的 🍷酒。"],cont([restOpt(ch)]));}
   case "ration":{RUN.food+=2;return S("🥫 配給站",["自動販賣機吐出兩包配給。<b>補給+2</b>。"],cont([searchOpt(ch,"🔨 敲打販賣機",l=>{if(rnd()<.5){RUN.food++;l.push("咚！又掉出一包。補給+1。");}else l.push("機器發出刺耳的警報……什麼也沒掉出來。");})]));}
@@ -1438,8 +1652,8 @@ function runEvent(ch,pre){
       const l=[];
       if(rnd()<.2){aliveMembers().forEach(m=>m.hp-=3);l.push("傳送失誤！你們被甩在地上，全員-3。");checkMemberDeaths(l);if(runLost())return endRun(false,l);}
       else l.push("一陣白光——你們出現在兩層樓之上。");
-      RUN.fi=Math.min(RUN.fi+1,7);RUN.visited[RUN.fi]="（傳送）";
-      setScene(`${FLOORS[RUN.fi].label} · ???`,"🌀 傳送完成",l,cont());render();}},
+      RUN.fi=Math.min(RUN.fi+1,LAST()-1);RUN.visited[RUN.fi]="（傳送）";
+      setScene(`${FL()[RUN.fi].label} · ???`,"🌀 傳送完成",l,cont());render();}},
     ...cont()]);
   case "lotto":{
     let plays=0;
@@ -1479,14 +1693,39 @@ function runEvent(ch,pre){
     checkMemberDeaths(l);if(runLost())return endRun(false,L.concat(l));
     l.push("房間盡頭的能量核心還在發光。");
     return S("🔴 激光室",l,[...aliveMembers().filter(m=>!m.ally).map(m=>({label:`⚡ 讓 ${m.name} 吸收核心（攻擊+2）`,act(){m.bonus.atk+=2;setScene(where,"能量灌注",[`${m.name} 的雙眼泛起紅光。攻擊永久+2（本次遠征）。`],cont());render();}})),...cont()]);}
-  case "gene":return S("🧪 基因庫",["培養槽裡漂浮著標記著各職業的基因樣本。只夠注射一次。"],
+  case "gene":return S("🧪 基因庫",[CH().prep],
     aliveMembers().filter(m=>!m.ally).flatMap(m=>[
       {label:`🧪 ${m.name}：生命上限+8`,act(){m.maxHp+=8;m.hp+=8;geneDone(m,"生命上限+8");}},
       {label:`🧪 ${m.name}：防禦+2`,act(){m.bonus.def+=2;geneDone(m,"防禦+2");}}
-    ]).concat([{label:"🚁 不注射，直接前往停機坪",cls:"pri",act:goHelipad}]));
+    ]).concat([{label:`${CH().vehIcon} 不拿了，直接前往${CH().bossRoom}`,cls:"pri",act:goHelipad}]));
   case "helipad":return helipad(L);
+  case "abyssboss":return abyssBoss(L);
+  case "cryo":{
+    const dead=own().filter(m=>!m.alive);
+    if(dead.length){const d=dead[0];d.alive=true;d.hp=Math.ceil(d.maxHp*.5);
+      return S("🧊 冷凍艙",["一排冷凍艙還在運轉，白霧從縫隙裡冒出來。",`你們把 ${d.name} 的身體放進去……解凍程序結束時，他咳嗽著醒了過來（50%生命）。`],cont());}
+    return S("🧊 冷凍艙",["一排冷凍艙還在運轉。只剩一個艙能用。"],[
+      ...aliveMembers().filter(m=>!m.ally).map(m=>({label:`🧊 讓 ${m.name} 進艙（生命全滿、上限+4）`,act(){m.maxHp+=4;m.hp=m.maxHp;SFX.heal();setScene(where,"🧊 解凍完成",[`${m.name} 從艙裡出來，傷口全都癒合了。生命上限+4（本次遠征）。`],cont());render();}})),
+      ...cont()]);}
+  case "prisoncell":return rivalEncounter(ch,L.concat(["鐵欄後面關著一個人。他抬起頭，眼神裡有一點希望。","「放我出去。我會報答你們的。」"]),[rivalUnit(fi)],{peaceful:true,bonus:.35});
+  case "blackmarket":return blackMarket(ch,L,shuffle(Object.keys(SHOP)).slice(0,4));
+  case "casino":{
+    let plays=0;
+    const bet=all=>({label:all?`🃏 全部押上（🪙${RUN.gold}，45%翻倍）`:`🃏 押一半（🪙${Math.floor(RUN.gold/2)}，45%翻倍）`,act(){
+      const b=all?RUN.gold:Math.floor(RUN.gold/2);if(b<1){toast("沒有金條可以押");return;}
+      plays++;let r;
+      if(rnd()<.45){RUN.gold+=b;r=`🎉 莊家翻牌——你贏了！🪙+${b}`;SFX.ssr();}else{RUN.gold-=b;r=`莊家冷笑著把 🪙${b} 掃走。`;SFX.lose();}
+      setScene(where,"🃏 賭場",[r,`目前金條 🪙${RUN.gold}。`],cont(plays<2&&RUN.gold>0?[bet(false),bet(true)]:[]));render();}});
+    return S("🃏 賭場",["綠色的牌桌、刺眼的吊燈。一個沒有臉的荷官正在洗牌。","「下注吧。最多兩把。」"],cont(RUN.gold>0?[bet(false),bet(true)]:[]));}
+  case "chapel":return S("🕯️ 禮拜堂",["幾根快燒完的蠟燭。這裡安靜得讓人想哭。"],[
+    {label:"🕯️ 在這裡過夜（全員生命全滿，盟友信任+15，耗時1）",cls:"pri",act(){
+      const l=["你們靠著長椅睡了一覺。醒來時，傷口好像沒那麼痛了。"];
+      aliveMembers().forEach(m=>m.hp=m.maxHp);const al=allyMember();if(al)al.trust+=15;
+      passTime(l);checkMemberDeaths(l);if(runLost())return endRun(false,l);
+      setScene(where,"🕯️ 天亮了",l,cont());render();}},
+    ...cont()]);
   case "rival":return rivalEncounter(ch,L,rivalGroup(fi));
-  case "shade":return shadeAmbush(ch,L.concat([pick(["燈管忽明忽滅。牆上的影子……自己動了。","你聽見有人在叫你的名字——但那聲音來自天花板。","地上躺著一具屍體。它的影子站了起來。"])]),fi>=5?2:1);
+  case "shade":return shadeAmbush(ch,L.concat([pick(CH().shade)]),(RUN.ch===ABYSS?fi>=10:fi>=5)?2:1);
   case "loot":{const t=lootLine(ri(1,2));if(rnd()<.4)RUN.food++;return S("📦 散落的物資",[pick(["有人在這裡打過一架，東西散了一地。","一個被撬開的置物櫃。"]),t],cont([restOpt(ch)]));}
   case "stash":return S("💰 暗格",[`你在通風口裡摸到一個布包。🪙+${addGold(ri(4,7))}。`],cont([restOpt(ch)]));
   case "gasleak":{
@@ -1498,18 +1737,31 @@ function runEvent(ch,pre){
   default:return S("🕸️ 空房間",[pick(["牆上用指甲刻滿了正字記號。數到第三百多天就停了。","一張翻倒的椅子、一灘乾掉的血。這裡什麼都沒有。","廣播突然響起：「目前存活人數……」然後就斷訊了。"]),rnd()<.3?(RUN.food++,"角落有一包沒拆的乾糧。補給+1。"):""],cont([restOpt(ch)]));
   }
 }
-function geneDone(m,txt){setScene(`2F · 201 基因庫`,"注射完成",[`${m.name} 的血管浮起一層微光。${txt}（本次遠征）。`],[{label:"🚁 前往停機坪",cls:"pri",act:goHelipad}]);render();}
+function geneDone(m,txt){const C=CH();setScene(C.prepLoc,"強化完成",[`${m.name} 的血管浮起一層微光。${txt}（本次遠征）。`],[{label:`${C.vehIcon} 前往${C.bossRoom}`,cls:"pri",act:goHelipad}]);render();}
 function goHelipad(){
   const l=[];passTime(l);checkMemberDeaths(l);if(runLost())return endRun(false,l);
-  RUN.visited[8]="停機坪";helipad(l);
+  RUN.visited[LAST()]=CH().bossRoom;helipad(l);
+}
+function blackMarket(ch,L,stock){
+  const where=loc(ch);
+  setScene(where,"🕶️ 黑市",L.concat(["一個戴墨鏡的男人坐在一堆箱子上。「現金交易，不找零。」",`你們身上有 🪙${RUN.gold}。`]),[
+    ...stock.map((id,i)=>({label:`${ITEMS[id].icon} ${ITEMS[id].name}　🪙${SHOP[id]}`,act(){
+      if(RUN.gold<SHOP[id]){toast("金條不足");return;}
+      RUN.gold-=SHOP[id];gainItem(id);SFX.click();toast(`買下 ${ITEMS[id].name}`);
+      blackMarket(ch,[],stock.filter((_,j)=>j!==i));}})),
+    {label:"🥫 補給 ×1　🪙3",act(){if(RUN.gold<3){toast("金條不足");return;}RUN.gold-=3;RUN.food++;toast("補給+1");blackMarket(ch,[],stock);}},
+    ...cont()]);render();
 }
 
 /* ---- 對手 ---- */
 const PRISONER_NO=()=>"#"+String(ri(1,999)).padStart(3,"0");
 function rivalUnit(fi){
-  const pool=fi<3?POOL.R:fi<6?POOL.R.concat(POOL.SR,POOL.SR):Object.keys(CARDS);
-  const id=pick(pool),stars=clamp(1+Math.floor(fi/3)+(rnd()<.3?1:0),1,5);
-  return {id,stars,scale:.78+fi*.06,name:CARDS[id].name+PRISONER_NO()};
+  const c=RUN.ch;let pool,stars,scale;
+  if(c===0){pool=fi<3?POOL.R:fi<6?POOL.R.concat(POOL.SR,POOL.SR):Object.keys(CARDS);stars=clamp(1+Math.floor(fi/3)+(rnd()<.3?1:0),1,5);scale=.78+fi*.06;}
+  else if(c===ABYSS){pool=Object.keys(CARDS);stars=clamp(2+Math.floor(fi/8)+(rnd()<.3?1:0),1,5);scale=1+fi*.035;}
+  else{pool=fi<3?POOL.R.concat(POOL.SR):Object.keys(CARDS);stars=clamp(1+Math.floor((fi+c*3)/4)+(rnd()<.3?1:0),1,5);scale=.78+fi*.05+c*.07;}
+  const id=pick(pool);
+  return {id,stars,scale,name:CARDS[id].name+PRISONER_NO()};
 }
 function rivalGroup(fi){
   const r=rnd(),n=fi<2?1:r<.5?1:r<.85?2:3;
@@ -1521,7 +1773,7 @@ function rivalEncounter(ch,L,group,opt={}){
   const lines=L.concat([`<div class="row" style="gap:6px;margin:6px 0">${group.map(x=>`<div style="width:56px;height:56px;border-radius:8px;overflow:hidden;border:2px solid var(--sideB)">${avatar(x.id)}</div>`).join("")}</div>`,
     `遭遇：<b style="color:var(--sideB)">${desc}</b>`,
     solo?pick(["「別緊張。我也只是想活著出去。」","「……你們有吃的嗎？」","他握著刀，但刀尖朝下。"]):pick(["他們交換了一個眼神，慢慢散開成包圍隊形。","「三個位子，我們剛好三個人。你們懂的。」"])]);
-  const bonus=opt.peaceful?.2:0,opts=[];
+  const bonus=opt.bonus!=null?opt.bonus:opt.peaceful?.2:0,opts=[];
   if(solo&&!al&&!full){
     opts.push({label:`🤝 提議結盟（${Math.round((.35+bonus)*100)}%）`,act:()=>tryAlly(ch,g,.35+bonus,"")});
     if(RUN.food>0)opts.push({label:`🤝 分他1份補給並提議結盟（${Math.round((.6+bonus)*100)}%）`,act:()=>{RUN.food--;tryAlly(ch,g,.6+bonus,"你遞出一包配給。");}});
@@ -1564,11 +1816,12 @@ function allyBetrays(al,lines,ch){
   }
 }
 function shadeAmbush(ch,L,n){
-  const fi=RUN.fi;
-  const g=Array.from({length:n},()=>({id:"ghost",stars:1,scale:.8+fi*.07}));
-  setScene(loc(ch),"👻 暗影",L,[
-    {label:"⚔️ 迎戰",cls:"pri",act:()=>runBattle(ch,g,null,"暗影發出刺耳的尖嘯！")},
-    {label:"🏃 逃跑（50%，失敗則被伏擊）",act(){if(rnd()<.5){setScene(loc(ch),"逃脫",["你們頭也不回地衝上樓梯。"],cont());render();}else runBattle(ch,g,"B","暗影比你們更快！");}}
+  const fi=RUN.fi,c=RUN.ch,id=c===ABYSS?pick(["ghost","mutant","guard","drone"]):CH().minion,M=MONSTERS[id];
+  const scale=c===0?.8+fi*.07:c===ABYSS?1+fi*.04:.8+fi*.05+c*.08;
+  const g=Array.from({length:n},()=>({id,stars:1,scale}));
+  setScene(loc(ch),`${M.emoji} ${M.name}`,L,[
+    {label:"⚔️ 迎戰",cls:"pri",act:()=>runBattle(ch,g,null,`${M.name}${n>1?"們":""}撲了過來！`)},
+    {label:"🏃 逃跑（50%，失敗則被伏擊）",act(){if(rnd()<.5){setScene(loc(ch),"逃脫",["你們頭也不回地衝向樓梯。"],cont());render();}else runBattle(ch,g,"B",`${M.name}比你們更快！`);}}
   ]);render();
 }
 function runBattle(ch,group,ambush,intro,after){
@@ -1582,8 +1835,8 @@ function runBattle(ch,group,ambush,intro,after){
       CUR_B=null;VIEW="run";
       const l=[];
       if(!win||runLost())return endRun(false,["你們倒在了"+where+"。"]);
-      const n=group.length,g=addGold((2+fi)*n);l.push(`戰鬥勝利。從對手身上搜出 🪙${g}。`);
-      if(group[0].id!=="ghost"){
+      const n=group.length,g=addGold((RUN.ch===ABYSS?4+Math.floor(fi/2):2+fi+RUN.ch*2)*n);l.push(`戰鬥勝利。從對手身上搜出 🪙${g}。`);
+      if(!MONSTERS[group[0].id]){
         if(RUN.pendingLoot){l.push("槍架上的 "+gainItem(RUN.pendingLoot)+" 歸你們了。");RUN.pendingLoot=null;}
         else if(rnd()<.6)l.push("還撿到 "+gainItem(pick(LOOT_TABLE))+"。");
       }
@@ -1597,29 +1850,50 @@ function runBattle(ch,group,ambush,intro,after){
 
 /* ---- 停機坪 ---- */
 function helipad(L){
-  RUN.fi=8;RUN.visited[8]="停機坪";
-  const size=aliveMembers().length,hp=48+size*12;
-  setScene("2F · 202 停機坪","🚁 停機坪",L.concat([
-    "冷風灌進來。直升機的螺旋槳已經開始轉動。",
-    "但機艙前站著一個戴防毒面具的巨大身影——<b style='color:var(--red)'>看守魔王</b>。他的鐵鍊拖在地上，嘩啦作響。"
-  ]),[{label:"⚔️ 決戰",cls:"pri",act(){
-    startBattle({title:"2F · 停機坪 決戰",home:"run",items:RUN.items,intro:"「沒有人能離開禁閉室。」",
-      A:aliveMembers().map(memberToUnit),B:[{id:"warden",stars:1,scale:1,maxHp:hp,hp}],
+  const C=CH();RUN.fi=LAST();RUN.visited[RUN.fi]=C.bossRoom;
+  const size=aliveMembers().length,hp=C.bossHp(size);
+  setScene(C.bossLoc,C.bossTitle,L.concat(C.bossLines),[{label:"⚔️ 決戰",cls:"pri",act(){
+    startBattle({title:C.bossLoc+" 決戰",home:"run",items:RUN.items,intro:C.bossIntro,
+      A:aliveMembers().map(memberToUnit),B:[{id:C.boss,stars:1,scale:C.bossScale,maxHp:hp,hp}],
       onEnd(win,B){
         B.units.filter(u=>u.ref).forEach(u=>{u.ref.hp=Math.max(0,u.hp);u.ref.alive=u.alive&&u.side==="A";});
         RUN.party=RUN.party.filter(m=>!m.betrayed);
         CUR_B=null;VIEW="run";
-        if(!win||runLost())return endRun(false,["看守魔王把你們拖回了黑暗裡。"]);
+        if(!win||runLost())return endRun(false,[C.lose]);
         seats();
       }});
   }}]);render();
 }
+/* ---- 深淵守門者 ---- */
+function abyssBoss(L){
+  const fi=RUN.fi,id=pick(["warden","zero","chief","host"]),size=aliveMembers().length,hp=Math.round((50+size*12)*(1+fi*.04));
+  const where=`D${fi} · 守門者之間`;RUN.visited[fi]="守門者";
+  setScene(where,"💀 守門者",L.concat([`深淵第 ${fi} 層的門後，站著一個熟悉的身影——<b style='color:var(--red)'>${MONSTERS[id].name}</b>。`,"但它的眼睛裡什麼都沒有，只有深淵。"]),[{label:"⚔️ 迎戰",cls:"pri",act(){
+    startBattle({title:where,home:"run",items:RUN.items,intro:"深淵在低語。",
+      A:aliveMembers().map(memberToUnit),B:[{id,stars:1,scale:1+fi*.03,maxHp:hp,hp,name:"守門者・"+MONSTERS[id].name}],
+      onEnd(win,B){
+        B.units.filter(u=>u.ref).forEach(u=>{u.ref.hp=Math.max(0,u.hp);u.ref.alive=u.alive&&u.side==="A";});
+        RUN.party=RUN.party.filter(m=>!m.betrayed);
+        CUR_B=null;VIEW="run";
+        if(!win||runLost())return endRun(false,["你們被深淵吞沒了。"]);
+        const g=addGold(10+fi*2),t=gainItem(pick(LOOT_TABLE));
+        SAVE.prog.abyssBest=Math.max(SAVE.prog.abyssBest,fi);
+        persistRun("post");
+        abyssPost([`守門者化成一灘黑水。🪙+${g}，還留下了 ${t}。`]);
+      }});
+  }}]);render();
+}
+function abyssPost(L){
+  const fi=RUN.fi;
+  setScene(`D${fi} · 守門者之間`,"💀 守門者倒下",L.concat(["更深處傳來風聲。你們可以帶著戰利品離開，或者繼續往下。",`<span class="dim">撤離：帶回全部金條＋深度獎勵 🪙${fi*2}。繼續：下一個守門者在 D${fi+5}，全滅只能帶回一半。</span>`]),
+    [{label:"⬇ 繼續深入",cls:"pri",act:toChoose},{label:"🪜 撤離深淵",act:()=>endRun(true,["你們沿著來時的樓梯，一路爬回了地面。"])}]);render();
+}
 function seats(){
-  const alive=aliveMembers();
-  if(alive.length<=3)return endRun(true,["看守魔王轟然倒下。你們衝進機艙，直升機拔地而起。"]);
-  const where="2F · 202 停機坪";
+  const alive=aliveMembers(),C=CH();
+  if(alive.length<=3)return endRun(true,[C.escape]);
+  const where=C.bossLoc;
   setScene(where,"💺 三個座位",[
-    "看守魔王轟然倒下。你們衝向機艙——",
+    `${C.fall}你們衝向${C.veh}——`,
     `<b>座位只有三個，而你們有 ${alive.length} 個人。</b>`,
     "所有人都停下了腳步。沒有人先開口。"
   ],[
@@ -1640,31 +1914,45 @@ function seats(){
         endRun(true,[`${m.name} 苦笑著退後一步：「去吧。」艙門關上的那一刻，你看見他朝毒霧走去。`]);
       }}})),
     {label:"🎲 全部擠上去（50%機率超載墜機）",act(){
-      if(rnd()<.5)endRun(true,["直升機搖搖晃晃地升空……居然撐住了！所有人都活著離開了禁閉室。"]);
-      else{aliveMembers().forEach(m=>m.hp=Math.ceil(m.hp/2));RUN.gold=Math.floor(RUN.gold/2);endRun(true,["超載警報狂響，直升機重重摔在樓頂邊緣——你們爬出殘骸，總算還是逃了出去。一半的金條撒進了夜色裡。"]);}
+      if(rnd()<.5)endRun(true,[`${C.veh}搖搖晃晃地出發……居然撐住了！所有人都活著離開了這裡。`]);
+      else{aliveMembers().forEach(m=>m.hp=Math.ceil(m.hp/2));RUN.gold=Math.floor(RUN.gold/2);endRun(true,[`超載警報狂響，${C.veh}重重撞了一下——你們爬出殘骸，總算還是逃了出去。一半的金條撒進了夜色裡。`]);}
     }}
   ]);render();
 }
 
 /* ---- 結算 ---- */
 function endRun(escaped,lines=[]){
-  const r=RUN;r.active=false;
-  const reached=r.fi;
-  let gain=escaped?r.gold+30:Math.floor(r.gold/2);
+  const r=RUN;r.active=false;SAVE.run=null;
+  const reached=r.fi,C=CHAPTERS[r.ch],abyss=r.ch===ABYSS,P=SAVE.prog;
+  let bonus=0;
   const out=lines.slice();
   if(escaped){
-    out.push(`<b style="color:var(--gold)">逃出成功！</b>`);
+    out.push(`<b style="color:var(--gold)">${abyss?"撤離成功！":"逃出成功！"}</b>`);
+    if(abyss)bonus=r.fi*2;
+    else{
+      bonus=30*(r.ch+1);P.clears[r.ch]=(P.clears[r.ch]||0)+1;
+      if(P.cleared<=r.ch){
+        P.cleared=r.ch+1;bonus+=FIRST_CLEAR[r.ch];
+        out.push(`🏅 首次通關「${C.name}」！額外 🪙${FIRST_CLEAR[r.ch]}`);
+        if(r.ch+1<ABYSS)out.push(`🔓 解鎖新章節：<b>第 ${r.ch+2} 章「${CHAPTERS[r.ch+1].name}」</b>`);
+        else out.push("🎬 <b>主線完結。</b>謝謝你陪他們走到最後。……不過深淵還在等你。");
+        if(r.ch===0)out.push(`🔓 解鎖：<b>🕳 無盡深淵</b>（沒有出口，每 5 層一個守門者）`);
+      }
+    }
     const al=r.party.find(m=>m.ally&&m.alive);
     if(al){
       const gr=grant(al.id);
       out.push(`🤝 ${al.name} 跟你交換了聯絡方式。<b>獲得職業卡：${CARDS[al.id].name}</b>${gr.isNew?"（NEW!）":gr.up?`（升至${gr.up}★）`:`（滿星，🪙+${gr.refund}）`}`);
       SFX.ssr();
     }else SFX.win();
-    SAVE.stats.escapes++;
+    if(!abyss)SAVE.stats.escapes++;
   }else{out.push(`<b style="color:var(--red)">全隊覆沒。</b>只帶回了一半的金條。`);SFX.lose();}
-  out.push(`帶回 🪙${gain}（本次遠征共搜得 🪙${r.gold}${escaped?"，逃出獎勵+30":""}）`);
-  SAVE.gold+=gain;SAVE.stats.best=Math.max(SAVE.stats.best,reached);save();
-  r.scene={loc:escaped?"夜空":"黑暗",title:escaped?"🚁 逃出生天":"✝ 遠征失敗",lines:out,opts:[{label:"回到主頁",cls:"pri",act(){RUN=null;go("home");}},{label:"再來一次",act(){RUN=null;startRun();}}]};
+  const gain=escaped?r.gold+bonus:Math.floor(r.gold/2);
+  out.push(`帶回 🪙${gain}（本次遠征共搜得 🪙${r.gold}${bonus?`，${abyss?"深度":"逃出"}獎勵+${bonus}`:""}）`);
+  if(abyss){P.abyssBest=Math.max(P.abyssBest,reached);out.push(`<span class="dim">本次到達 D${reached}，最深紀錄 D${P.abyssBest}。</span>`);}
+  SAVE.gold+=gain;if(r.ch===0)SAVE.stats.best=Math.max(SAVE.stats.best,reached);save();
+  r.scene={loc:escaped?"夜空":"黑暗",title:escaped?(abyss?"🪜 撤離深淵":`${C.vehIcon} 逃出生天`):"✝ 遠征失敗",lines:out,opts:[{label:"回到主頁",cls:"pri",act(){RUN=null;go("home");}},{label:"再來一次",act(){RUN=null;startRun(r.ch);}},
+    ...(escaped&&!abyss&&CHAPTERS[r.ch+1]&&r.ch+1<ABYSS?[{label:`➡ 前往第 ${r.ch+2} 章`,act(){RUN=null;startRun(r.ch+1);}}]:[])]};
   r.choices=null;VIEW="run";render();
 }
 
@@ -1691,29 +1979,38 @@ function abandonRun(){
   openModal(`<h3>放棄遠征？</h3><p class="dim">視同全隊覆沒，只帶回一半金條。</p><div class="row"><button class="pri" onclick="closeModal();endRun(false,['你們選擇放棄，躺回了停屍間的鐵櫃。'])">放棄</button><button onclick="closeModal()">繼續</button></div>`);
 }
 function viewRun(){
+  if(!RUN&&SAVE.run)return `<h2>逃殺遠征</h2><div class="panel"><p>你有一場進行中的遠征：<b>${CHAPTERS[SAVE.run.ch].name}</b>・${SAVE.run.floors[SAVE.run.fi].label}</p>
+    <div class="row"><button class="pri" onclick="resumeRun()">▶ 繼續遠征</button><button onclick="SAVE.run=null;save();render()">放棄這場遠征</button></div></div>`;
   if(!RUN)return `<h2>逃殺遠征</h2>
-    <div class="panel"><p>帶著隊伍從 <b>B7 停屍間</b> 出發，每層選一個房間，一路爬到 <b>2F 停機坪</b>。</p>
+    <div class="chapters">${CHAPTERS.map((C,i)=>{const ok=unlocked(i),n=SAVE.prog.clears[i]||0;
+      return `<div class="chap ${ok?"":"lockc"}" ${ok&&SAVE.team.length?`onclick="startRun(${i})"`:""}><div class="ic">${ok?C.icon:"🔒"}</div>
+        <div><b>${C.abyss?"":`第 ${i+1} 章　`}${C.name}</b><div class="dim small">${ok?C.sub:i===ABYSS?"通關第 1 章後解鎖":`通關「${CHAPTERS[i-1].name}」後解鎖`}</div>
+        <div class="small" style="color:var(--gold)">${C.abyss?(SAVE.prog.abyssBest?`最深 D${SAVE.prog.abyssBest}`:""):n?`已逃出 ${n} 次`:ok?`首通獎勵 🪙${FIRST_CLEAR[i]}`:""}</div></div></div>`;}).join("")}</div>
+    <div class="panel"><p>每層選一個房間往上爬，打倒最上層的魔王就能逃出。後面的章節敵人更強、獎勵更多。</p>
     <ul class="dim small" style="padding-left:18px;margin:0">
       <li>每上一層消耗 1 份補給，沒有補給全員飢餓 -2。</li>
       <li>毒氣會從底層慢慢往上爬。休息、多搜一次都會耗時——被追上就每步扣血。</li>
       <li>遇到其他逃殺者可以結盟、交易、突襲或避開。盟友能幫你打架，但信任度太低會背叛。</li>
-      <li>停機坪有看守魔王，打倒他才能登機。直升機只有 <b>三個座位</b>。</li>
-      <li>逃出：帶回全部金條 +30；全滅：只帶回一半。和盟友一起逃出能獲得他的職業卡。</li>
+      <li>最上層有魔王，打倒他才能離開。交通工具只有 <b>三個座位</b>。</li>
+      <li>逃出：帶回全部金條＋逃出獎勵；全滅：只帶回一半。和盟友一起逃出能獲得他的職業卡。</li>
+      <li>遠征會自動存檔，中途關掉網頁，下次打開可以接著玩。</li>
     </ul></div>
     <h3>出戰隊伍</h3><div class="cardgrid">${SAVE.team.map(id=>cardTile(id,`showCard('${id}')`)).join("")||"<span class='dim'>尚未編隊</span>"}</div>
-    <div class="row" style="margin-top:14px"><button class="pri" onclick="startRun()" ${SAVE.team.length?"":"disabled"}>🪜 開始遠征</button></div>`;
-  const r=RUN,g=gasIdx();
-  const tower=FLOORS.map((f,i)=>i).reverse().map(i=>`<div class="fl ${i===r.fi?"cur":""} ${i<r.fi?"done":""} ${i<=g?"gas":""}">
-    <span class="lb">${FLOORS[i].label}</span><span class="rm">${i===r.fi?"🧍 ":""}${r.visited[i]||(i===8?"🚁":"")}</span></div>`).join("");
+    <p class="dim small">點上面的章節開始遠征。</p>`;
+  const r=RUN,g=gasIdx(),ab=r.ch===ABYSS;
+  if(ab)ensureFloor(Math.max(0,r.fi-3)+7);
+  const idx=ab?Array.from({length:8},(_,k)=>Math.max(0,r.fi-3)+k):FL().map((f,i)=>i);
+  const tower=idx.reverse().map(i=>`<div class="fl ${i===r.fi?"cur":""} ${i<r.fi?"done":""} ${i<=g?"gas":""}">
+    <span class="lb">${FL()[i].label}</span><span class="rm">${i===r.fi?"🧍 ":""}${r.visited[i]||(isBossFloor(i)?(ab?"💀":CH().vehIcon):"")}</span></div>`).join("");
   let main;
   if(r.choices){
     const rv=canReveal();
-    main=`<div class="scene"><div class="loc">${FLOORS[r.fi+1].label} 層</div><h2>選擇要進入的房間</h2>
+    main=`<div class="scene"><div class="loc">${CH().name}・${FL()[r.fi+1].label} 層</div><h2>選擇要進入的房間</h2>
       <div class="dim small">你們爬上樓梯。走廊兩側是幾扇門。</div>
       <div class="choices">${r.choices.map((c,i)=>{const known=c.name||rv;
-        return `<div class="door" onclick="chooseRoom(${i})"><div class="di">${known?EV_ICON[c.ev]:"🚪"}</div><div class="dn">${c.id}${c.name?" "+c.name:""}</div>
+        return `<div class="door" onclick="chooseRoom(${i})"><div class="di">${known?(c.ev==="shade"?MONSTERS[ab?"ghost":CH().minion].emoji:EV_ICON[c.ev]):"🚪"}</div><div class="dn">${c.id}${c.name?" "+c.name:""}</div>
         <div class="dd">${c.name?"":known?EV_HINT[c.ev]+(rv?"（監控）":""):"未知房間"}</div></div>`;}).join("")}</div>
-      ${r.items.includes("rope")&&r.fi+1<7?`<div class="opts"><button onclick="useRope()">🪢 用繩索直接攀過這層（不耗時、不觸發事件）</button></div>`:""}</div>`;
+      ${canRope()?`<div class="opts"><button onclick="useRope()">🪢 用繩索直接攀過這層（不耗時、不觸發事件）</button></div>`:""}</div>`;
   }else{
     const s=r.scene;
     main=`<div class="scene"><div class="loc">${s.loc}</div><h2>${s.title}</h2>
@@ -1730,7 +2027,7 @@ function viewRun(){
     </div>${r.sel!=null&&m.alive&&r.active?`<button class="mini gold" onclick="applyOutItem(${i})">使用</button>`:""}</div>`;}).join("");
   const side=`<div class="panel">
     <div class="res"><span>🥫 ${r.food}</span><span style="color:var(--gold)">🪙 ${r.gold}</span><span class="dim">⏱ ${r.time}</span></div>
-    <div class="gasbar">☣ 毒氣：${g<0?"尚未出現":"已淹到 "+FLOORS[Math.min(g,8)].label}</div>
+    <div class="gasbar">☣ 毒氣：${g<0?"尚未出現":"已淹到 "+FL()[clamp(g,0,FL().length-1)].label}</div>
     <h3>隊伍</h3>${party}
     ${al&&r.food>0&&r.active?`<button class="mini" onclick="shareFood()">🥫 分補給給盟友（信任+20）</button>`:""}
     <h3>背包</h3><div class="items">${r.items.map((id,i)=>`<span class="item ${r.sel===i?"sel":""}" title="${ITEMS[id].desc}" onclick="useOutItem(${i})">${ITEMS[id].icon}${ITEMS[id].name}</span>`).join("")||"<span class='dim small'>空</span>"}</div>
@@ -1747,6 +2044,7 @@ function sceneOpt(i){const o=RUN.scene.opts[i];SFX.click();o.act();}
   if(q&&/^[A-Za-z0-9]{5}$/.test(q)){JOIN_CODE=q.toUpperCase();DUEL_MODE="online";VIEW="duel";history.replaceState(null,"",location.pathname);}})();
 render();
 if(JOIN_CODE)joinRoom(JOIN_CODE);
+else if(SAVE.run)resumeRun();
 </script>
 </body>
 </html>

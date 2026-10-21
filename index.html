@@ -40,6 +40,13 @@ h3{margin:14px 0 8px;font-size:16px;color:#c9ced5}
 
 /* home */
 .hero{text-align:center;padding:40px 10px 20px}
+.nexthint{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:linear-gradient(90deg,#2a1013,var(--panel));border:1px solid var(--red);border-radius:12px;padding:10px 14px;margin-top:12px}
+.nexthint b{color:var(--gold)}
+.gdots{display:flex;gap:6px;justify-content:center;margin:10px 0}
+.gdots i{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.gdots i.on{background:var(--red)}
+.gpage .gic{font-size:44px;text-align:center}
+.gpage ul{padding-left:18px;margin:6px 0}
 .hero h1{font-size:clamp(40px,9vw,76px);margin:0;letter-spacing:8px;color:#fff;text-shadow:0 0 30px rgba(229,72,77,.7),3px 0 var(--red),-3px 0 #3cf;animation:glitch 4s infinite}
 .hero .sub{color:var(--dim);letter-spacing:4px;margin-top:6px}
 @keyframes glitch{0%,92%,100%{transform:none;text-shadow:0 0 30px rgba(229,72,77,.7),3px 0 var(--red),-3px 0 #3cf}93%{transform:translate(2px,-1px) skewX(-6deg);text-shadow:0 0 30px rgba(229,72,77,.7),-5px 0 var(--red),5px 0 #3cf}95%{transform:translate(-2px,1px)}}
@@ -219,6 +226,7 @@ b.sA{color:var(--sideA)} b.sB{color:var(--sideB)}
     <div class="logo" onclick="go('home')">禁閉逃殺<small>文字獄</small></div>
     <nav id="nav"></nav>
     <div class="wallet" id="wallet"></div>
+    <button class="muteBtn" onclick="openGuide(0)" title="玩法導引">❓</button>
     <button class="muteBtn" id="muteBtn" onclick="toggleMute()"></button>
   </header>
   <main id="view"></main>
@@ -528,6 +536,36 @@ function toast(msg){
 function openModal(html){$("#mbox").innerHTML=html;$("#modal").classList.add("show");}
 function closeModal(){$("#modal").classList.remove("show");}
 
+/* ===================== GUIDE ===================== */
+// 超簡單導引：第一次進來自動打開，之後按右上角 ❓ 重看
+const GUIDE=[
+  {ic:"⛓",t:"這是什麼遊戲？",b:["你和同伴被關在禁閉室，要一路往上爬、搶上只有 <b>三個座位</b> 的直升機。","玩法只有三件事：<b>抽角色 → 組隊 → 出發遠征</b>。"]},
+  {ic:"🎴",t:"① 抽角色",b:["到「招募」花金條抽卡。<b>第一次十連必出 SSR</b>，開局的金條剛好夠。","抽到重複的角色會升星（最多 5★），每 1 星能力 +10%。"]},
+  {ic:"👥",t:"② 組隊",b:["到「隊伍」點角色 →「加入隊伍」，最多 3 人。","不要的角色可以「遣散」換金條，或「合成」成更高稀有度。"]},
+  {ic:"🪜",t:"③ 出發遠征",b:["每一層選一扇門進去：可能是物資、敵人、或其他逃殺者。","注意 <b>🥫補給</b>（每層吃 1 份）和 <b>☣毒氣</b>（從底層往上淹）。","遇到人可以結盟、交易或開打。打倒最上層的魔王就逃出了！"]},
+  {ic:"⚔️",t:"④ 戰鬥",b:["輪到你的角色時，按「普通攻擊」或「技能」，再點目標。","懶得操作就按「自動」，讓 AI 幫你打。"]},
+  {ic:"🏆",t:"⑤ 然後呢？",b:["逃出第 1 章後會解鎖後面的章節和 <b>🕳 無盡深淵</b>。","「競技場」打 AI 賺金條；「雙人對決」可以和朋友網路對戰。","進度會自動存檔，換裝置用主頁的「匯出／匯入存檔」。"]}
+];
+function openGuide(i){
+  const g=GUIDE[i],last=i===GUIDE.length-1;
+  openModal(`<div class="gpage"><div class="gic">${g.ic}</div><h3 style="text-align:center;margin:4px 0">${g.t}</h3>
+    <ul>${g.b.map(x=>`<li>${x}</li>`).join("")}</ul></div>
+    <div class="gdots">${GUIDE.map((_,k)=>`<i class="${k===i?"on":""}"></i>`).join("")}</div>
+    <div class="row">${i?`<button onclick="openGuide(${i-1})">← 上一步</button>`:`<button onclick="endGuide()">跳過</button>`}
+      <button class="pri" style="margin-left:auto" onclick="${last?"endGuide()":`openGuide(${i+1})`}">${last?"開始玩！":"下一步 →"}</button></div>`);
+}
+function endGuide(){SAVE.guided=true;save();closeModal();render();}
+// 主頁的「下一步」提示
+function nextHint(){
+  const st=SAVE.stats,P=SAVE.prog;
+  if(!SAVE.pulls)return ["第一步：去招募所抽一次十連，<b>首次必出 SSR</b>！","gacha","🎴 去招募"];
+  if(SAVE.team.length<3)return ["把喜歡的角色編進隊伍（最多 3 人）。","team","👥 去編隊"];
+  if(!st.runs)return ["隊伍準備好了，出發第一次遠征吧！","run","🪜 去遠征"];
+  if(P.cleared<1)return ["目標：打倒停機坪的看守魔王，逃出禁閉室。打不贏就多抽卡、升星再來。","run","🪜 去遠征"];
+  if(P.cleared<4)return [`下一個目標：第 ${P.cleared+1} 章「${CHAPTERS[P.cleared].name}」。也可以去無盡深淵刷紀錄。`,"run","🪜 去遠征"];
+  return [`主線全破！挑戰無盡深淵，目前最深 D${P.abyssBest||0}。`,"run","🕳 去深淵"];
+}
+
 /* ===================== HOME ===================== */
 function viewHome(){
   const own=Object.keys(SAVE.owned).length,st=SAVE.stats;
@@ -536,6 +574,7 @@ function viewHome(){
     <p style="margin:0">你在停屍間冰冷的鐵櫃裡醒來。廣播說：<b>「直升機只有三個座位。」</b><br>
     <span class="dim">招募囚犯、組成三人小隊，從 B7 一路殺上停機坪。路上遇到的人——可以結盟，也可以先下手為強。</span></p>
   </div>
+  ${(h=>`<div class="nexthint"><span>👉 ${h[0]}</span><button class="pri mini" style="margin-left:auto" onclick="go('${h[1]}')">${h[2]}</button></div>`)(nextHint())}
   <div class="modes">
     <div class="mode" onclick="go('gacha')"><div class="ic">🎴</div><b>招募所</b><p>花金條抽取職業卡。SSR 3%・十連保底 SR・60 抽保底 SSR</p></div>
     <div class="mode" onclick="go('team')"><div class="ic">👥</div><b>隊伍</b><p>已收集 ${own}/${Object.keys(CARDS).length} 名職業，挑 3 人出戰</p></div>
@@ -2127,6 +2166,7 @@ function sceneOpt(i){const o=RUN.scene.opts[i];SFX.click();o.act();}
 render();
 if(JOIN_CODE)joinRoom(JOIN_CODE);
 else if(SAVE.run)resumeRun();
+else if(!SAVE.guided)openGuide(0);
 </script>
 </body>
 </html>

@@ -445,7 +445,7 @@ function toggleMute(){SAVE.muted=!SAVE.muted;save();renderHeader();}
 /* ===================== VIEW ROUTER ===================== */
 let VIEW="home";
 const NAV=[["home","主頁"],["gacha","招募"],["team","隊伍"],["run","遠征"],["arena","競技場"],["duel","雙人對決"]];
-function locked(){return (RUN&&RUN.active)||(CUR_B&&!CUR_B.done)||DUEL&&DUEL.phase==="battle";}
+function locked(){return (RUN&&RUN.active)||(CUR_B&&!CUR_B.done)||(DUEL&&DUEL.phase==="battle")||!!NET;}
 function go(v){
   if(locked()&&v!==VIEW){toast("進行中無法離開（遠征中可按「放棄遠征」）");return;}
   SFX.click();VIEW=v;render();window.scrollTo(0,0);
@@ -461,6 +461,7 @@ function render(){
   const f={home:viewHome,gacha:viewGacha,team:viewTeam,run:viewRun,arena:viewArena,duel:viewDuel,battle:viewBattle}[VIEW];
   $("#view").innerHTML=f();
   if(VIEW==="battle"){const l=$("#blog");if(l)l.scrollTop=l.scrollHeight;}
+  if(CUR_B&&CUR_B.online&&!CUR_B.guest)pushSnap(CUR_B);
 }
 function toast(msg){
   const d=document.createElement("div");
@@ -484,7 +485,7 @@ function viewHome(){
     <div class="mode" onclick="go('team')"><div class="ic">👥</div><b>隊伍</b><p>已收集 ${own}/${Object.keys(CARDS).length} 名職業，挑 3 人出戰</p></div>
     <div class="mode" onclick="go('run')"><div class="ic">🪜</div><b>逃殺遠征</b><p>文字冒險主線：選房間、搜物資、躲毒氣、結盟或背叛，搶上直升機</p></div>
     <div class="mode" onclick="go('arena')"><div class="ic">⚔️</div><b>競技場</b><p>對戰 AI 小隊爬塔，第 ${SAVE.arenaTier} 層。贏了拿金條</p></div>
-    <div class="mode" onclick="go('duel')"><div class="ic">🆚</div><b>雙人對決</b><p>同一台裝置，兩人輪流選角後互毆</p></div>
+    <div class="mode" onclick="go('duel')"><div class="ic">🆚</div><b>雙人對決</b><p>同機輪流操作，或建立房間和朋友網路連線互毆</p></div>
   </div>
   <h3>戰績</h3>
   <div class="panel row small">
@@ -775,7 +776,8 @@ function aiChoose(B,u){
 
 function startBattle(cfg){
   const B={title:cfg.title,units:[],log:[],round:0,ctrl:cfg.ctrl||{A:"human",B:"ai"},items:cfg.items||null,
-    wall:{},flags:{},auto:false,fast:false,wait:null,done:false,over:null,cfg,labels:cfg.labels||{A:"我方",B:"敵方"}};
+    wall:{},flags:{},auto:false,fast:false,wait:null,done:false,over:null,cfg,labels:cfg.labels||{A:"我方",B:"敵方"},
+    online:cfg.online||null,rseq:0,mySide:"A"};
   B.units=cfg.A.map(o=>mkUnit({...o,side:"A"})).concat(cfg.B.map(o=>mkUnit({...o,side:"B"})));
   CUR_B=B;BATTLE_HOME=cfg.home||"arena";VIEW="battle";
   if(cfg.intro)blog(B,cfg.intro,"big");
@@ -850,8 +852,8 @@ async function takeTurn(B,u){
     if(checkEnd(B))return;
   }
   for(let n=0;n<2;n++){
-    const human=B.ctrl[u.side]==="human"&&!u.ally&&!B.auto;
-    const act=human?await waitHuman(B,u):aiChoose(B,u);
+    const ctl=B.ctrl[u.side],human=ctl==="human"&&!u.ally&&!B.auto;
+    const act=human?await waitHuman(B,u):ctl==="remote"?await waitRemote(B,u):aiChoose(B,u);
     if(!act)return;
     doAction(B,u,act);
     render();
@@ -943,14 +945,14 @@ function unitCard(B,u){
 }
 function actionPanel(B){
   if(B.over){
-    const win=B.over==="A";
-    const head=B.ctrl.B==="human"?`${B.labels[B.over]} 勝利！`:win?"勝利":"敗北";
-    return `<div class="result ${win||B.ctrl.B==="human"?"win":"lose"}"><h2>${head}</h2><div class="dim">${B.cfg.resultNote?B.cfg.resultNote(B):""}</div>
+    const hot=B.ctrl.A==="human"&&B.ctrl.B==="human",win=B.over===B.mySide;
+    const head=hot?`${B.labels[B.over]} 勝利！`:win?"勝利":"敗北";
+    return `<div class="result ${win||hot?"win":"lose"}"><h2>${head}</h2><div class="dim">${B.cfg.resultNote?B.cfg.resultNote(B):""}</div>
       <button class="pri" style="margin-top:8px" onclick="finishBattle()">繼續</button></div>`;
   }
   const w=B.wait;
   if(!w)return `<div class="apanel dim">${B.active?nm(B.active)+" 行動中……":"……"}</div>`;
-  const u=w.u,sk=DEF(u.id).skill,who=B.ctrl.B==="human"?`<span class="tag">${B.labels[u.side]}</span> `:"";
+  const u=w.u,sk=DEF(u.id).skill,who=B.ctrl.A==="human"&&B.ctrl.B==="human"?`<span class="tag">${B.labels[u.side]}</span> `:"";
   if(w.mode==="target")return `<div class="apanel"><div class="who">${who}${nm(u)}：選擇【${w.label}】的目標（點選發光的角色）</div><button onclick="cancelTarget()">取消</button></div>`;
   if(w.mode==="items")return `<div class="apanel"><div class="who">選擇道具</div><div class="btns">
     ${B.items.map((id,i)=>ITEMS[id].battle?`<button onclick="pickItem(${i})" title="${ITEMS[id].desc}">${ITEMS[id].icon}${ITEMS[id].name}</button>`:"").join("")||"<span class='dim'>沒有可在戰鬥中使用的道具</span>"}
@@ -961,16 +963,17 @@ function actionPanel(B){
     <button onclick="act('skill')" ${canUseSkill(B,u)?"":"disabled"} class="${canUseSkill(B,u)?"pri":""}">✦ ${sk.name}${u.cd>0?`（${u.cd}）`:""}</button>
     <button onclick="act('guard')">🛡 防禦</button>
     ${B.items?`<button onclick="act('items')" ${usable?"":"disabled"}>🎒 道具 ${usable}</button>`:""}
-  </div><div class="skdesc">✦ ${sk.desc}　◈ ${DEF(u.id).passive.name}：${DEF(u.id).passive.desc}</div></div>`;
+  </div>${B.guest?`<div class="skdesc">（${REMOTE_TIMEOUT/1000} 秒內沒有行動會自動出手）</div>`:""}<div class="skdesc">✦ ${sk.desc}　◈ ${DEF(u.id).passive.name}：${DEF(u.id).passive.desc}</div></div>`;
 }
 function viewBattle(){
   const B=CUR_B;if(!B)return "";
+  const me=B.mySide||"A",op=me==="A"?"B":"A";
   return `<div class="btop"><div class="ttl">${B.title}　<span class="dim small">第 ${B.round} 回合</span></div>
     ${B.ctrl.A==="human"&&B.ctrl.B!=="human"?`<button onclick="act('auto')" class="${B.auto?"ok":""}">${B.auto?"自動中":"自動"}</button>`:""}
-    <button onclick="CUR_B.fast=!CUR_B.fast;render()" class="${B.fast?"ok":""}">${B.fast?"⏩ 快速":"▶ 正常"}</button></div>
-    <div class="side B">${B.units.filter(u=>u.side==="B").map(u=>unitCard(B,u)).join("")}</div>
-    <div class="vs">— ${B.labels.B} ／ ${B.labels.A} —</div>
-    <div class="side A">${B.units.filter(u=>u.side==="A").map(u=>unitCard(B,u)).join("")}</div>
+    ${B.guest?"":`<button onclick="CUR_B.fast=!CUR_B.fast;render()" class="${B.fast?"ok":""}">${B.fast?"⏩ 快速":"▶ 正常"}</button>`}</div>
+    <div class="side B">${B.units.filter(u=>u.side===op).map(u=>unitCard(B,u)).join("")}</div>
+    <div class="vs">— ${B.labels[op]} ／ ${B.labels[me]} —</div>
+    <div class="side A">${B.units.filter(u=>u.side===me).map(u=>unitCard(B,u)).join("")}</div>
     ${actionPanel(B)}
     <div class="blog" id="blog">${B.log.map(l=>`<div class="${l.cls}">${l.html}</div>`).join("")}</div>`;
 }
@@ -1016,13 +1019,18 @@ function startArena(){
 let DUEL=null;
 const DRAFT_ORDER=["A","B","B","A","A","B"];
 function viewDuel(){
-  if(!DUEL||DUEL.phase==="done")DUEL={phase:"draft",step:0,picks:{A:[],B:[]}};
+  return `<h2>雙人對決</h2><div class="row" style="margin-bottom:12px">
+    <button class="${DUEL_MODE==="local"?"pri":""}" onclick="setDuelMode('local')">🖥 同機對戰</button>
+    <button class="${DUEL_MODE==="online"?"pri":""}" onclick="setDuelMode('online')">🌐 網路對戰</button></div>`
+    +(DUEL_MODE==="online"?viewOnline():viewDuelLocal());
+}
+function viewDuelLocal(){
+  if(!DUEL||DUEL.phase==="done"||DUEL.online)DUEL={phase:"draft",step:0,picks:{A:[],B:[]}};
   const d=DUEL,cur=DRAFT_ORDER[d.step],taken=d.picks.A.concat(d.picks.B);
   const side=s=>`<div class="panel" style="flex:1;min-width:220px;border-color:${s===cur&&d.step<6?"var(--gold)":"var(--line)"}">
     <b style="color:var(--side${s})">${s==="A"?"玩家一":"玩家二"}</b>
     <div class="draftside">${d.picks[s].map(id=>`<div class="av">${avatar(id)}</div>`).join("")}</div></div>`;
-  return `<h2>雙人對決</h2>
-  <p class="dim">兩人輪流選角（蛇形順序 1-2-2-1-1-2），所有職業都以 3★ 參戰。選好後輪流操作互毆。</p>
+  return `<p class="dim">兩人輪流選角（蛇形順序 1-2-2-1-1-2），所有職業都以 3★ 參戰。選好後輪流操作互毆。</p>
   <div class="row">${side("A")}${side("B")}</div>
   ${d.step<6?`<h3>輪到 <span style="color:var(--side${cur})">${cur==="A"?"玩家一":"玩家二"}</span> 選角</h3>
   <div class="cardgrid">${sortedIds().map(id=>{const c=CARDS[id],tk=taken.includes(id);
@@ -1031,6 +1039,7 @@ function viewDuel(){
   :`<div class="row" style="margin-top:12px"><button class="pri" onclick="startDuel()">⚔ 開打！</button><button onclick="DUEL=null;render()">重新選角</button></div>`}`;
 }
 function duelPick(id){
+  if(DUEL.online)return onlinePick(id);
   const d=DUEL;if(d.step>=6)return;
   d.picks[DRAFT_ORDER[d.step]].push(id);d.step++;SFX.flip();render();
 }
@@ -1040,6 +1049,210 @@ function startDuel(){
     A:DUEL.picks.A.map(id=>({id,stars:3})),B:DUEL.picks.B.map(id=>({id,stars:3})),
     intro:"兩支隊伍在禁閉室中央對峙。只有一方能走出去。",
     onEnd(){DUEL.phase="done";CUR_B=null;VIEW="duel";render();}});
+}
+
+/* ===================== ONLINE DUEL (Firebase) ===================== */
+// 網路對戰：房主（A）跑完整戰鬥引擎；挑戰者（B）只送出自己的操作、接收戰況快照。
+// 資料庫結構 rooms/{房號}：t 建立時間、guest 挑戰者加入、gl 挑戰者離開、draft.p 選角順序、snap 戰況快照、act 挑戰者的操作
+const FB_CFG={apiKey:"AIzaSyBFcsgw6urVdIyJbvH1aZLaK0MQNJ1yfSg",authDomain:"confinement-escape-text.firebaseapp.com",
+  databaseURL:"https://confinement-escape-text-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"confinement-escape-text",appId:"1:523494416946:web:9e95a3d65ec4f17e87d22b"};
+const FB_SDK="https://www.gstatic.com/firebasejs/10.12.2/";
+const REMOTE_TIMEOUT=60000;
+let FB_DB=null,NET=null,DUEL_MODE="local",JOIN_CODE="",SNAP_T=null;
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement("script");s.src=src;s.onload=res;s.onerror=()=>rej(new Error("無法載入連線元件"));document.head.appendChild(s);});}
+// SDK 只在進入網路對戰時才載入，其他模式仍可離線遊玩
+async function fbDb(){
+  if(FB_DB)return FB_DB;
+  await loadScript(FB_SDK+"firebase-app-compat.js");
+  await loadScript(FB_SDK+"firebase-database-compat.js");
+  firebase.initializeApp(FB_CFG);FB_DB=firebase.database();return FB_DB;
+}
+function genCode(){const c="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let s="";for(let i=0;i<5;i++)s+=c[Math.floor(rnd()*c.length)];return s;}
+function setDuelMode(m){if(NET){toast("請先離開房間");return;}DUEL_MODE=m;DUEL=null;render();}
+function netFail(e){console.error(e);toast("連線失敗："+(e&&e.message||e));if(NET&&NET.ref)leaveOnline();else{NET=null;render();}}
+
+async function hostRoom(){
+  if(NET)return;
+  NET={status:"connecting"};render();
+  try{
+    const db=await fbDb();let code=null,ref=null;
+    for(let i=0;i<5&&!code;i++){
+      const c=genCode(),r=db.ref("rooms/"+c);
+      const tx=await r.transaction(cur=>cur?undefined:{t:Date.now()});
+      if(tx.committed){code=c;ref=r;}
+    }
+    if(!code)throw new Error("無法建立房間");
+    ref.onDisconnect().remove();
+    NET={ref,code,side:"A",status:"room",gone:false};
+    DUEL={phase:"lobby",step:0,picks:{A:[],B:[]},online:true};
+    ref.child("guest").on("value",s=>{if(s.val()&&DUEL&&DUEL.phase==="lobby"){DUEL.phase="draft";SFX.sr();toast("對手加入了！");render();}});
+    ref.child("gl").on("value",s=>{if(s.val())opponentLeft();});
+    ref.child("draft").on("value",onDraft);
+    ref.child("act").on("value",s=>{const v=s.val();if(v&&CUR_B&&CUR_B.remoteResolve)CUR_B.remoteResolve(v);});
+    render();
+  }catch(e){NET=null;netFail(e);}
+}
+async function joinRoom(code){
+  code=(code||"").toUpperCase().trim();
+  if(!/^[A-Z0-9]{5}$/.test(code)){toast("房號是5碼英數字");return;}
+  if(NET)return;
+  JOIN_CODE=code;NET={status:"connecting"};render();
+  try{
+    const db=await fbDb(),ref=db.ref("rooms/"+code);
+    if(!(await ref.child("t").once("value")).exists())throw new Error("找不到房間 "+code);
+    const tx=await ref.child("guest").transaction(cur=>cur?undefined:Date.now());
+    if(!tx.committed)throw new Error("房間已經有人了");
+    ref.child("gl").onDisconnect().set(true);
+    NET={ref,code,side:"B",status:"room",gone:false};
+    DUEL={phase:"draft",step:0,picks:{A:[],B:[]},online:true};
+    ref.child("t").on("value",s=>{if(!s.exists())hostLeft();});
+    ref.child("draft").on("value",onDraft);
+    ref.child("snap").on("value",s=>applySnap(s.val()));
+    render();
+  }catch(e){NET=null;netFail(e);}
+}
+function onDraft(s){
+  if(!DUEL||!DUEL.online||!NET)return;
+  const v=s.val(),p=(v&&v.p)||[];
+  DUEL.picks={A:[],B:[]};p.forEach((id,i)=>DUEL.picks[DRAFT_ORDER[i]].push(id));DUEL.step=p.length;
+  if(p.length)SFX.flip();
+  if(VIEW==="duel")render();
+  if(NET.side==="A"&&p.length>=6&&!DUEL.started)setTimeout(startOnlineBattle,900);
+}
+function onlinePick(id){
+  const d=DUEL;if(!NET||!NET.ref||d.step>=6||DRAFT_ORDER[d.step]!==NET.side)return;
+  NET.ref.child("draft").transaction(cur=>{
+    const p=(cur&&cur.p)||[];
+    if(p.length>=6||DRAFT_ORDER[p.length]!==NET.side||p.includes(id))return;
+    return {p:p.concat(id)};
+  }).catch(netFail);
+}
+function startOnlineBattle(){
+  if(!NET||!DUEL||DUEL.started)return;
+  DUEL.started=true;DUEL.phase="battle";
+  startBattle({title:"網路對決 · 房間 "+NET.code,home:"duel",ctrl:{A:"human",B:"remote"},labels:{A:"你",B:"對手"},online:NET,
+    A:DUEL.picks.A.map(id=>({id,stars:3})),B:DUEL.picks.B.map(id=>({id,stars:3})),
+    intro:"連線建立。兩支隊伍在禁閉室中央對峙。",
+    onEnd(){leaveOnline();}});
+}
+
+/* ---- 房主：等待挑戰者操作、推送快照 ---- */
+function waitRemote(B,u){
+  return new Promise(res=>{
+    const seq=++B.rseq;let done=false,tm=null;
+    const finish=a=>{if(done)return;done=true;clearTimeout(tm);B.rwait=null;B.remoteResolve=null;res(a);};
+    B.rwait={uid:u.uid,seq};
+    B.remoteResolve=m=>{if(m.ai)return finish(aiChoose(B,u));if(m.seq===seq)finish(decodeAction(B,u,m));};
+    if(B.online.gone)return finish(aiChoose(B,u));
+    tm=setTimeout(()=>{blog(B,`⏰ ${nm(u)} 逾時未行動，自動出手。`);finish(aiChoose(B,u));},REMOTE_TIMEOUT);
+    render();
+  });
+}
+// 對方送來的操作一律重新驗證，不合法就改由 AI 決定
+function decodeAction(B,u,m){
+  const t=m.t?B.units.find(x=>x.uid===m.t):null;
+  if(m.type==="guard")return {type:"guard"};
+  if(m.type==="attack"&&validTargets(B,u,"enemy").includes(t))return {type:"attack",target:t};
+  if(m.type==="skill"&&canUseSkill(B,u)){
+    const sk=DEF(u.id).skill;
+    if(!["enemy","ally","mate"].includes(sk.t)||validTargets(B,u,sk.t).includes(t))return {type:"skill",target:t};
+  }
+  return aiChoose(B,u);
+}
+function pushSnap(B){
+  if(SNAP_T||!NET||!NET.ref)return;
+  SNAP_T=setTimeout(()=>{
+    SNAP_T=null;if(!NET||!NET.ref)return;
+    NET.ref.child("snap").set({title:B.title,round:B.round,over:B.over||"",active:B.active?B.active.uid:0,wall:B.wall,
+      waitUid:B.rwait?B.rwait.uid:0,waitSeq:B.rwait?B.rwait.seq:0,log:B.log.slice(-40),
+      units:B.units.map(u=>({uid:u.uid,id:u.id,name:u.name,side:u.side,stars:u.stars,maxHp:u.maxHp,hp:u.hp,atk:u.atk,def:u.def,spd:u.spd,
+        cd:u.cd,buffs:u.buffs,st:u.st,perm:u.perm,alive:u.alive,ally:u.ally}))
+    }).catch(()=>{});
+  },80);
+}
+function opponentLeft(){
+  if(!NET||NET.gone)return;
+  NET.gone=true;
+  if(CUR_B&&CUR_B.online&&!CUR_B.over){blog(CUR_B,"📴 對手斷線了，由 AI 接手他的隊伍。","bad");if(CUR_B.remoteResolve)CUR_B.remoteResolve({ai:true});render();}
+  else if(!CUR_B){toast("對手離開了房間");leaveOnline();}
+}
+
+/* ---- 挑戰者：用快照重建戰鬥畫面 ---- */
+function applySnap(s){
+  if(!s||!NET||NET.side!=="B")return;
+  const prev=CUR_B&&CUR_B.guest?CUR_B:null;
+  // Firebase 不存空陣列／空物件，要補回預設值
+  const units=(s.units||[]).map(u=>Object.assign(u,{buffs:u.buffs||[],st:u.st||{},perm:u.perm||{},flags:{}}));
+  const B=prev||{guest:true,ctrl:{A:"remote",B:"human"},labels:{A:"對手",B:"你"},mySide:"B",items:null,flags:{},done:false,online:NET,
+    cfg:{onEnd:()=>leaveOnline()}};
+  const diffs=[];
+  if(prev)units.forEach(u=>{const o=prev.units.find(x=>x.uid===u.uid);if(o&&o.hp!==u.hp)diffs.push([u,u.hp-o.hp]);});
+  Object.assign(B,{title:s.title,round:s.round,units,log:s.log||[],wall:s.wall||{},over:s.over||null});
+  B.active=units.find(u=>u.uid===s.active)||null;
+  if(s.waitUid&&s.waitSeq>(B.sentSeq||0)){
+    const u=units.find(x=>x.uid===s.waitUid);
+    if(B.wait&&B.wait.seq===s.waitSeq)B.wait.u=u;
+    else{B.wait={u,mode:"menu",seq:s.waitSeq,res:a=>sendAct(B,s.waitSeq,a)};SFX.click();}
+  }else B.wait=null;
+  if(DUEL)DUEL.phase="battle";
+  CUR_B=B;
+  if(B.done)return;
+  VIEW="battle";render();
+  diffs.forEach(([u,d])=>{fx(B,u,(d>0?"+":"")+d,d>0?"heal":"dmg");d>0?SFX.heal():SFX.hit();});
+  if(B.over&&!B.overSfx){B.overSfx=1;B.over==="B"?SFX.win():SFX.lose();}
+}
+function sendAct(B,seq,a){
+  B.sentSeq=seq;
+  if(NET&&NET.ref)NET.ref.child("act").set({seq,type:a.type,t:a.target?a.target.uid:0}).catch(netFail);
+  render();
+}
+function hostLeft(){
+  if(!NET)return;
+  if(CUR_B&&CUR_B.guest&&CUR_B.over)return;
+  toast("房主離開了，連線結束");leaveOnline();
+}
+function leaveOnline(){
+  const n=NET;NET=null;
+  if(n&&n.ref){
+    ["guest","gl","draft","act","t","snap"].forEach(k=>n.ref.child(k).off());
+    if(n.side==="A"){n.ref.onDisconnect().cancel();n.ref.remove().catch(()=>{});}
+    else{n.ref.child("gl").onDisconnect().cancel();n.ref.child("gl").set(true).catch(()=>{});}
+  }
+  clearTimeout(SNAP_T);SNAP_T=null;
+  if(CUR_B&&CUR_B.online)CUR_B.done=true;
+  CUR_B=null;DUEL=null;VIEW="duel";render();
+}
+function copyLink(l){
+  try{navigator.clipboard.writeText(l).then(()=>toast("已複製邀請連結"),()=>toast(l));}catch(e){toast(l);}
+}
+function viewOnline(){
+  if(!NET)return `<div class="panel"><p style="margin-top:0">和朋友在不同裝置上連線對打：一人建立房間，把房號或邀請連結傳給對方。</p>
+    <button class="pri" onclick="hostRoom()">🏠 建立房間</button>
+    <h3>加入房間</h3>
+    <div class="row"><input id="joinCode" maxlength="5" placeholder="5碼房號" value="${JOIN_CODE}" autocomplete="off"
+      style="font:inherit;font-size:18px;letter-spacing:4px;text-transform:uppercase;width:150px;padding:6px 10px;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px">
+    <button class="gold" onclick="joinRoom($('#joinCode').value)">加入</button></div>
+    <p class="dim small">雙方都以 3★ 參戰，蛇形選角。房主的裝置負責計算戰鬥：房主關掉網頁，對戰就結束；挑戰者斷線或 60 秒沒動作，改由 AI 代打。</p></div>`;
+  if(NET.status==="connecting")return `<div class="panel">🌐 連線中……</div>`;
+  const leave=`<button onclick="leaveOnline()">離開房間</button>`;
+  if(DUEL.phase==="lobby"){
+    const link=location.origin+location.pathname+"?room="+NET.code;
+    return `<div class="panel" style="text-align:center"><div class="dim">房號</div>
+      <div style="font-size:44px;font-weight:900;letter-spacing:10px;color:var(--gold)">${NET.code}</div>
+      <div class="small dim" style="word-break:break-all">${link}</div>
+      <div class="row" style="justify-content:center;margin-top:10px"><button class="gold" onclick="copyLink('${link}')">📋 複製邀請連結</button>${leave}</div>
+      <p class="dim">等待對手加入……</p></div>`;
+  }
+  const d=DUEL,cur=DRAFT_ORDER[d.step],me=NET.side,op=me==="A"?"B":"A",taken=d.picks.A.concat(d.picks.B),mine=d.step<6&&cur===me;
+  const side=(s,label)=>`<div class="panel" style="flex:1;min-width:200px;border-color:${s===cur&&d.step<6?"var(--gold)":"var(--line)"}">
+    <b>${label}</b><div class="draftside">${d.picks[s].map(id=>`<div class="av" title="${CARDS[id].name}">${avatar(id)}</div>`).join("")}</div></div>`;
+  return `<div class="row"><span class="dim">房間 ${NET.code}</span><span style="margin-left:auto">${leave}</span></div>
+  <div class="row" style="margin-top:8px">${side(me,"你")}${side(op,"對手")}</div>
+  ${d.step<6?`<h3>${mine?"輪到 <span style='color:var(--gold)'>你</span> 選角":"等待對手選角……"}</h3>
+  <div class="cardgrid">${sortedIds().map(id=>{const c=CARDS[id],tk=taken.includes(id);
+    return `<div class="ccard ${c.r} ${tk?"locked":""}" style="${mine||tk?"":"opacity:.6"}" onclick="${tk||!mine?"":`duelPick('${id}')`}" oncontextmenu="showFoe('${id}');return false"><div class="av">${avatar(id)}</div><div class="nm">${c.name}</div><div class="small r${c.r}">${c.r}</div></div>`;}).join("")}</div>
+  <p class="dim small">右鍵（或長按）查看技能。</p>`:`<h3>選角完成，即將開打……</h3>`}`;
 }
 
 /* ===================== RUN: DATA ===================== */
@@ -1529,7 +1742,11 @@ function viewRun(){
 function sceneOpt(i){const o=RUN.scene.opts[i];SFX.click();o.act();}
 
 /* ===================== BOOT ===================== */
+// 邀請連結 ?room=XXXXX：直接進網路對戰並加入房間
+(()=>{const q=new URLSearchParams(location.search).get("room");
+  if(q&&/^[A-Za-z0-9]{5}$/.test(q)){JOIN_CODE=q.toUpperCase();DUEL_MODE="online";VIEW="duel";history.replaceState(null,"",location.pathname);}})();
 render();
+if(JOIN_CODE)joinRoom(JOIN_CODE);
 </script>
 </body>
 </html>

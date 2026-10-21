@@ -8,3 +8,7 @@
 - **雙人對決**：同機兩人蛇形選角後輪流操作互毆。
 
 頭像 `images/avatars/*.webp` 取自本體專案。存檔存在瀏覽器 localStorage。
+
+## 網路對戰
+
+雙人對決的「網路對戰」使用 Firebase Realtime Database（專案 `confinement-escape-text`）。房主的瀏覽器負責計算戰鬥，挑戰者只送出操作並接收戰況快照。資料庫規則在 `database.rules.json`，修改後用 `firebase deploy --only database` 部署。

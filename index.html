@@ -236,6 +236,7 @@ b.sA{color:var(--sideA)} b.sB{color:var(--sideB)}
 .ucard.bossu{width:170px;border-color:#7a2a3a}
 .ucard.bossu.p2{border-color:var(--red);box-shadow:0 0 22px rgba(229,72,77,.7);animation:rage 1.2s infinite}
 @keyframes rage{50%{box-shadow:0 0 34px rgba(229,72,77,.95)}}
+.qtag{display:inline-block;font-size:10px;font-weight:800;line-height:15px;padding:0 5px;margin-right:4px;border-radius:5px;border:1px solid currentColor;vertical-align:middle;letter-spacing:.3px;background:rgba(0,0,0,.35)}
 .rN{color:#a3acb6}.rUR{color:#ff6b95;text-shadow:0 0 8px rgba(255,94,138,.6)}
 .gfx{font-size:11px;color:#7fe3ff}
 .req{font-size:11px;color:var(--dim)}.req.bad{color:var(--red);font-weight:700}
@@ -806,6 +807,8 @@ function gearStats(g){
 }
 function statStr(o){return Object.keys(ST_LBL).filter(k=>o[k]).map(k=>ST_PCT[k]?`${ST_LBL[k]}+${o[k]}%`:`${ST_LBL[k]}+${o[k]}`).join(" ");}
 function fxStr(g){return (g.fx||[]).map(f=>`✦${AFFIX[f.k].n}+${f.v}${AFFIX[f.k].pct?"%":""}`).join(" ");}
+// 稀有度標籤：N／R／SR／SSR／UR／EX，放在裝備名稱旁邊
+function qTag(q){return `<span class="qtag r${q}">${q}</span>`;}
 function gearName(g){return `${GEAR[g.base].icon}${GEAR[g.base].name}${g.lv?" +"+g.lv:""}`;}
 function gearCls(base){const c=GEAR[base].cls;return c?c.map(k=>CLASSES[k].icon+CLASSES[k].name).join("／"):"全職業";}
 
@@ -1316,7 +1319,7 @@ function showCard(id){
     <div>${clsTag(id)} <span class="dim small">${CLASSES[c.cls].desc}</span></div>${o?lvBar(id):""}
     <div class="small">❤ ${sv("hp",s.maxHp)}　⚔ ${sv("atk",s.atk)}　🛡 ${sv("def",s.def)}　💨 ${sv("spd",s.spd)}</div>
     ${o?`<div class="gslots">${Object.keys(SLOTS).map(sl=>{const g=gearById(o.eq&&o.eq[sl]);
-      return `<div class="gslot ${g?"has "+GEAR[g.base].q:""}" onclick="openSlot('${id}','${sl}')"><div class="gi">${g?gearImg(g.base):"＋"}</div>${g?`<b class="r${GEAR[g.base].q}">${GEAR[g.base].name}${g.lv?" +"+g.lv:""}</b>${lvOk(id,g.base)?"":`<div class="req bad">⚠ 需 Lv.${GEAR_REQ[GEAR[g.base].q]}，未生效</div>`}`:`<span class="dim">${SLOTS[sl]}</span>`}</div>`;}).join("")}</div>
+      return `<div class="gslot ${g?"has "+GEAR[g.base].q:""}" onclick="openSlot('${id}','${sl}')"><div class="gi">${g?gearImg(g.base):"＋"}</div>${g?`<b class="r${GEAR[g.base].q}">${qTag(GEAR[g.base].q)}${GEAR[g.base].name}${g.lv?" +"+g.lv:""}</b>${lvOk(id,g.base)?"":`<div class="req bad">⚠ 需 Lv.${GEAR_REQ[GEAR[g.base].q]}，未生效</div>`}`:`<span class="dim">${SLOTS[sl]}</span>`}</div>`;}).join("")}</div>
     ${setHtml(id)}${e.crit||e.steal||e.dodge?`<div class="gfx">裝備特效：${statStr({crit:e.crit,steal:e.steal,dodge:e.dodge})}</div>`:""}`:""}
     </div></div>
     ${skillHtml(c)}
@@ -1546,7 +1549,7 @@ function addGear(base,lv=0){
   const g={uid:++SAVE.gearUid,base,lv,roll:ri(lo,hi),fx};SAVE.gear.push(g);return g;
 }
 function rollGear(q){return pick(Object.keys(GEAR).filter(k=>GEAR[k].q===q));}
-function dropGear(q){return gearName(addGear(rollGear(q)));}
+function dropGear(q){return gearName(addGear(rollGear(q)))+`（${q}）`;}
 // 身上生效的裝備（等級不足的不算）
 // eq 是「欄位→裝備 uid」的對照；預覽時可以傳入假設的組合
 function wornOf(id,eq){return Object.values(eq||{}).map(gearById).filter(g=>g&&lvOk(id,g.base));}
@@ -1579,7 +1582,7 @@ function openSlot(id,sl){
   const list=SAVE.gear.filter(g=>GEAR[g.base].slot===sl&&g.uid!==cur).sort(gearSort);
   const ok=list.filter(g=>canWear(id,g.base)&&lvOk(id,g.base)),no=list.filter(g=>!canWear(id,g.base)),low=list.filter(g=>canWear(id,g.base)&&!lvOk(id,g.base));
   openModal(`<h3>${CARDS[id].name} 的${SLOTS[sl]} ${clsTag(id)}</h3>
-    ${cur?`<div class="row" style="margin-bottom:8px"><span>目前：<b>${gearName(gearById(cur))}</b> ${statStr(gearStats(gearById(cur)))}</span><button class="mini" style="margin-left:auto" onclick="takeOff('${id}','${sl}')">卸下</button></div>`:""}
+    ${cur?`<div class="row" style="margin-bottom:8px"><span>目前：<b>${qTag(GEAR[gearById(cur).base].q)}${gearName(gearById(cur))}</b> ${statStr(gearStats(gearById(cur)))}</span><button class="mini" style="margin-left:auto" onclick="takeOff('${id}','${sl}')">卸下</button></div>`:""}
     <div class="ggrid">${ok.map(g=>gearCard(g,`equipTo('${id}',${g.uid});showCard('${id}');render()`)).join("")||`<span class="dim">沒有可以穿的${SLOTS[sl]}。去「商店」買，或在遠征、競技場打倒敵人掉落。</span>`}</div>
     ${low.length?`<p class="small" style="color:var(--red)">等級不足（目前 Lv.${lvOf(id)}）：${low.map(g=>`${GEAR[g.base].name}（需 Lv.${GEAR_REQ[GEAR[g.base].q]}）`).join("、")}</p>`:""}
     ${no.length?`<p class="dim small">職業不符（${no.map(g=>GEAR[g.base].name).join("、")}）</p>`:""}
@@ -1590,7 +1593,7 @@ function gearSort(a,b){return GQ.indexOf(GEAR[b.base].q)-GQ.indexOf(GEAR[a.base]
 function gearCard(g,onclick){
   const G=GEAR[g.base],w=gearOwner(g.uid);
   return `<div class="gcard ${G.q}" onclick="${onclick}">${g.lv?`<span class="lv ${g.lv>=ENH_MAX?"max":g.lv>=7?"hi":""}">+${g.lv}</span>`:""}<div class="gi">${gearImg(g.base)}</div>
-    <div class="gn r${G.q}">${G.name}</div><div class="small">${statStr(gearStats(g))}</div>${g.fx&&g.fx.length?`<div class="gfx">${fxStr(g)}</div>`:""}
+    <div class="gn r${G.q}">${qTag(G.q)}${G.name}</div><div class="small">${statStr(gearStats(g))}</div>${g.fx&&g.fx.length?`<div class="gfx">${fxStr(g)}</div>`:""}
     <div class="small dim">${GQ_NAME[G.q]}・${SLOTS[G.slot]}・${gearCls(g.base)} ${reqTag(null,g.base)}</div>${w?`<div class="who">👤 ${CARDS[w].name}</div>`:""}</div>`;
 }
 
@@ -1634,7 +1637,7 @@ function viewDex(){
   <div class="filters"><button class="${DEX_Q?"":"on"}" onclick="DEX_Q='';render()">全部（${keys.length}）</button>${GQ.map(q=>`<button class="${DEX_Q===q?"on":""}" onclick="DEX_Q='${q}';render()">${q}（${keys.filter(k=>GEAR[k].q===q).length}）</button>`).join("")}</div>
   <div class="ggrid">${show.map(k=>{const G=GEAR[k],o=dexOwned(k);
     return `<div class="gcard ${G.q} ${o.n?"":"dexlock"}" onclick="openDex('${k}')">${o.n?`<span class="lv" style="color:var(--green)">×${o.n}</span>`:""}
-      <div class="gi">${gearImg(k)}</div><div class="gn r${G.q}">${G.name}</div><div class="small">${statStr(G.st)}</div>
+      <div class="gi">${gearImg(k)}</div><div class="gn r${G.q}">${qTag(G.q)}${G.name}</div><div class="small">${statStr(G.st)}</div>
       <div class="small dim">${GQ_NAME[G.q]}・${SLOTS[G.slot]}・${gearCls(k)} ${reqTag(null,k)}</div>${o.n?"":`<div class="small dim">未擁有</div>`}</div>`;}).join("")}</div>
   <h3 style="margin-top:18px">🧩 套裝效果</h3>
   <p class="dim small" style="margin-top:0">同稀有度的武器、防具、飾品穿 2 件、3 件有額外效果（3 件會同時拿到 2 件的效果）。</p>
@@ -1648,7 +1651,7 @@ function openDex(k){
   const aff=Object.entries(AFFIX).map(([a,A])=>`${A.n} +${Math.max(1,Math.round(A.r[0]*m))}～${Math.max(1,Math.round(A.r[1]*m))}${A.pct?"%":""}`).join("、");
   const boss=Object.keys(BOSS_DROP).find(b=>BOSS_DROP[b]===k);
   openModal(`<div class="detail"><div class="bigicon fx-${G.q}">${gearImg(k)}</div><div style="flex:1">
-    <div class="r${G.q}">${G.q}（${GQ_NAME[G.q]}）・${SLOTS[G.slot]}</div><h2 style="margin:2px 0">${G.name}</h2>
+    <div class="r${G.q}">${G.q}（${GQ_NAME[G.q]}）・${SLOTS[G.slot]}</div><h2 style="margin:2px 0">${qTag(G.q)}${G.name}</h2>
     <div class="small">${o.n?`倉庫裡有 <b>${o.n}</b> 件，最高 +${o.best}`:`<span class="dim">倉庫裡還沒有</span>`}</div>
     <div class="small dim">可裝備：${gearCls(k)}・穿戴等級 Lv.${GEAR_REQ[G.q]}</div></div></div>
     <div class="sk"><b>📊 數值</b><br>基礎：${statStr(G.st)}<br>品質浮動（${lo}%～${hi}%）：${rng}<br>強化到 +${ENH_MAX}：${max}（以 100% 品質計）</div>
@@ -1689,13 +1692,13 @@ function viewFit(){
         <div>${clsTag(id)} <span class="small dim">Lv.${lvOf(id)}</span></div></div></div>
     <div style="margin-top:10px"><b class="small">${nw?"裝上之後的素質":"目前素質"}</b>${nw?` <span class="small dim">（含套裝加成）</span>`:""}</div>
     ${fitStatHtml(cur,nw)}
-    ${nw?`<div class="fitpv"><b>預覽：${gearName(pick)}</b> <span class="small">${statStr(gearStats(pick))}${pick.fx&&pick.fx.length?" "+fxStr(pick):""}</span>
+    ${nw?`<div class="fitpv"><b>預覽：${qTag(GEAR[pick.base].q)}${gearName(pick)}</b> <span class="small">${statStr(gearStats(pick))}${pick.fx&&pick.fx.length?" "+fxStr(pick):""}</span>
       ${pickWho&&pickWho!==id?`<div class="small" style="color:var(--gold)">👤 目前 ${CARDS[pickWho].name} 穿著，穿上會從他身上拿走</div>`:""}
       <div class="row" style="margin-top:8px"><button class="pri" onclick="fitEquip()">✅ 穿上</button><button onclick="FIT_PICK=0;render()">取消</button></div></div>`:""}
   </div>
   <div class="gslots" style="margin-top:10px">${Object.keys(SLOTS).map(sl=>{const g=gearById(eq[sl]);
     return `<div class="gslot ${g?"has "+GEAR[g.base].q:""} ${FIT_SLOT===sl?"fitsel":""}" onclick="fitSlot('${sl}')"><div class="small dim">${SLOTS[sl]}</div>
-      <div class="gi">${g?gearImg(g.base):"＋"}</div>${g?`<b class="r${GEAR[g.base].q}">${GEAR[g.base].name}${g.lv?" +"+g.lv:""}</b>${lvOk(id,g.base)?"":`<div class="req bad">需 Lv.${GEAR_REQ[GEAR[g.base].q]}</div>`}`:`<span class="dim small">空</span>`}</div>`;}).join("")}</div>
+      <div class="gi">${g?gearImg(g.base):"＋"}</div>${g?`<b class="r${GEAR[g.base].q}">${qTag(GEAR[g.base].q)}${GEAR[g.base].name}${g.lv?" +"+g.lv:""}</b>${lvOk(id,g.base)?"":`<div class="req bad">需 Lv.${GEAR_REQ[GEAR[g.base].q]}</div>`}`:`<span class="dim small">空</span>`}</div>`;}).join("")}</div>
   ${setHtml(id)}
   ${eq[FIT_SLOT]?`<div class="row" style="margin-top:6px"><button class="mini" onclick="fitTakeOff('${FIT_SLOT}')">卸下目前的${SLOTS[FIT_SLOT]}</button></div>`:""}
   <h3 style="margin-top:14px">📦 倉庫・${SLOTS[FIT_SLOT]}（${list.length} 件）</h3>
@@ -1721,7 +1724,7 @@ function openGear(uid){
   const G=GEAR[g.base],w=gearOwner(uid),cands=Object.keys(SAVE.owned).filter(id=>canWear(id,g.base)&&lvOk(id,g.base)&&id!==w).sort((a,b)=>R_ORDER[CARDS[a].r]-R_ORDER[CARDS[b].r]);
   const sell=GEAR_SELL[G.q]+g.lv*4;
   openModal(`<div class="detail"><div class="bigicon fx-${G.q}">${gearImg(g.base)}</div><div style="flex:1">
-    <div class="r${G.q}">${G.q}（${GQ_NAME[G.q]}）・${SLOTS[G.slot]}</div><h2 style="margin:2px 0">${G.name}${g.lv?` <span style="color:var(--gold)">+${g.lv}</span>`:""}</h2>
+    <div class="r${G.q}">${G.q}（${GQ_NAME[G.q]}）・${SLOTS[G.slot]}</div><h2 style="margin:2px 0">${qTag(G.q)}${G.name}${g.lv?` <span style="color:var(--gold)">+${g.lv}</span>`:""}</h2>
     <div>${statStr(gearStats(g))}</div>
     <div class="small dim">品質 ${g.roll||100}%（同種裝備數值會浮動）</div>
     ${g.fx&&g.fx.length?`<div class="gfx">隨機詞條：${fxStr(g)}</div>`:`<div class="small dim">沒有隨機詞條</div>`}
@@ -1737,7 +1740,7 @@ function openGear(uid){
 }
 function confirmGearSell(uid){
   const g=gearById(uid),p=GEAR_SELL[GEAR[g.base].q]+g.lv*4;
-  openModal(`<h3>分解 ${gearName(g)}？</h3><p class="dim">裝備會消失，換得 🪙${p}。</p>
+  openModal(`<h3>分解 ${qTag(GEAR[g.base].q)}${gearName(g)}？</h3><p class="dim">裝備會消失，換得 🪙${p}。</p>
     <div class="row"><button class="pri" onclick="sellGear(${uid})">分解</button><button onclick="openGear(${uid})">取消</button></div>`);
 }
 function sellGear(uid){
@@ -1755,7 +1758,7 @@ function openEnhance(uid){
   const max=g.lv>=ENH_MAX,rate=max?0:Math.min(100,ENH_RATE[g.lv]+(ENH.luck?10:0)),cost=enhCost(g.lv);
   const risk=g.lv<4?"失敗：沒有損失":"失敗：掉 1 級";
   const nx={...g,lv:g.lv+1};
-  openModal(`<h3>🔨 強化 ${gearName(g)}</h3>
+  openModal(`<h3>🔨 強化 ${qTag(GEAR[g.base].q)}${gearName(g)}</h3>
     ${ENH.res?`<div class="enhres ${ENH.res.ok?"ok":"bad"}">${ENH.res.msg}</div>`:""}
     ${max?`<p>已經強化到 +${ENH_MAX}，無法再強化。</p>`:`
     <div>${statStr(gearStats(g))} <b>→</b> <span style="color:var(--green)">${statStr(gearStats(nx))}</span></div>
@@ -1807,7 +1810,7 @@ function viewShop(){
     body=`<h3>裝備箱</h3><div class="shopsec">${Object.entries(BOXES).map(([k,b])=>`<div class="sitem"><div class="gi">${boxImg(k,"box")}</div><b>${b.name}</b><div class="small dim">${b.desc}</div>
         <button class="gold" onclick="buyBox('${k}')" ${SAVE.gold<b.price?"disabled":""}>🪙${b.price}</button></div>`).join("")}</div>
       <h3>直接購買</h3><div class="shopsec">${Object.keys(GEAR).filter(k=>GEAR_PRICE[GEAR[k].q]).map(k=>{const G=GEAR[k];
-        return `<div class="sitem" style="border-color:${G.q==="SR"?"var(--purple)":G.q==="R"?"#2c5a86":"#4a525c"}"><div class="gi">${gearImg(k)}</div><b class="r${G.q}">${G.name}</b>
+        return `<div class="sitem" style="border-color:${G.q==="SR"?"var(--purple)":G.q==="R"?"#2c5a86":"#4a525c"}"><div class="gi">${gearImg(k)}</div><b class="r${G.q}">${qTag(G.q)}${G.name}</b>
         <div class="small">${statStr(G.st)} <span class="dim">（±浮動）</span></div><div class="small dim">${GQ_NAME[G.q]}・${SLOTS[G.slot]}・${gearCls(k)} ${reqTag(null,k)}</div>
         <button onclick="buyGear('${k}')" ${SAVE.gold<GEAR_PRICE[G.q]?"disabled":""}>🪙${GEAR_PRICE[G.q]}</button></div>`;}).join("")}</div>
       <p class="dim small">SSR（史詩）只能從裝備箱、主線魔王或深淵守門者取得；UR（傳說）只能從黃金裝備箱、第 5～6 章魔王或深淵 D20 以下的守門者取得。</p>
@@ -1833,7 +1836,7 @@ function pay(n){if(SAVE.gold<n){toast("金條不足");return false;}SAVE.gold-=n
 function buyGear(k){
   if(!pay(GEAR_PRICE[GEAR[k].q]))return;
   const g=addGear(k);save();SFX.click();render();
-  openModal(`<h3>🛒 購買成功</h3><p>獲得 <b class="r${GEAR[k].q}">${gearName(g)}</b>（品質 ${g.roll}%：${statStr(gearStats(g))}${g.fx.length?" "+fxStr(g):""}）。</p>
+  openModal(`<h3>🛒 購買成功</h3><p>獲得 <b class="r${GEAR[k].q}">${qTag(GEAR[k].q)}${gearName(g)}</b>（品質 ${g.roll}%：${statStr(gearStats(g))}${g.fx.length?" "+fxStr(g):""}）。</p>
     <div class="row"><button class="pri" onclick="openGear(${g.uid})">查看／裝備</button><button onclick="closeModal()">關閉</button></div>`);
 }
 function buyBox(k){

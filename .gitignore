@@ -1,0 +1,7 @@
+# GM 工具：服務帳戶金鑰等於專案最高權限，絕對不能上傳
+gm/*.json
+gm/_libs/
+gm/gm_log.txt
+*firebase-adminsdk*.json
+*serviceAccount*.json
+__pycache__/

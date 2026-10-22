@@ -25,7 +25,7 @@
 - **突破**：角色 5★ 後可以消耗 💎突破石 突破，成功率從 30% 起每次 ×0.85 遞減（30→26→22→…→7%）。成功：星星回到 1★ 重新累積，原本的能力全部保留，另外全能力 +1.5%，突破後每升 1 星 +2.5%；失敗：突破石消失、不會降星。第 n 次突破需要 2n 顆突破石，最多 10 次。突破石來源：商店（🪙15）、5★ 後抽到重複卡、主線魔王、深淵守門者、練功房。
 - **等級**：戰鬥勝利得經驗（遠征、魔王、深淵守門者、競技場、練功房），每級全能力 +2%，最高 Lv.50。倒下的角色經驗減半。
 - **練功房**：30 關可無限重打的怪物關，打贏解鎖下一關，主要給經驗，少量金條、10% 掉裝備。
-- **鍵盤操作**：戰鬥中輪到你時，會預先選好一隻目標（金框＋🎯），↑↓（或 W S）選行動，←→（或 A D）換目標，Enter／空白鍵直接出手，不用再點敵人；進到選道具或選目標時 ←→ 換目標、Enter 確認、Esc／Backspace 返回。
+- **鍵盤操作**：戰鬥中輪到你時，會預先選好一隻目標（金框＋🎯），←→（或 A D）在攻擊／技能／防禦／道具之間切換，Enter／空白鍵直接出手，不用再點敵人；想換目標按 ↑（W）移到目標列再用 ←→ 換，↓（S）回到行動列，或直接按 Tab 換目標；進到選道具或選目標時 ←→ 選擇、Enter 確認、Esc／Backspace 返回。
 - **競技場**：對戰 AI 小隊爬塔賺金條，勝利有機率掉裝備。
 - **雙人對決**：同機兩人蛇形選角後輪流操作互毆。
 
@@ -36,12 +36,14 @@
 - 遠征探索：Abandoned passages (horror ambience loop) — by congusbongus，取自 OpenGameArt（https://opengameart.org/content/abandoned-passages-horror-ambience-loop ），授權 CC0。
 - 招募／隊伍／裝備：Medieval: King's Feast — by RandomMind，取自 OpenGameArt（https://opengameart.org/content/medieval-kings-feast ），授權 CC0。
 - 故事頁（老國王）：Fantasy Choir 2 — by cesisco（César da Rocha），取自 OpenGameArt（https://opengameart.org/content/fantasy-choir-3-orchestral-pieces ），授權 CC0。
+- 競技場（含競技場戰鬥）：Epic Boss Battle [Seamlessly Looping] — by Juhani Junkala（上傳者 SubspaceAudio），取自 OpenGameArt（https://opengameart.org/content/boss-battle-music ），授權 CC0。
+- 雙人對決（含同機與網路對戰）：JRPG Epic Rock Battle Theme #1 — by HydroGene，取自 OpenGameArt（https://opengameart.org/content/jrpg-epic-rock-battle-theme-1 ），授權 CC0。
 - 無盡深淵：Dark Cavern Ambient — by Paul Wortmann，取自 OpenGameArt（https://opengameart.org/content/dark-cavern-ambient ），授權 CC0。
 - 戰鬥／逃出成功：DEgITx - Machine Paradigm（https://www.youtube.com/watch?v=2uGf8-vfFLI ，作者頻道 @DEgITx），透過 YouTube 嵌入播放器播放，版權屬於原作者。存檔存在瀏覽器 localStorage。
 
 ## 帳號／雲端存檔
 
-右上角 👤 可以註冊「自訂帳號＋密碼」，登入後存檔自動上傳 Firebase（`users/{uid}`），換裝置登入同一個帳號就能接著玩；不登入也能照常玩。帳號會轉成「帳號@jbts.game」當登入信箱（不寄信，忘記密碼無法重設）。只能在網路版使用。
+右上角 👤 可以註冊「自訂帳號＋密碼」，登入後存檔自動上傳 Firebase（`users/{uid}`），換裝置登入同一個帳號就能接著玩；不登入也能照常玩。帳號會轉成「帳號@jbts.game」當登入信箱（不寄信，忘記密碼無法重設）。登入後可在 👤 視窗按「🔑 修改密碼」，輸入舊密碼和新密碼修改。忘記密碼時，開發者（GM）可以用 `gm/` 資料夾裡的 GM 工具幫玩家重設成臨時密碼（玩家的原密碼查不到，Firebase 只存加密結果）；GM 工具需要服務帳戶金鑰，只在開發者自己的電腦上使用，詳見 `gm/說明.txt`。只能在網路版使用。
 
 啟用步驟（只要做一次）：
 1. Firebase 主控台 → Authentication → Sign-in method → 開啟「電子郵件／密碼」。

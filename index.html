@@ -376,6 +376,7 @@ footer.credit a{color:var(--gold)}
 .kbsel{outline:3px solid #5ef0ff!important;outline-offset:2px;box-shadow:0 0 16px rgba(94,240,255,.85)!important}
 .kbtgt{outline:3px solid #ffd24d!important;outline-offset:2px;box-shadow:0 0 18px rgba(255,210,77,.9)!important;position:relative}
 .kbtgt::before{content:"🎯";position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:22px;z-index:5;animation:floaty 1s ease-in-out infinite;pointer-events:none}
+.kbhold{outline:2px dashed #5ef0ff!important;outline-offset:2px}
 .kbhint{margin-top:6px;font-size:12px;color:var(--dim)}
 @media (hover:none){.kbhint{display:none}}
 
@@ -434,6 +435,9 @@ footer.credit a{color:var(--gold)}
       出處 <a href="https://opengameart.org/content/medieval-kings-feast" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・故事頁（老國王）：<b>Fantasy Choir 2</b> — by cesisco（César da Rocha）・
       出處 <a href="https://opengameart.org/content/fantasy-choir-3-orchestral-pieces" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
+      ・競技場：<b>Epic Boss Battle [Seamlessly Looping]</b> — by Juhani Junkala（<a href="https://opengameart.org/content/boss-battle-music" target="_blank" rel="noopener">OpenGameArt</a>，上傳者 SubspaceAudio）・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
+      ・雙人對決：<b>JRPG Epic Rock Battle Theme #1</b> — by HydroGene・
+      出處 <a href="https://opengameart.org/content/jrpg-epic-rock-battle-theme-1" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・無盡深淵：<b>Dark Cavern Ambient</b> — by Paul Wortmann・
       出處 <a href="https://opengameart.org/content/dark-cavern-ambient" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・戰鬥／破關：<b>DEgITx - Machine Paradigm</b>・出處 <a href="https://www.youtube.com/watch?v=2uGf8-vfFLI" target="_blank" rel="noopener">YouTube</a>
@@ -445,6 +449,8 @@ footer.credit a{color:var(--gold)}
     <audio id="bgm_abyss" src="music/dark_cavern_ambient_002.ogg" loop preload="none"></audio>
     <audio id="bgm_town" src="music/kings_feast_loop.ogg" loop preload="none"></audio>
     <audio id="bgm_story" src="music/fantasy_choir_2.ogg" loop preload="none"></audio>
+    <audio id="bgm_arena" src="music/arena_epic_boss_battle.ogg" loop preload="none"></audio>
+    <audio id="bgm_duel" src="music/jrpg_battle_loop.mp3" loop preload="none"></audio>
   </footer>
 </div>
 <div id="modal" onclick="if(event.target===this)closeModal()"><div class="mbox" id="mbox"></div></div>
@@ -1012,7 +1018,7 @@ function toggleMute(){SAVE.muted=!SAVE.muted;save();renderHeader();}
 const BGM_ID="2uGf8-vfFLI";
 let BGM=null,BGM_READY=false,BGM_STARTED=false,BGM_CUR=null;
 function loadBgm(){
-  ["main","town","run","abyss","story"].forEach(k=>{const a=$("#bgm_"+k);if(a)a.volume=.4;});
+  ["main","town","run","abyss","story","arena","duel"].forEach(k=>{const a=$("#bgm_"+k);if(a)a.volume=.4;});
   window.onYouTubeIframeAPIReady=()=>{
     BGM=new YT.Player("bgmPlayer",{videoId:BGM_ID,
       playerVars:{loop:1,playlist:BGM_ID,controls:1,playsinline:1,rel:0,modestbranding:1},
@@ -1022,7 +1028,14 @@ function loadBgm(){
 }
 function bgmWant(){
   if(!BGM_STARTED||SAVE.bgm===false)return null;
-  if(VIEW==="battle"||(VIEW==="run"&&RUN&&!RUN.active&&RUN.escaped))return "battle";
+  if(VIEW==="battle"){ // 競技場、雙人對決（含網路對戰）的戰鬥用各自的專屬曲，其他戰鬥用 YouTube 那首
+    if(CUR_B&&(CUR_B.online||CUR_B.guest||BATTLE_HOME==="duel"))return "duel";
+    if(BATTLE_HOME==="arena")return "arena";
+    return "battle";
+  }
+  if(VIEW==="run"&&RUN&&!RUN.active&&RUN.escaped)return "battle";
+  if(VIEW==="arena")return "arena";
+  if(VIEW==="duel")return "duel";
   if(VIEW==="run"&&RUN&&RUN.active)return RUN.ch===ABYSS?"abyss":"run";
   if(VIEW==="story")return "story"; // 老國王的故事頁：莊嚴的合唱曲
   if(VIEW==="gacha"||VIEW==="team"||VIEW==="gear")return "town"; // 招募、隊伍、裝備：中世紀風
@@ -1030,7 +1043,7 @@ function bgmWant(){
 }
 function syncBgm(){
   const w=bgmWant();if(w===BGM_CUR)return;BGM_CUR=w;
-  ["main","town","run","abyss","story"].forEach(k=>{const a=$("#bgm_"+k);if(!a||!a.play)return;
+  ["main","town","run","abyss","story","arena","duel"].forEach(k=>{const a=$("#bgm_"+k);if(!a||!a.play)return;
     if(w===k){a.currentTime=0;a.play().catch(()=>{});}else a.pause();});
   if(BGM_READY){if(w==="battle"){BGM.seekTo(0,true);BGM.playVideo();}else BGM.pauseVideo();}
 }
@@ -2344,7 +2357,7 @@ function useBattleItem(B,u,idx,t){
 }
 
 /* ---- human input ---- */
-function waitHuman(B,u){return new Promise(res=>{KB_SEL="";B.wait={u,res,mode:"menu"};render();});}
+function waitHuman(B,u){return new Promise(res=>{KB_SEL="";KB_ROW="act";B.wait={u,res,mode:"menu"};render();});}
 function act(kind){
   const B=CUR_B;if(!B)return;
   if(kind==="auto"){B.auto=!B.auto;SFX.click();if(B.auto&&B.wait)return resolveHuman(aiChoose(B,B.wait.u));render();return;}
@@ -2423,9 +2436,10 @@ function actionPanel(B){
 }
 
 /* ---- 鍵盤操作（戰鬥中） ----
-   平常（輪到我方、選行動的時候）就已經「預先選好一隻目標」：↑↓（或 W S）選行動，←→（或 A D）換目標，
-   Enter 直接執行——攻擊不用再點敵人。進到選道具／選目標畫面時，←→ 換目標、Enter 確認、Esc 返回。 */
-let KB_SEL="",KB_TE=0,KB_TA=0; // KB_TE／KB_TA：最近選的敵人／我方目標（還活著、還能選就沿用）
+   輪到我方時已經「預先選好一隻目標」（🎯），游標預設在行動列：←→（A D）在 攻擊／技能／防禦／道具 之間切換，Enter 直接執行，攻擊不用再點敵人。
+   想換目標：按 ↑（W）把游標移到目標列，←→ 換一隻，Enter 就打這一隻，↓（S）回到行動列；也可以按 Tab 直接換目標。
+   進到選道具／選目標畫面時，←→ 換目標、Enter 確認、Esc 返回。 */
+let KB_SEL="",KB_ROW="act",KB_TE=0,KB_TA=0; // KB_ROW：游標在「行動列」(act) 還是「目標列」(tgt)；KB_TE／KB_TA：最近選的敵人／我方目標
 const KB_ACT=["attack","skill","guard","items"];
 const kbKey=e=>(e.dataset&&e.dataset.kb)||e.id;
 function kbMenu(){const B=CUR_B;return !!(B&&VIEW==="battle"&&B.wait&&B.wait.mode==="menu");}
@@ -2464,14 +2478,16 @@ function kbCur(items){return items.find(e=>kbKey(e)===KB_SEL);}
 // 每次畫面重畫後呼叫：標出目前選到的行動（青框）與目標（金框＋🎯）
 function kbApply(){
   try{
-    document.querySelectorAll("#view .kbsel,#view .kbtgt").forEach(e=>e.classList.remove("kbsel","kbtgt"));
+    document.querySelectorAll("#view .kbsel,#view .kbtgt,#view .kbhold").forEach(e=>e.classList.remove("kbsel","kbtgt","kbhold"));
     const B=CUR_B;if(!B||VIEW!=="battle")return;
     const items=kbItems();if(!items.length)return;
     if(kbMenu()){
       let cur=kbCur(items);
       if(!cur){cur=items.find(e=>kbKey(e)==="attack")||items[0];KB_SEL=kbKey(cur);}
-      cur.classList.add("kbsel");
-      const t=kbCurTarget();if(t.id){const el=document.getElementById("u"+t.id);if(el)el.classList.add("kbtgt");}
+      const t=kbCurTarget();
+      if(KB_ROW==="tgt"&&!t.list.length)KB_ROW="act";
+      cur.classList.add(KB_ROW==="tgt"?"kbhold":"kbsel");
+      if(t.id){const el=document.getElementById("u"+t.id);if(el){el.classList.add("kbtgt");if(KB_ROW==="tgt")el.classList.add("kbsel");}}
       return;
     }
     let cur=kbCur(items);
@@ -2492,15 +2508,21 @@ function kbRows(items){
   rows.forEach(r=>r.list.sort((a,b)=>a.x-b.x));
   return rows;
 }
+function kbCycleTarget(d){
+  const t=kbCurTarget();
+  if(t.list.length>1){const nid=t.list[(t.list.indexOf(t.id)+d+t.list.length)%t.list.length];kbRemember(t.tt,nid);kbApply();}
+}
 function kbMove(dx,dy){
   if(kbMenu()){
-    if(dy){ // 上下：選行動
-      const acts=kbActions();if(!acts.length)return;
-      const i=Math.max(0,acts.findIndex(e=>kbKey(e)===KB_SEL));
-      KB_SEL=kbKey(acts[(i+dy+acts.length)%acts.length]);kbApply();return;
+    if(dy<0){ // ↑：把游標移到目標列（只有需要選目標的行動才有）
+      if(kbCurTarget().list.length){KB_ROW="tgt";kbApply();}
+      return;
     }
-    const t=kbCurTarget(); // 左右：換目標
-    if(t.list.length>1){const nid=t.list[(t.list.indexOf(t.id)+dx+t.list.length)%t.list.length];kbRemember(t.tt,nid);kbApply();}
+    if(dy>0){KB_ROW="act";kbApply();return;} // ↓：回到行動列
+    if(KB_ROW==="tgt"){kbCycleTarget(dx);return;} // 目標列：←→ 換目標
+    const acts=kbActions();if(!acts.length)return; // 行動列：←→ 在攻擊／技能／防禦／道具之間切換
+    const i=Math.max(0,acts.findIndex(e=>kbKey(e)===KB_SEL));
+    KB_SEL=kbKey(acts[(i+dx+acts.length)%acts.length]);kbApply();
     return;
   }
   const items=kbItems();if(!items.length)return;
@@ -2534,6 +2556,7 @@ function kbKeydown(e){
   if((m&&m.classList.contains("show"))||(g&&g.classList.contains("show")))return;
   if(!B.over&&!B.wait)return; // 對手行動中不攔截按鍵，避免誤觸
   const k=e.key.length===1?e.key.toLowerCase():e.key;
+  if(k==="Tab"&&kbMenu()){e.preventDefault();kbCycleTarget(e.shiftKey?-1:1);return;}
   const D={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1],a:[-1,0],d:[1,0],w:[0,-1],s:[0,1]};
   if(D[k]){e.preventDefault();kbMove(D[k][0],D[k][1]);return;}
   if(k==="Enter"||k===" "){
@@ -2548,7 +2571,7 @@ function kbKeydown(e){
     if(w&&(w.mode==="target"||w.mode==="items")){e.preventDefault();cancelTarget();}
   }
 }
-const KB_HINT=`<div class="kbhint">⌨ ↑↓（W S）選行動　←→（A D）換目標　Enter 確認　Esc 返回</div>`;
+const KB_HINT=`<div class="kbhint">⌨ ←→（A D）選行動　↑ 換目標（↓ 返回）　Tab 換目標　Enter 確認　Esc 返回</div>`;
 function viewBattle(){
   const B=CUR_B;if(!B)return "";
   const me=B.mySide||"A",op=me==="A"?"B":"A";
@@ -3115,6 +3138,7 @@ function authErr(e){
   if(/email-already-in-use/.test(c))return "這個帳號已經有人用了，換一個吧";
   if(/wrong-password|user-not-found|invalid-credential|invalid-login/.test(c))return "帳號或密碼錯誤";
   if(/weak-password/.test(c))return "密碼至少要 6 個字";
+  if(/requires-recent-login/.test(c))return "登入時間太久了，請先登出再重新登入後再改密碼";
   if(/too-many-requests/.test(c))return "嘗試太多次了，請稍後再試";
   if(/operation-not-allowed/.test(c))return "伺服器還沒開放帳號功能（開發者需要在 Firebase 開啟帳號密碼登入）";
   if(/network/.test(c))return "連線失敗，請檢查網路";
@@ -3129,6 +3153,7 @@ function openAccount(){
     <p class="small dim">${SYNC_MSG||"尚未同步"}</p>
     <div class="opts"><button class="pri" onclick="uploadSave(true)">☁ 立即上傳存檔</button>
       <button onclick="pullCloud(true)">⬇ 從雲端下載存檔</button>
+      <button onclick="openChangePw()">🔑 修改密碼</button>
       <button onclick="doLogout()">登出</button></div>
     <div class="row" style="margin-top:10px"><button onclick="closeModal()">關閉</button></div>`);
   openModal(`<h3>👤 帳號（雲端存檔）</h3>
@@ -3154,6 +3179,34 @@ async function doLogin(){
   const v=acctInput();if(!v)return;toast("登入中……");
   try{const a=await fbAuth();const c=await a.signInWithEmailAndPassword(acctEmail(v.n),v.p);setAcct(c.user);glog("👤ACCT","登入 "+v.n);await pullCloud(true);}
   catch(e){glog("❌ACCT",e&&e.code||e);toast(authErr(e));}
+}
+// 修改密碼：先用舊密碼重新驗證身分，再改成新密碼（沒有綁信箱，所以忘記舊密碼就無法修改）
+function openChangePw(){
+  if(!ACCT)return openAccount();
+  const css="width:100%;padding:8px;margin:4px 0 8px;font:inherit;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px";
+  openModal(`<h3>🔑 修改密碼</h3><p class="small dim">帳號：<b>${ACCT.name}</b></p>
+    <label class="small">舊密碼</label><input id="cpOld" type="password" autocomplete="current-password" style="${css}">
+    <label class="small">新密碼（至少 6 個字）</label><input id="cpNew" type="password" autocomplete="new-password" style="${css}">
+    <label class="small">再輸入一次新密碼</label><input id="cpNew2" type="password" autocomplete="new-password" style="${css}">
+    <p class="small" style="color:var(--red)">⚠ 沒有綁定信箱，改完請記好新密碼，忘記就找不回來。</p>
+    <div class="row"><button class="pri" onclick="doChangePw()">確認修改</button><button onclick="openAccount()">返回</button></div>`);
+}
+async function doChangePw(){
+  const o=$("#cpOld").value||"",n=$("#cpNew").value||"",n2=$("#cpNew2").value||"";
+  if(!o){toast("請輸入舊密碼");return;}
+  if(n.length<6){toast("新密碼至少要 6 個字");return;}
+  if(n!==n2){toast("兩次輸入的新密碼不一樣");return;}
+  if(n===o){toast("新密碼不能跟舊密碼一樣");return;}
+  toast("修改中……");
+  try{
+    const a=await fbAuth(),u=a.currentUser;if(!u){toast("登入狀態已失效，請重新登入");return;}
+    await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,o));
+    await u.updatePassword(n);
+    glog("👤ACCT","修改密碼 "+ACCT.name);closeModal();toast("✅ 密碼已修改，下次請用新密碼登入");
+  }catch(e){
+    glog("❌ACCT",e&&e.code||e);
+    toast(/wrong-password|invalid-credential|invalid-login/.test(e&&e.code||"")?"舊密碼不正確":authErr(e));
+  }
 }
 async function doLogout(){try{await (await fbAuth()).signOut();}catch(e){}ACCT=null;SYNC_MSG="";try{localStorage.removeItem(ACCT_KEY);}catch(e){}closeModal();renderHeader();toast("已登出（存檔仍保留在這台裝置）");}
 // 讀雲端存檔；ask=true 時兩邊不同會讓玩家選，false（開遊戲自動同步）時用比較新的那份

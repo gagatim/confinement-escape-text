@@ -1377,8 +1377,8 @@ function teamUnit(id){
 }
 
 /* ===================== LEVEL ===================== */
-// 角色等級：戰鬥勝利得經驗，每級全能力 +2%（用 cardStats 的 scale 疊上去），上限 Lv.20
-const LV_MAX=20;
+// 角色等級：戰鬥勝利得經驗，每級全能力 +2%（用 cardStats 的 scale 疊上去），上限 Lv.50
+const LV_MAX=50;
 function lvOf(id){const o=SAVE.owned[id];return o&&o.lv||1;}
 function lvScale(id){return 1+.02*(lvOf(id)-1);}
 function lvNeed(lv){return 8+lv*6;}
@@ -2117,52 +2117,52 @@ function viewOnline(){
 // img:true 的怪物頭像在 images/bosses/{id}_1.webp（一般）與 {id}_2.webp（爆氣）
 const BOSS_LIST=["doomhunter","voidlord","fatejudge","reaper","abyssking","nightemperor","overlord","endwalker"];
 Object.assign(MONSTERS,{
-  doomhunter:{name:"滅世獵手",img:true,r:"SSR",hp:420,atk:14,def:3,spd:7,boss2:{hp:.6,atk:.25,spd:2},gx:{crit:25},
+  doomhunter:{name:"滅世獵手",img:true,r:"SSR",hp:267,atk:30,def:8,spd:12,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:25},
     quote:"追蹤、狩獵，直到目標消失。",
     skill:{name:"鎖定狙殺",cd:3,t:"none",kind:"dmg",desc:"狙擊生命最低的敵人（2.4倍、無視防禦）。爆氣後改為3倍，並對其他敵人掃射0.6倍。",
       use(B,u){const f=foes(B,u).sort((a,b)=>a.hp-b.hp);if(!f.length)return;blog(B,"🎯 紅色雷射點停在了獵物的眉心。","bad");
         hit(B,u,f[0],u.flags.p2?3:2.4,{pierce:true});if(u.flags.p2)foes(B,u).filter(x=>x!==f[0]).forEach(t=>hit(B,u,t,.6));}},
     passive:{name:"獵殺本能",desc:"暴擊率+25%。"}},
-  voidlord:{name:"虛空主宰",img:true,r:"SSR",hp:480,atk:14,def:4,spd:6,boss2:{hp:.6,atk:.25,spd:2},gx:{dodge:15},
+  voidlord:{name:"虛空主宰",img:true,r:"SSR",hp:667,atk:63,def:18,spd:21,boss2:{hp:.7,atk:.35,spd:2},gx:{dodge:15},
     quote:"我掌控的不只是數據，而是整個禁閉區的規則。",
     skill:{name:"系統覆寫",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.8倍傷害，每人40%機率暈眩1回合。爆氣後再清除敵人所有增益並攻擊-2。",
       use(B,u){blog(B,"💠 所有螢幕同時跳出同一行字：「權限已轉移」。","bad");foes(B,u).forEach(t=>{hit(B,u,t,.8);if(t.alive&&rnd()<.4)stun(B,t,1);
         if(u.flags.p2&&t.alive){t.buffs=t.buffs.filter(b=>b.v<0);buff(B,t,"atk",-2,2);}});}},
     passive:{name:"虛體",desc:"閃避率+15%。"}},
-  fatejudge:{name:"命運裁決者",img:true,r:"SSR",hp:540,atk:15,def:4,spd:5,dr:2,boss2:{hp:.6,atk:.25,spd:2},
+  fatejudge:{name:"命運裁決者",img:true,r:"SSR",hp:1666,atk:138,def:42,spd:36,dr:3,boss2:{hp:.7,atk:.35,spd:2},
     quote:"你的命運，由我來決定。",
     skill:{name:"命運之輪",cd:3,t:"none",kind:"dmg",desc:"轉動命運之輪，隨機：全體1倍傷害／自身恢復8%生命／單體2.5倍傷害。爆氣後一次轉兩格。",
       use(B,u){for(let n=0;n<(u.flags.p2?2:1);n++){const k=ri(1,3),f=foes(B,u);if(!f.length)break;
         if(k===1){blog(B,"☸ 命運之輪停在「審判」。","bad");f.forEach(t=>hit(B,u,t,1));}
         else if(k===2){blog(B,"☸ 命運之輪停在「延命」。","bad");heal(B,u,Math.round(u.maxHp*.08));}
         else{blog(B,"☸ 命運之輪停在「處刑」。","bad");hit(B,u,pick(f),2.5);}}}},
-    passive:{name:"定數",desc:"受到的傷害-2。"}},
-  reaper:{name:"死神代行者",img:true,r:"SSR",hp:600,atk:17,def:4,spd:6,boss2:{hp:.6,atk:.25,spd:2},gx:{steal:20},
+    passive:{name:"定數",desc:"受到的傷害-3。"}},
+  reaper:{name:"死神代行者",img:true,r:"SSR",hp:2000,atk:156,def:42,spd:42,boss2:{hp:.7,atk:.35,spd:2},gx:{steal:20},
     quote:"死亡不是終點，而是我的任務。",
     skill:{name:"收割",cd:3,t:"none",kind:"dmg",desc:"對生命最低的敵人揮下鐮刀（1.8倍）。爆氣後全體敵人再中毒（4點×3回合）。",
       use(B,u){const f=foes(B,u).sort((a,b)=>a.hp-b.hp);if(!f.length)return;blog(B,"⚰ 鎖鏈嘩啦作響，鐮刀落下。","bad");hit(B,u,f[0],1.8);
         if(u.flags.p2)foes(B,u).forEach(t=>poison(B,t,4,3));}},
     passive:{name:"魂之收割",desc:"造成傷害時恢復傷害20%的生命。"}},
-  abyssking:{name:"深淵君王",img:true,r:"SSR",hp:680,atk:17,def:6,spd:4,dr:3,regen:6,boss2:{hp:.6,atk:.25,spd:2},
+  abyssking:{name:"深淵君王",img:true,r:"SSR",hp:2400,atk:168,def:54,spd:30,dr:4,regen:15,boss2:{hp:.7,atk:.35,spd:2},
     quote:"這片禁閉區，現在由我來支配。",
     skill:{name:"王權壓制",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.9倍傷害，攻擊-3（2回合）。爆氣後傷害提高到1.2倍。",
       use(B,u){blog(B,"👑 「跪下。」整個房間的空氣沉了下來。","bad");foes(B,u).forEach(t=>{hit(B,u,t,u.flags.p2?1.2:.9);if(t.alive)buff(B,t,"atk",-3,2);});}},
-    passive:{name:"王之軀",desc:"受到的傷害-3；每回合恢復6生命。"}},
-  nightemperor:{name:"永夜帝王",img:true,r:"SSR",hp:760,atk:18,def:6,spd:5,regen:8,boss2:{hp:.6,atk:.25,spd:2},gx:{dodge:10},
+    passive:{name:"王之軀",desc:"受到的傷害-4；每回合恢復15生命。"}},
+  nightemperor:{name:"永夜帝王",img:true,r:"SSR",hp:4299,atk:270,def:81,spd:54,regen:20,boss2:{hp:.7,atk:.35,spd:2},gx:{dodge:10},
     quote:"黑夜，是我的王座。",
     skill:{name:"永夜降臨",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.7倍傷害並中毒（3點×3回合），自身恢復5%生命。爆氣後中毒加重為5點。",
       use(B,u){blog(B,"🌑 燈全滅了。黑暗裡只剩下那雙紫色的眼睛。","bad");foes(B,u).forEach(t=>{hit(B,u,t,.7);if(t.alive)poison(B,t,u.flags.p2?5:3,3);});heal(B,u,Math.round(u.maxHp*.05));}},
-    passive:{name:"夜之主",desc:"每回合恢復8生命；閃避率+10%。"}},
-  overlord:{name:"天命霸主",img:true,r:"SSR",hp:850,atk:20,def:7,spd:5,dr:3,boss2:{hp:.6,atk:.25,spd:2},gx:{crit:15},
+    passive:{name:"夜之主",desc:"每回合恢復20生命；閃避率+10%。"}},
+  overlord:{name:"天命霸主",img:true,r:"SSR",hp:17000,atk:990,def:300,spd:180,dr:5,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:15},
     quote:"命運？由我來定義！",
     skill:{name:"天命審判",cd:3,t:"none",kind:"dmg",desc:"對單一敵人造成2倍傷害、其他敵人0.8倍，自身攻擊+3（3回合）。",
       use(B,u){const f=foes(B,u);if(!f.length)return;const t=pick(f);blog(B,"🌟 金色的光球從天而降。","bad");hit(B,u,t,2);foes(B,u).filter(x=>x!==t).forEach(x=>hit(B,u,x,.8));buff(B,u,"atk",3,3);}},
-    passive:{name:"霸者之威",desc:"受到的傷害-3；暴擊率+15%。"}},
-  endwalker:{name:"終焉行者",img:true,r:"SSR",hp:950,atk:22,def:7,spd:7,dr:3,boss2:{hp:.6,atk:.25,spd:2},gx:{crit:15,steal:15},
+    passive:{name:"霸者之威",desc:"受到的傷害-5；暴擊率+15%。"}},
+  endwalker:{name:"終焉行者",img:true,r:"SSR",hp:20000,atk:1080,def:330,spd:240,dr:5,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:15,steal:15},
     quote:"最後一個站著的，才是真正的勝者。",
     skill:{name:"終焉",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成1.2倍傷害。爆氣後改為1.6倍，每人30%機率暈眩。",
       use(B,u){blog(B,"⛓ 「遊戲結束。」","bad");foes(B,u).forEach(t=>{hit(B,u,t,u.flags.p2?1.6:1.2);if(u.flags.p2&&t.alive&&rnd()<.3)stun(B,t,1);});}},
-    passive:{name:"最後的勝者",desc:"受到的傷害-3；暴擊率+15%、吸血15%。"}}
+    passive:{name:"最後的勝者",desc:"受到的傷害-5；暴擊率+15%、吸血15%。"}}
 });
 // 魔王的個人故事
 const BOSS_STORY={
@@ -2187,7 +2187,7 @@ const BOSS_STORY={
 const BOSS_DROP={doomhunter:"doomrifle",voidlord:"voidterm",fatejudge:"fatecompass",reaper:"reaperscythe",abyssking:"abysscrown",nightemperor:"nightrobe",overlord:"overlordmantle",endwalker:"endchain"};
 const BOSS_REQ=1; // 主線通關幾章後開放（第一位）
 function bossUnlocked(i){return SAVE.prog.cleared>=BOSS_REQ&&(i===0||(SAVE.bosses[BOSS_LIST[i-1]]||0)>0);}
-function bossReward(i){return {gold:60+i*25,exp:60+i*20,first:150+i*60,stone:3+i};}
+function bossReward(i){return {gold:100+i*50,exp:150+i*60,first:300+i*120,stone:5+i*2};}
 function bossCard(id,i){
   const M=MONSTERS[id],ok=bossUnlocked(i),n=SAVE.bosses[id]||0;
   return `<div class="bosscard ${ok?"":"lockc"}" onclick="${ok?`openBoss('${id}')`:"toast('先打倒上一位魔王')"}">
@@ -2210,14 +2210,14 @@ function openBoss(id){
     ${skillHtml(M)}
     <div class="sk"><b>💢 爆氣（第二階段）</b><br>第一條命打完後立刻爆氣：生命回復到 ${Math.round(M.boss2.hp*100)}%、攻擊+${Math.round(M.boss2.atk*100)}%、速度+${M.boss2.spd}、解除身上的減益與中毒、技能冷卻 -1。</div>
     <div class="sk"><b>🎁 獎勵</b><br>每次討伐：🪙${r.gold}、經驗 +${r.exp}${n?"":`<br>首次討伐：額外 🪙${r.first}、💎突破石 ×${r.stone}`}<br>
-      專屬裝備 <b class="rEX">${G.icon}${G.name}</b>（${statStr(G.st)}）：${n?"2%":"首次 5%"} 機率掉落</div>
+      專屬裝備 <b class="rEX">${G.icon}${G.name}</b>（${statStr(G.st)}）：${n?"2% 機率掉落":"首次討伐必定掉落"}</div>
     <div class="row" style="margin-top:12px"><button class="pri" onclick="startBoss('${id}')" ${SAVE.team.length?"":"disabled"}>⚔ 挑戰</button><button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
 }
 function startBoss(id){
   if(!SAVE.team.length)return;
   closeModal();
   const i=BOSS_LIST.indexOf(id),M=MONSTERS[id],r=bossReward(i),ids=SAVE.team.slice();
-  startBattle({title:`魔王討伐・${M.name}`,home:"run",maxRound:120,A:ids.map(teamUnit),B:[{id,stars:1,gx:M.gx}],
+  startBattle({title:`魔王討伐・${M.name}`,home:"run",maxRound:200,A:ids.map(teamUnit),B:[{id,stars:1,gx:M.gx}],
     intro:`「${M.quote}」`,
     resultNote:B=>B.over==="A"?`${M.name} 倒下了。`:"魔王太強了……升級、升星、換裝備後再來。",
     onEnd(win,B){
@@ -2228,7 +2228,7 @@ function startBoss(id){
         SAVE.gold+=r.gold;notes.push(`🪙+${r.gold}`);
         if(first){SAVE.gold+=r.first;SAVE.charms.stone+=r.stone;notes.push(`🏅 首次討伐：🪙+${r.first}、💎突破石 ×${r.stone}`);}
         notes.push(expLine(r.exp,gainExp(ids,r.exp,dead)));
-        if(rnd()<(first?.05:.02)){const g=addGear(BOSS_DROP[id]);notes.push(`🎁 <b class="rEX">魔王專屬裝備：${gearName(g)}</b>（${statStr(gearStats(g))}${g.fx.length?" "+fxStr(g):""}）`);SFX.ssr();}
+        if(first||rnd()<.02){const g=addGear(BOSS_DROP[id]);notes.push(`🎁 <b class="rEX">魔王專屬裝備：${gearName(g)}</b>（${statStr(gearStats(g))}${g.fx.length?" "+fxStr(g):""}）`);SFX.ssr();}
         if(i+1<BOSS_LIST.length&&first)notes.push(`🔓 下一位魔王出現了：<b>${MONSTERS[BOSS_LIST[i+1]].name}</b>`);
         if(i+1===BOSS_LIST.length&&first)notes.push("🎬 <b>8 位魔王全部討伐完成！</b>");
       }

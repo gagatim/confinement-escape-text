@@ -734,7 +734,7 @@ const SETS={
 };
 const SLOTS={weapon:"武器",armor:"防具",acc:"飾品"};
 // 有插圖的裝備（images/equipment/{代號}.webp，256×256 透明底）。沒有插圖的（目前只有狗牌）、或圖片載入失敗時，退回用表情符號
-const GEAR_IMG=new Set(["stick","rags","band","pipe","axe","dagger","rifle","doll","baton","jacket","coin","chainsaw","katana","crossbow","grimoire","riot","vest","bracer","railgun","scythe","aegis","exo","watch","gavel","abyssmail","scales","endchain","reaperscythe","fatecompass","doomrifle","voidterm","nightrobe","overlordmantle","abysscrown"]);
+const GEAR_IMG=new Set(["stick","rags","band","pipe","axe","dagger","rifle","doll","baton","jacket","coin","dogtag","chainsaw","katana","crossbow","grimoire","riot","vest","bracer","railgun","scythe","aegis","exo","watch","gavel","abyssmail","scales","endchain","reaperscythe","fatecompass","doomrifle","voidterm","nightrobe","overlordmantle","abysscrown"]);
 function gearImg(base,cls=""){
   const G=GEAR[base];if(!GEAR_IMG.has(base))return G.icon;
   return `<img class="gimg ${cls}" src="images/equipment/${base}.webp" alt="${G.name}" draggable="false" loading="lazy" onerror="this.outerHTML='${G.icon}'">`;

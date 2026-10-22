@@ -615,7 +615,22 @@ const MONSTERS={
   audience:{name:"千萬觀眾",emoji:"🌐",r:"SSR",hp:200,atk:13,def:5,spd:6,dr:3,regen:8,revive:.4,
     skill:{name:"投票處刑",cd:3,t:"none",kind:"dmg",desc:"全網投票：對生命最低的敵人造成2.5倍傷害，再對全體敵人造成0.7倍傷害。",
       use(B,u){const f=foes(B,u).sort((a,b)=>a.hp-b.hp);if(!f.length)return;blog(B,"🌐 螢幕上的票數瘋狂跳動：「淘汰他！」","bad");hit(B,u,f[0],2.5);foes(B,u).forEach(t=>hit(B,u,t,.7));}},
-    passive:{name:"輿論",desc:"受到的傷害-3；每回合恢復8生命；第一次倒下時以40%生命重新站起。"}}
+    passive:{name:"輿論",desc:"受到的傷害-3；每回合恢復8生命；第一次倒下時以40%生命重新站起。"}},
+  // 第11、12章（第二季，偏難）
+  rookie:{name:"第二季參賽者",emoji:"🎟️",r:"R",hp:30,atk:11,def:3,spd:6,dr:1,
+    skill:{name:"新人的狠勁",cd:2,t:"enemy",kind:"dmg",desc:"造成1.6倍傷害，自身防禦+2（2回合）。",use(B,u,t){hit(B,u,t,1.6);buff(B,u,"def",2,2);}},
+    passive:{name:"有備而來",desc:"受到的傷害-1。"}},
+  castingdir:{name:"選角導演",emoji:"📋",r:"SSR",hp:190,atk:14,def:6,spd:5,dr:3,regen:8,
+    skill:{name:"試鏡淘汰",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成1倍傷害，並讓生命最低的敵人暈眩1回合。",
+      use(B,u){blog(B,"📋 「下一位。」——導演在名單上劃掉一個名字。","bad");foes(B,u).forEach(t=>hit(B,u,t,1));const f=foes(B,u).sort((a,b)=>a.hp-b.hp)[0];if(f)stun(B,f,1);}},
+    passive:{name:"選角權",desc:"受到的傷害-3；每回合恢復8生命。"}},
+  guardian:{name:"冠軍親衛隊",emoji:"🛡️",r:"R",hp:34,atk:11,def:5,spd:5,regen:3,
+    skill:{name:"護駕",cd:2,t:"enemy",kind:"dmg",desc:"造成1.4倍傷害，嘲諷1回合（敵人優先攻擊自己）。",use(B,u,t){hit(B,u,t,1.4);u.st.taunt=2;}},
+    passive:{name:"忠誠",desc:"每回合開始恢復3生命。"}},
+  pastchamp:{name:"上一季的你",emoji:"🏆",r:"SSR",hp:210,atk:15,def:6,spd:7,dr:3,evade:.15,revive:.5,
+    skill:{name:"冠軍的記憶",cd:3,t:"none",kind:"dmg",desc:"用你們會的每一招反打回來：全體敵人1.3倍傷害，自身恢復8%生命。",
+      use(B,u){blog(B,"🏆 「這一招，我上一季就用過了。」","bad");foes(B,u).forEach(t=>hit(B,u,t,1.3));heal(B,u,Math.round(u.maxHp*.08));}},
+    passive:{name:"衛冕者",desc:"受到的傷害-3；被攻擊時15%機率閃避；第一次倒下時以50%生命重新站起。"}}
 };
 const DEF=id=>CARDS[id]||MONSTERS[id];
 const POOL={SSR:[],SR:[],R:[]};
@@ -828,6 +843,8 @@ function migrate(s){
   if(s.chv<3){if(s.run&&s.run.ch===6)s.run.ch=8;s.chv=3;}
   // 第9、10章插在無盡深淵前面：深淵 ch 從 8 改成 10
   if(s.chv<4){if(s.run&&s.run.ch===8)s.run.ch=10;s.chv=4;}
+  // 第11、12章插在無盡深淵前面：深淵 ch 從 10 改成 12
+  if(s.chv<5){if(s.run&&s.run.ch===10)s.run.ch=12;s.chv=5;}
   if(!s.gear){s.gear=[];s.gearUid=0;}
   if(!s.stash)s.stash={items:[],food:0};
   if(!s.charms)s.charms={protect:0,luck:0};
@@ -988,7 +1005,7 @@ const GUIDE=[
   {ic:"🛒",t:"③ 裝備與商店",b:["「商店」可以買裝備、強化符和遠征物資（下一次遠征自動帶上）。","在角色卡片點 <b>武器／防具／飾品</b> 欄位就能穿上。武器有職業限制。","「裝備」頁可以強化到 +10。<b>強化可能失敗</b>：+5 以上失敗會掉 1 級（裝備不會碎），用 🧿保護符 可以保住等級。"]},
   {ic:"🪜",t:"④ 出發遠征",b:["每一層選一扇門進去：可能是物資、敵人、或其他逃殺者。","注意 <b>🥫補給</b>（每層吃 1 份）和 <b>☣毒氣</b>（從底層往上淹）。","遇到人可以結盟、交易或開打。打倒最上層的魔王就逃出了！"]},
   {ic:"⚔️",t:"⑤ 戰鬥",b:["輪到你的角色時，按「普通攻擊」或「技能」，再點目標。","懶得操作就按「自動」，讓 AI 幫你打。"]},
-  {ic:"🏆",t:"⑥ 然後呢？",b:["主線共 10 章，逃出一章解鎖下一章；逃出第 1 章後解鎖 <b>🕳 無盡深淵</b>。","「練功房」重複打怪練等級（每級全能力 +2%）；「競技場」打 AI 賺金條；「雙人對決」可以和朋友網路對戰。","進度會自動存檔，換裝置用主頁的「匯出／匯入存檔」。"]}
+  {ic:"🏆",t:"⑥ 然後呢？",b:["主線共 12 章，逃出一章解鎖下一章；逃出第 1 章後解鎖 <b>🕳 無盡深淵</b>。","「練功房」重複打怪練等級（每級全能力 +2%）；「競技場」打 AI 賺金條；「雙人對決」可以和朋友網路對戰。","進度會自動存檔，換裝置用主頁的「匯出／匯入存檔」。"]}
 ];
 function openGuide(i){
   const g=GUIDE[i],last=i===GUIDE.length-1;
@@ -2694,14 +2711,26 @@ Object.assign(ROOM_NAME,{
 });
 Object.assign(ROOM_EV,{攝影棚:"morgue",道具間:"warehouse",綠幕走廊:"shade",剪輯室:"control",觀眾留言牆:"shade",化妝間:"gene",主控室:"helipad",
   斷訊大廳:"morgue",倒塌的看板:"warehouse",粉絲聚集區:"shade",閃光燈走廊:"shade",後台通道:"gene",最後的舞台:"helipad"});
-const ABYSS=10;
+const FLOORS_CASTING=mkFloors("W",[1,4,5,6,5,6,5,6,5,6,5,4,2]);
+const FLOORS_CHAMP=mkFloors("X",[1,4,5,6,5,6,6,5,6,5,6,5,4,2]);
+Object.assign(ROOM_NAME,{
+  W101:"報到處",W201:"新人休息區",W203:"配給站",W301:"藥房",W303:"通緝海報牆",W401:"武器庫",W404:"樂透房",W501:"排練室",W503:"冷凍艙",W505:"黑市",
+  W601:"手術室",W603:"新人休息區",W701:"賭場",W703:"控制室",W801:"禮拜堂",W803:"金庫",W901:"強化艙",W903:"雷射走廊",W1001:"配給站",W1003:"水塔",
+  W1101:"黑市",W1201:"手術室",W1301:"候場室",W1302:"試鏡廳",
+  X101:"入場通道",X201:"觀眾席",X203:"配給站",X301:"藥房",X303:"冠軍走廊",X401:"武器庫",X403:"黑市",X501:"樂透房",X503:"冷凍艙",
+  X601:"手術室",X603:"重播室",X701:"賭場",X703:"控制室",X801:"禮拜堂",X803:"金庫",X901:"強化艙",X903:"雷射走廊",X1001:"配給站",X1003:"水塔",
+  X1101:"冠軍走廊",X1201:"黑市",X1203:"手術室",X1301:"禮拜堂",X1401:"選手休息室",X1402:"冠軍擂台"
+});
+Object.assign(ROOM_EV,{報到處:"morgue",新人休息區:"shade",通緝海報牆:"shade",排練室:"respec",候場室:"gene",試鏡廳:"helipad",
+  入場通道:"morgue",觀眾席:"warehouse",冠軍走廊:"shade",重播室:"control",選手休息室:"gene",冠軍擂台:"helipad"});
+const ABYSS=12;
 // 深淵的特殊房間（不放傳送、基因庫這類依賴固定樓層的事件）
 const ABYSS_ROOMS={ration:"配給站",pharmacy:"藥房",armory:"武器庫",blackmarket:"黑市",casino:"賭場",surgery:"手術室",cryo:"冷凍艙",
   lotto:"樂透房",control:"控制室",respec:"操作室",water:"水塔",chapel:"禮拜堂",laser:"激光室",vault:"金庫",warehouse:"大倉庫",
   granary:"糧倉",prisoncell:"牢房",wine:"酒窖"};
 // 平衡：主線全破約需 40 次遠征（機器人模擬）。金條收入刻意壓低，抽卡要省著用
-const FIRST_CLEAR=[40,50,60,70,80,90,100,120,150,200];
-const CH_POW=[1,1.3,1.5,1.6,1.65,1.45,1.8,1.6,1.95,1.75]; // 第6、8章魔王會復活，倍數稍低以免變成高牆；第9、10章刻意偏難
+const FIRST_CLEAR=[40,50,60,70,80,90,100,120,150,200,250,300];
+const CH_POW=[1,1.3,1.5,1.6,1.65,1.45,1.8,1.6,1.95,2.0,2.45,1.75]; // 第6、8章魔王會復活，倍數稍低以免變成高牆；第9、10章刻意偏難
 function chPow(){return RUN&&RUN.ch!==ABYSS?CH_POW[RUN.ch]:1;}
 const CHAPTERS=[
   {name:"禁閉室",sub:"B7 停屍間 → 2F 停機坪",icon:"⛓",floors:FLOORS,minion:"ghost",boss:"warden",bossScale:1,bossHp:n=>48+n*12,
@@ -2818,7 +2847,37 @@ const CHAPTERS=[
       "製作人倒了，直播斷了，可是他們不想結束。他們湧進大樓，把手機、螢幕和目光，全部匯聚成一個巨大的身影。",
       "他們說：「我們只是在看而已。」——但每一場禁閉逃殺，都是為了他們才開始的。只有讓他們親眼看見謝幕，這一切才會真的結束。"],
     bossIntro:"千萬觀眾：「投票開始。」",lose:"票數過半。「重播。」——你們在停屍間的鐵櫃裡醒來。",
-    fall:"螢幕一塊接一塊熄滅。",escape:"螢幕一塊接一塊熄滅。最後一盞聚光燈下，你們三個人並肩鞠躬。沒有掌聲，也沒有重播——<b>這場遊戲，終於真正謝幕了。</b>"},
+    fall:"螢幕一塊接一塊熄滅。",escape:"螢幕一塊接一塊熄滅。最後一盞聚光燈下，你們三個人並肩鞠躬。沒有掌聲，也沒有重播——<b>這場遊戲，終於真正謝幕了。</b>……三個月後，一封燙金的信寄到你家：「禁閉逃殺 第二季　前季冠軍特別參賽邀請」。"},
+  {name:"選角室",sub:"W1 報到處 → W13 試鏡廳",icon:"📋",floors:FLOORS_CASTING,minion:"rookie",boss:"castingdir",bossScale:1.7,bossHp:n=>140+n*32,
+    veh:"錄取通知",vehIcon:"✉️",bossLoc:"W13 · W1302 試鏡廳",bossRoom:"試鏡廳",prepLoc:"W13 · W1301 候場室",
+    startLoc:"W101 · 報到處",startTitle:"🎟️ 第二季",
+    intro:it=>["你們沒有回信。但某天醒來，你們已經坐在一間報到處裡，手腕上綁著新的號碼牌——編號前面多了一個「S2」。",
+      "廣播響起，是一個陌生的聲音：<b>「歡迎前季冠軍。第二季的規則很簡單：新人們都想打敗你們，證明自己。座位一樣只有三個。」</b>",
+      `報到桌上放著一個寫著「前季冠軍專用」的包裹，裡面是 ${it}。`,"走廊兩側坐滿了新參賽者，每個人都盯著你們看。往上爬吧。"],
+    shade:["一群新參賽者圍了過來：「打倒前季冠軍，就能直接進決賽！」","牆上貼著你們的通緝海報，上面寫著懸賞金額。","「就是他們！上一季的那幾個！」"],
+    prep:"候場室。牆上掛著各種戲服和道具，化妝台上留著幾支「上一季剩下的藥劑」。只能帶走一樣。",
+    bossTitle:"✉️ 試鏡廳",bossLines:["一間空蕩蕩的試鏡廳，地上用膠帶貼著一個「X」。","長桌後面坐著一個戴墨鏡的女人，手裡翻著一疊履歷——<b style='color:var(--red)'>選角導演</b>。「前季冠軍？我看過你們的帶子。演技普通。」"],
+    story:["她挑過每一屆禁閉逃殺的參賽者。誰該被關進來、誰會變成觀眾最愛的角色、誰只是陪跑的炮灰，都是她在這張長桌後決定的。",
+      "上一季，她把你們歸類在「第一集就會出局」那一疊。結果你們一路活到了謝幕——那是她職業生涯唯一的失誤。",
+      "製作人倒了，節目差點停播，是她說服贊助商開了第二季：「讓前季冠軍回來，讓新人挑戰他們，收視率會翻倍。」",
+      "她不恨你們，她只是想親手修正那個失誤。這一次，她要你們在試鏡廳就被淘汰。"],
+    bossIntro:"選角導演闔上履歷：「開始試鏡。」",lose:"選角導演在你們的名字上畫了一個叉。「下一位。」",
+    fall:"選角導演的墨鏡掉在地上，履歷散了一地。",escape:"選角導演的墨鏡掉在地上，履歷散了一地。她看著你們，沉默了很久：「……錄取。決賽見。」"},
+  {name:"冠軍之戰",sub:"X1 入場通道 → X14 冠軍擂台",icon:"🏆",floors:FLOORS_CHAMP,minion:"guardian",boss:"pastchamp",bossScale:1.8,bossHp:n=>150+n*34,
+    veh:"冠軍獎盃",vehIcon:"🏆",bossLoc:"X14 · X1402 冠軍擂台",bossRoom:"冠軍擂台",prepLoc:"X14 · X1401 選手休息室",
+    startLoc:"X101 · 入場通道",startTitle:"🏟️ 決賽",
+    intro:it=>["決賽場館大得看不見屋頂。觀眾席坐滿了人，歡呼聲震得地板發抖。","大螢幕打出對戰表：你們的名字對面，是另一組人——<b>「第一季冠軍隊」</b>。",
+      `選手通道的置物櫃裡放著 ${it}。`,"等等……你們不就是第一季的冠軍嗎？那對面那組人是誰？往上爬吧，答案在擂台上。"],
+    shade:["一排穿著冠軍隊服的親衛隊擋住了通道。","觀眾在喊對面那組人的名字——喊的是你的名字。","螢幕在重播第一季的畫面，可是畫面裡的人，動作跟你們不太一樣。"],
+    prep:"選手休息室。置物櫃上貼著第一季的冠軍照——照片裡的人，跟你們長得一模一樣。櫃子裡留著幾樣東西，只能帶走一樣。",
+    bossTitle:"🏆 冠軍擂台",bossLines:["聚光燈打在擂台中央。對面的人慢慢走出來，穿著你在第一季穿過的衣服。",
+      "他摘下兜帽——那是你的臉。<b style='color:var(--red)'>上一季的你</b>。「我才是真的冠軍。你只是一份備份。」"],
+    story:["第一季結束後，主辦方偷偷保存了你們的全部資料：每一次戰鬥、每一個選擇、每一次差點死掉的瞬間。",
+      "他們用這些資料做出了一個「完美的冠軍」——他記得你所有的招式，卻沒有你的猶豫，也沒有你的同伴。",
+      "這一整季，他都在擂台上等著。觀眾喊的是你的名字，但他們想看的，是「兩個冠軍只能留一個」的畫面。",
+      "他說他才是真的，你只是備份。可是一路爬上來的是你們，一起扛過毒氣、背叛和三個座位的，也是你們。證明給他看。"],
+    bossIntro:"上一季的你擺出跟你一模一樣的架勢：「那就看看誰比較像冠軍。」",lose:"上一季的你舉起獎盃。觀眾歡呼——歡呼的是同一個名字。",
+    fall:"上一季的你單膝跪地，身影像訊號不良的畫面一樣閃爍、散開。",escape:"上一季的你單膝跪地，身影像訊號不良的畫面一樣閃爍、散開。最後他笑了一下：「……原來冠軍不是一個人。」你們三個人一起舉起獎盃。<b>第二季，冠軍衛冕。</b>"},
   {name:"無盡深淵",sub:"沒有出口。每 5 層一個守門者，打倒後可以選擇撤離",icon:"🕳",abyss:true,
     startLoc:"D0 · 深淵入口",startTitle:"🕳 深淵",
     intro:it=>["禁閉室的停屍間底下還有一道暗門。門後的樓梯一直往下，看不到盡頭。",
@@ -3215,7 +3274,7 @@ function allyBetrays(al,lines,ch){
   }
 }
 function shadeAmbush(ch,L,n){
-  const fi=RUN.fi,c=RUN.ch,id=c===ABYSS?pick(["ghost","mutant","guard","drone","deepone","mirror","echo","doppel","cameraman","fanatic"]):CH().minion,M=MONSTERS[id];
+  const fi=RUN.fi,c=RUN.ch,id=c===ABYSS?pick(["ghost","mutant","guard","drone","deepone","mirror","echo","doppel","cameraman","fanatic","rookie","guardian"]):CH().minion,M=MONSTERS[id];
   const scale=c===0?.8+fi*.07:c===ABYSS?1+fi*.04:.8+fi*.05+c*.08;
   const g=Array.from({length:n},()=>({id,stars:1,scale}));
   setScene(loc(ch),`${M.emoji} ${M.name}`,L,[
@@ -3270,7 +3329,7 @@ function helipad(L){
 }
 /* ---- 深淵守門者 ---- */
 function abyssBoss(L){
-  const fi=RUN.fi,id=pick(["warden","zero","chief","host","kraken","judge","loopkeeper","origin","producer","audience"]),size=aliveMembers().length,hp=Math.round((50+size*12)*(1+fi*.04));
+  const fi=RUN.fi,id=pick(["warden","zero","chief","host","kraken","judge","loopkeeper","origin","producer","audience","castingdir","pastchamp"]),size=aliveMembers().length,hp=Math.round((50+size*12)*(1+fi*.04));
   const where=`D${fi} · 守門者之間`;RUN.visited[fi]="守門者";
   setScene(where,"💀 守門者",L.concat([`深淵第 ${fi} 層的門後，站著一個熟悉的身影——<b style='color:var(--red)'>${MONSTERS[id].name}</b>。`,"但它的眼睛裡什麼都沒有，只有深淵。"]),[{label:"⚔️ 迎戰",cls:"pri",act(){
     startBattle({title:where,home:"run",items:RUN.items,intro:"深淵在低語。",

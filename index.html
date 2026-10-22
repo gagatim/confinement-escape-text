@@ -429,12 +429,14 @@ footer.credit a{color:var(--gold)}
     <div>🎵 背景音樂<br>
       ・主頁等選單：<b>Ambient Horror Track 01</b> — Music by Cleyton Kauffman（<a href="https://soundcloud.com/cleytonkauffman" target="_blank" rel="noopener">soundcloud.com/cleytonkauffman</a>）・
       出處 <a href="https://opengameart.org/content/ambient-horror-track-01" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
-      ・遠征探索：<b>Abandoned passages (horror ambience loop)</b> — by congusbongus・
-      出處 <a href="https://opengameart.org/content/abandoned-passages-horror-ambience-loop" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
+      ・遠征探索：<b>Determined Pursuit (epic orchestra loop)</b> — by Emma_MA・
+      出處 <a href="https://opengameart.org/content/determined-pursuit-epic-orchestra-loop" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・招募／隊伍／裝備：<b>Medieval: King's Feast</b> — by RandomMind（<a href="http://www.patreon.com/randommind" target="_blank" rel="noopener">Patreon</a>）・
       出處 <a href="https://opengameart.org/content/medieval-kings-feast" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・故事頁（老國王）：<b>Fantasy Choir 2</b> — by cesisco（César da Rocha）・
       出處 <a href="https://opengameart.org/content/fantasy-choir-3-orchestral-pieces" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
+      ・成就：<b>Triumphant</b> — by Emma_MA・
+      出處 <a href="https://opengameart.org/content/triumphant" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・商店：<b>Bossa Nova</b> — by Joth・
       出處 <a href="https://opengameart.org/content/bossa-nova" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・競技場：<b>Epic Boss Battle [Seamlessly Looping]</b> — by Juhani Junkala（<a href="https://opengameart.org/content/boss-battle-music" target="_blank" rel="noopener">OpenGameArt</a>，上傳者 SubspaceAudio）・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
@@ -447,10 +449,11 @@ footer.credit a{color:var(--gold)}
       右上角 🎵 可以開關背景音樂。<br>
       <button class="mini" style="margin-top:6px" onclick="openStuck()">🐞 遊戲卡住了／回報問題</button></div>
     <audio id="bgm_main" src="music/ambient_horror_track01.ogg" loop preload="auto"></audio>
-    <audio id="bgm_run" src="music/abandoned_passages.ogg" loop preload="none"></audio>
+    <audio id="bgm_run" src="music/determined_pursuit_loop.ogg" loop preload="none"></audio>
     <audio id="bgm_abyss" src="music/dark_cavern_ambient_002.ogg" loop preload="none"></audio>
     <audio id="bgm_town" src="music/kings_feast_loop.ogg" loop preload="none"></audio>
     <audio id="bgm_story" src="music/fantasy_choir_2.ogg" loop preload="none"></audio>
+    <audio id="bgm_ach" src="music/triumphant_achievement.ogg" loop preload="none"></audio>
     <audio id="bgm_shop" src="music/bossa_nova_shop.mp3" loop preload="none"></audio>
     <audio id="bgm_arena" src="music/arena_epic_boss_battle.ogg" loop preload="none"></audio>
     <audio id="bgm_duel" src="music/jrpg_battle_loop.mp3" loop preload="none"></audio>
@@ -1021,7 +1024,7 @@ function toggleMute(){SAVE.muted=!SAVE.muted;save();renderHeader();}
 const BGM_ID="2uGf8-vfFLI";
 let BGM=null,BGM_READY=false,BGM_STARTED=false,BGM_CUR=null;
 function loadBgm(){
-  ["main","town","shop","run","abyss","story","arena","duel"].forEach(k=>{const a=$("#bgm_"+k);if(a)a.volume=.4;});
+  ["main","town","shop","ach","run","abyss","story","arena","duel"].forEach(k=>{const a=$("#bgm_"+k);if(a)a.volume=.4;});
   window.onYouTubeIframeAPIReady=()=>{
     BGM=new YT.Player("bgmPlayer",{videoId:BGM_ID,
       playerVars:{loop:1,playlist:BGM_ID,controls:1,playsinline:1,rel:0,modestbranding:1},
@@ -1038,6 +1041,7 @@ function bgmWant(){
   }
   if(VIEW==="run"&&RUN&&!RUN.active&&RUN.escaped)return "battle";
   if(VIEW==="shop")return "shop"; // 商店：輕鬆的爵士
+  if(VIEW==="ach")return "ach"; // 成就：凱旋的號角與弦樂
   if(VIEW==="arena")return "arena";
   if(VIEW==="duel")return "duel";
   if(VIEW==="run"&&RUN&&RUN.active)return RUN.ch===ABYSS?"abyss":"run";
@@ -1047,7 +1051,7 @@ function bgmWant(){
 }
 function syncBgm(){
   const w=bgmWant();if(w===BGM_CUR)return;BGM_CUR=w;
-  ["main","town","shop","run","abyss","story","arena","duel"].forEach(k=>{const a=$("#bgm_"+k);if(!a||!a.play)return;
+  ["main","town","shop","ach","run","abyss","story","arena","duel"].forEach(k=>{const a=$("#bgm_"+k);if(!a||!a.play)return;
     if(w===k){a.currentTime=0;a.play().catch(()=>{});}else a.pause();});
   if(BGM_READY){if(w==="battle"){BGM.seekTo(0,true);BGM.playVideo();}else BGM.pauseVideo();}
 }

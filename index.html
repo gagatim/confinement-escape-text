@@ -25,7 +25,8 @@ header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 0;bo
 .logo{font-weight:900;letter-spacing:2px;font-size:20px;color:var(--red);text-shadow:0 0 12px rgba(229,72,77,.5);cursor:pointer}
 .logo small{color:var(--dim);font-size:12px;letter-spacing:1px;margin-left:6px;text-shadow:none}
 nav{display:flex;gap:6px;flex-wrap:wrap;flex:1}
-nav button{padding:5px 10px;font-size:14px}
+nav button{padding:5px 10px;font-size:14px;white-space:nowrap}
+.menuBtn{display:none;white-space:nowrap}
 nav button.on{border-color:var(--red);color:#fff}
 .wallet{margin-left:auto;font-weight:700;color:var(--gold);white-space:nowrap}
 .muteBtn{padding:4px 8px}
@@ -67,7 +68,7 @@ h3{margin:14px 0 8px;font-size:16px;color:#c9ced5}
 .ccard.locked{filter:grayscale(1) brightness(.35)}
 .ccard.inteam::after{content:"出戰";position:absolute;top:4px;right:4px;background:var(--red);color:#fff;font-size:11px;padding:0 6px;border-radius:6px}
 .ccard .av{width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#0a0b0d;display:flex;align-items:center;justify-content:center}
-.av img{width:100%;height:100%;object-fit:cover;display:block}
+.av img,.avimg{width:100%;height:100%;object-fit:cover;display:block}
 .emo{font-size:40px;line-height:1}
 .ccard .nm{font-weight:700;font-size:14px;margin-top:4px}
 .stars{color:var(--gold);font-size:11px;letter-spacing:-1px}
@@ -78,7 +79,11 @@ h3{margin:14px 0 8px;font-size:16px;color:#c9ced5}
 /* modal */
 #modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
 #modal.show{display:flex}
-.mbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;max-width:520px;width:100%;max-height:90vh;overflow:auto;padding:18px}
+.mbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;max-width:520px;width:100%;max-height:85vh;max-height:85dvh;overflow:auto;padding:18px}
+button,.door,.ccard,.ucard,.gcard,.chap,.bosscard,.item,.pull{touch-action:manipulation}
+#sos{position:fixed;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:99;width:46px;height:46px;border-radius:50%;padding:0;font-size:20px;
+  background:rgba(42,16,19,.85);border:1px solid var(--red);box-shadow:0 2px 10px rgba(0,0,0,.6);opacity:.75}
+#sos:hover{opacity:1}
 .detail{display:flex;gap:14px}
 .detail .av{width:120px;min-width:120px;aspect-ratio:1;border-radius:12px;overflow:hidden}
 .sk{background:var(--panel2);border-radius:8px;padding:8px 10px;margin-top:8px;font-size:14px}
@@ -266,6 +271,16 @@ footer.credit a{color:var(--gold)}
   .fl .lb{width:auto}
   .fl .rm{max-width:60px}
 }
+/* 手機：選單收進 ☰，點開才顯示，選完自動收起 */
+@media (max-width:760px){
+  header{gap:6px;padding:8px 0}
+  .logo{font-size:17px;letter-spacing:1px}
+  .menuBtn{display:inline-block;order:-1;padding:6px 10px}
+  nav{display:none;order:10;flex-basis:100%;flex-wrap:wrap;gap:6px}
+  nav.open{display:flex}
+  nav button{flex:1 1 28%;padding:9px 6px;font-size:15px}
+  .wallet{font-size:14px}
+}
 @media (max-width:560px){
   .ucard{width:31%;min-width:96px;padding:4px}
   .pullgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -280,6 +295,7 @@ footer.credit a{color:var(--gold)}
 <div id="app">
   <header>
     <div class="logo" onclick="go('home')">禁閉逃殺<small>文字獄</small></div>
+    <button class="menuBtn" id="menuBtn" onclick="toggleNav()">☰ 選單</button>
     <nav id="nav"></nav>
     <div class="wallet" id="wallet"></div>
     <button class="muteBtn" onclick="openGuide(0)" title="玩法導引">❓</button>
@@ -298,7 +314,8 @@ footer.credit a{color:var(--gold)}
       出處 <a href="https://opengameart.org/content/dark-cavern-ambient" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・戰鬥／破關：<b>DEgITx - Machine Paradigm</b>・出處 <a href="https://www.youtube.com/watch?v=2uGf8-vfFLI" target="_blank" rel="noopener">YouTube</a>
       （作者頻道 <a href="https://www.youtube.com/@DEgITx" target="_blank" rel="noopener">@DEgITx</a>），版權屬於原作者，透過 YouTube 嵌入播放器播放。<br>
-      右上角 🎵 可以開關背景音樂。</div>
+      右上角 🎵 可以開關背景音樂。<br>
+      <button class="mini" style="margin-top:6px" onclick="openStuck()">🐞 遊戲卡住了／回報問題</button></div>
     <audio id="bgm_main" src="music/ambient_horror_track01.ogg" loop preload="auto"></audio>
     <audio id="bgm_run" src="music/abandoned_passages.ogg" loop preload="none"></audio>
     <audio id="bgm_abyss" src="music/dark_cavern_ambient_002.ogg" loop preload="none"></audio>
@@ -307,10 +324,21 @@ footer.credit a{color:var(--gold)}
 <div id="modal" onclick="if(event.target===this)closeModal()"><div class="mbox" id="mbox"></div></div>
 <div id="gacha"></div>
 <div id="fx"></div>
+<button id="sos" onclick="openStuck()" title="遊戲卡住了？按這裡">🆘</button>
 <script>
 "use strict";
 /* ===================== UTIL ===================== */
 const $=s=>document.querySelector(s);
+/* ---- 除錯紀錄：自動記下錯誤與重要事件（最近 300 筆），玩家可以從 🐞 回報問題 複製給開發者 ---- */
+const LOG_KEY="jbts_log";
+let LOGS=[];try{LOGS=JSON.parse(localStorage.getItem(LOG_KEY))||[];}catch(e){}
+function glog(type,msg){
+  const t=new Date(),ts=`${t.getMonth()+1}/${t.getDate()} ${t.toTimeString().slice(0,8)}`;
+  LOGS.push(`[${ts}] ${type} ${msg}`);if(LOGS.length>300)LOGS.splice(0,LOGS.length-300);
+  try{localStorage.setItem(LOG_KEY,JSON.stringify(LOGS));}catch(e){}
+}
+window.addEventListener("error",e=>glog("❌ERROR",`${e.message} (第 ${e.lineno} 行:${e.colno})`));
+window.addEventListener("unhandledrejection",e=>glog("❌ERROR",String(e.reason&&e.reason.stack||e.reason)));
 const rnd=Math.random;
 const ri=(a,b)=>a+Math.floor(rnd()*(b-a+1));
 const pick=a=>a[Math.floor(rnd()*a.length)];
@@ -623,9 +651,9 @@ function gearCls(base){const c=GEAR[base].cls;return c?c.map(k=>CLASSES[k].icon+
 
 function avatar(id,p2){
   const d=DEF(id);
-  if(d.img) return `<img src="images/bosses/${id}_${p2?2:1}.webp" alt="" draggable="false">`;
+  if(d.img) return `<img class="avimg" src="images/bosses/${id}_${p2?2:1}.webp" alt="" draggable="false">`;
   if(d.emoji) return `<span class="emo">${d.emoji}</span>`;
-  return `<img src="images/avatars/${id}.webp" alt="" draggable="false" onerror="this.outerHTML='<span class=emo>${d.name.charAt(0)}</span>'">`;
+  return `<img class="avimg" src="images/avatars/${id}.webp" alt="" draggable="false" onerror="this.outerHTML='<span class=emo>${d.name.charAt(0)}</span>'">`;
 }
 function starStr(n,br=0){return (br?`<b class="brk">突破${br}</b> `:"")+"★".repeat(n)+"<span style='opacity:.25'>"+"★".repeat(5-n)+"</span>";}
 // 星級：每多1星全能力+10%，3星起防禦+1。突破後保留之前的能力，每次突破 +1.5%，
@@ -653,10 +681,71 @@ function newSave(){
   s.team=starters.slice();
   return migrate(s);
 }
+/* ---- 防作弊：存檔簽章 + 數值檢查 ----
+   存檔寫入時附上簽章（h）。讀檔時簽章對不上＝存檔在遊戲外被改過；數值超出遊戲規則（星數>5、等級>50、
+   裝備強化>10、詞條超出範圍……）＝被改過。兩種情況都會清空存檔重新開始。
+   注意：純網頁遊戲沒辦法 100% 防止作弊，這裡擋的是「直接改存檔／改匯出代碼」和「改出不可能的數值」。 */
+const SIG_SALT="jbts::禁閉逃殺::v1::"+"7f3a9c";
+function sigOf(str){
+  let h1=0xdeadbeef^str.length,h2=0x41c6ce57^str.length;const t=SIG_SALT+str;
+  for(let i=0;i<t.length;i++){const c=t.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677);}
+  h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);
+  h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);
+  return (h2>>>0).toString(36)+(h1>>>0).toString(36);
+}
+function packSave(s){const d=JSON.stringify(s);return {d,h:sigOf(d)};}
+// 讀出來的原始資料 → {s:存檔, bad:原因}；舊格式（還沒有簽章）照常讀取，下次存檔時補上簽章
+function unpackSave(raw){
+  if(raw&&typeof raw.d==="string"&&raw.h){
+    if(sigOf(raw.d)!==raw.h)return {s:null,bad:"存檔簽章不符（存檔在遊戲外被修改過）"};
+    return {s:JSON.parse(raw.d),bad:""};
+  }
+  return {s:raw,bad:""};
+}
+let TAMPER="";
 function loadSave(){
-  try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));if(s&&s.v===1)return migrate(s);}catch(e){}
+  try{
+    const raw=JSON.parse(localStorage.getItem(SAVE_KEY));
+    if(raw){const {s,bad}=unpackSave(raw);if(bad){TAMPER=bad;return newSave();}if(s&&s.v===1)return migrate(s);}
+  }catch(e){}
   return newSave();
 }
+const isInt=(v,a,b)=>Number.isInteger(v)&&v>=a&&v<=b;
+// 檢查存檔裡有沒有遊戲規則不可能出現的數值，有的話回傳原因
+function validSave(s){
+  if(!isInt(s.gold,0,5000000))return "金條數量異常";
+  for(const id in s.owned){
+    const o=s.owned[id];
+    if(!CARDS[id])return "出現不存在的角色";
+    if(!isInt(o.stars,1,5))return `${CARDS[id].name} 星數異常`;
+    if(o.lv!=null&&!isInt(o.lv,1,LV_MAX))return `${CARDS[id].name} 等級異常`;
+    if(o.br!=null&&!isInt(o.br,0,BR_MAX))return `${CARDS[id].name} 突破次數異常`;
+    if(o.exp!=null&&!isInt(o.exp,0,lvNeed(o.lv||1)))return `${CARDS[id].name} 經驗值異常`;
+  }
+  if(!Array.isArray(s.team)||s.team.length>3||s.team.some(id=>!s.owned[id]))return "隊伍資料異常";
+  const uids=new Set();
+  for(const g of s.gear||[]){
+    const G=GEAR[g.base];if(!G)return "出現不存在的裝備";
+    if(uids.has(g.uid))return "裝備資料重複";uids.add(g.uid);
+    if(!isInt(g.lv,0,ENH_MAX))return `${G.name} 強化等級異常`;
+    if(g.roll!=null&&!isInt(g.roll,GEAR_ROLL[G.q][0],GEAR_ROLL[G.q][1]))return `${G.name} 品質異常`;
+    const fx=g.fx||[];if(fx.length>3||new Set(fx.map(f=>f.k)).size!==fx.length)return `${G.name} 詞條異常`;
+    for(const f of fx){const A=AFFIX[f.k];if(!A||!isInt(f.v,1,Math.max(1,Math.round(A.r[1]*AFFIX_MULT[G.q]))))return `${G.name} 詞條數值異常`;}
+  }
+  for(const k in s.charms)if(!isInt(s.charms[k],0,99999))return "強化道具數量異常";
+  if(!isInt(s.arenaTier,1,100000))return "競技場層數異常";
+  if(s.train&&!isInt(s.train.best,0,TRAIN_MAX))return "練功房進度異常";
+  if(!isInt(s.prog.cleared,0,ABYSS))return "主線進度異常";
+  if(s.run&&!(isInt(s.run.gold,0,5000000)&&isInt(s.run.food,0,9999)))return "遠征資料異常";
+  return "";
+}
+// 發現作弊：清空存檔重新開始
+function wipeTampered(why){SAVE=newSave();RUN=null;CUR_B=null;VIEW="home";save();render();tamperNotice(why);}
+function tamperNotice(why){
+  openModal(`<h3>⚠ 偵測到存檔被修改</h3><p>原因：<b>${why}</b></p><p class="dim">為了公平，這份存檔已經<b style="color:var(--red)">清空</b>，請重新開始。</p>
+    <div class="row"><button class="pri" onclick="closeModal()">知道了</button></div>`);
+}
+function checkIntegrity(){if(!SAVE)return true;const why=validSave(SAVE);if(why){wipeTampered(why);return false;}return true;}
 // 舊存檔補欄位：已逃出過禁閉室就算通關第1章
 function migrate(s){
   if(!s.prog)s.prog={cleared:s.stats&&s.stats.escapes>0?1:0,clears:{},abyssBest:0};
@@ -670,11 +759,12 @@ function migrate(s){
   if(!s.charms)s.charms={protect:0,luck:0};
   if(!s.train)s.train={best:0};
   if(!s.bosses)s.bosses={};
+  s.team=(s.team||[]).filter(id=>s.owned[id]);
   if(s.charms.stone==null)s.charms.stone=0;
   return s;
 }
 function exportSave(){
-  const code=btoa(unescape(encodeURIComponent(JSON.stringify({...SAVE,run:null}))));
+  const code=btoa(unescape(encodeURIComponent(JSON.stringify(packSave({...SAVE,run:null})))));
   openModal(`<h3>匯出存檔</h3><p class="dim small">複製這段代碼，在別的裝置或瀏覽器按「匯入存檔」貼上，就能接著玩。（進行中的遠征不會帶過去）</p>
     <textarea id="saveCode" readonly style="width:100%;height:120px;font-size:11px">${code}</textarea>
     <div class="row"><button class="pri" onclick="copySave()">📋 複製</button><button onclick="closeModal()">關閉</button></div>`);
@@ -691,12 +781,18 @@ function importSave(){
 }
 function doImport(){
   try{
-    const s=JSON.parse(decodeURIComponent(escape(atob($("#saveCode").value.trim()))));
+    const {s,bad}=unpackSave(JSON.parse(decodeURIComponent(escape(atob($("#saveCode").value.trim())))));
+    if(bad){toast("這段存檔代碼被修改過，無法匯入");return;}
     if(!s||s.v!==1||!s.owned||!s.stats)throw 0;
+    const why=validSave(migrate(s));if(why){toast("存檔代碼數值異常（"+why+"），無法匯入");return;}
     SAVE=migrate(s);SAVE.run=null;RUN=null;save();closeModal();toast("匯入成功！");go("home");
   }catch(e){toast("代碼格式不對，請確認有完整複製");}
 }
-function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(SAVE));}catch(e){}}
+function save(){
+  if(SAVE_READY&&!checkIntegrity())return;
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify(packSave(SAVE)));}catch(e){}
+}
+let SAVE_READY=false;
 let SAVE=loadSave();
 
 /* ===================== SOUND ===================== */
@@ -767,18 +863,34 @@ const NAV=[["home","主頁"],["gacha","招募"],["team","隊伍"],["gear","裝�
 function locked(){return (RUN&&RUN.active)||(CUR_B&&!CUR_B.done)||(DUEL&&DUEL.phase==="battle")||!!NET;}
 function go(v){
   if(locked()&&v!==VIEW){toast("進行中無法離開（遠征中可按「放棄遠征」）");return;}
-  SFX.click();VIEW=v;render();window.scrollTo(0,0);
+  SFX.click();VIEW=v;NAV_OPEN=false;render();window.scrollTo(0,0);
 }
+let NAV_OPEN=false;
+function toggleNav(){NAV_OPEN=!NAV_OPEN;SFX.click();renderHeader();}
 function renderHeader(){
   $("#nav").innerHTML=NAV.map(([k,l])=>`<button class="${VIEW===k||(VIEW==="battle"&&k===BATTLE_HOME)?"on":""}" onclick="go('${k}')">${l}</button>`).join("");
+  $("#nav").className=NAV_OPEN?"open":"";
+  const cur=NAV.find(([k])=>k===VIEW||(VIEW==="battle"&&k===BATTLE_HOME));
+  $("#menuBtn").textContent=(NAV_OPEN?"✕ ":"☰ ")+(cur?cur[1]:"選單");
   $("#wallet").textContent="🪙 "+SAVE.gold;
   $("#muteBtn").textContent=SAVE.muted?"🔇":"🔊";
   $("#bgmBtn").textContent=SAVE.bgm===false?"🎵✕":"🎵";
 }
 let BATTLE_HOME="arena";
+// 畫面出錯時不要整個卡死：記錄錯誤，顯示自救按鈕
 function render(){
+  try{renderInner();}
+  catch(e){
+    glog("❌RENDER",`畫面=${VIEW}：${e&&e.stack||e}`);
+    $("#view").innerHTML=`<div class="panel" style="margin-top:16px;text-align:center"><h2>⚠ 畫面發生錯誤</h2>
+      <p class="dim">錯誤已經記錄下來。可以試試下面的按鈕，或按右下角 🆘 複製紀錄回報。</p>
+      <div class="opts">${RUN&&RUN.active&&SAVE.runCk?`<button class="pri" onclick="resetFloor()">🔄 重置這一層</button>`:""}
+      <button onclick="forceHome()">🏠 強制回到主頁（遠征進度會保留）</button><button onclick="openStuck()">🐞 查看錯誤紀錄</button></div></div>`;
+  }
+}
+function renderInner(){
   renderHeader();
-  const f={home:viewHome,gacha:viewGacha,team:viewTeam,gear:viewGear,shop:viewShop,run:viewRun,train:viewTrain,arena:viewArena,duel:viewDuel,battle:viewBattle}[VIEW];
+  const f={home:viewHome,gacha:viewGacha,team:viewTeam,gear:viewGear,shop:viewShop,run:viewRun,train:viewTrain,arena:viewArena,duel:viewDuel,battle:viewBattle}[VIEW]||viewHome;
   $("#view").innerHTML=f();
   if(VIEW==="battle"){const l=$("#blog");if(l)l.scrollTop=l.scrollHeight;}
   if(CUR_B&&CUR_B.online&&!CUR_B.guest)pushSnap(CUR_B);
@@ -931,6 +1043,7 @@ function doBreak(id){
   BR_RES={id,ok:false,msg:`💥 突破失敗……💎突破石 ×${need} 消失了（星數沒有變）`};SFX.lose();save();render();confirmBreak(id);
 }
 function doPull(n){
+  if($("#gacha").classList.contains("show")||!tapOk())return;
   const cost=n===10?TEN_COST:PULL_COST;
   if(SAVE.gold<cost){toast("金條不足！去遠征或競技場賺一些吧");return;}
   SAVE.gold-=cost;SAVE.pulls+=n;
@@ -1474,7 +1587,9 @@ function mkUnit(o){
   const u={uid:++UID,id:o.id,name:o.name||d.name,side:o.side,stars:o.stars||1,
     maxHp:o.maxHp||s.maxHp,atk:s.atk+(o.atk||0),def:s.def+(o.def||0),spd:s.spd+(o.spd||0),
     cd:0,buffs:[],st:{},perm:{},flags:{},alive:true,ally:!!o.ally,ref:o.ref||null,gx:o.gx||{}};
-  u.hp=o.hp!=null?Math.min(o.hp,u.maxHp):u.maxHp;
+  const mul=o.mult||1;
+  if(mul!==1){u.maxHp=Math.round(u.maxHp*mul);u.atk=Math.round(u.atk*mul);u.def=Math.round(u.def*mul);u.spd=Math.round(u.spd*mul);}
+  u.hp=o.hp!=null?Math.min(Math.round(o.hp*mul),u.maxHp):u.maxHp;
   if(u.hp<=0)u.alive=false;
   return u;
 }
@@ -1671,6 +1786,12 @@ function battleStartPassives(B){
   }
 }
 async function battleLoop(B){
+  try{await battleLoopInner(B);}
+  catch(e){glog("❌BATTLE",`${B.title} 第${B.round}回合：${e&&e.stack||e}`);
+    if(!B.aborted){blog(B,"⚠ 戰鬥發生錯誤。請按上方「🐞 卡住了」重置，並把紀錄回報給開發者。","bad");render();}}
+}
+async function battleLoopInner(B){
+  glog("⚔BATTLE",`開始：${B.title}`);
   await sleep(300);
   battleStartPassives(B);render();
   while(!checkEnd(B)){
@@ -1681,6 +1802,7 @@ async function battleLoop(B){
       if(checkEnd(B))break;
       if(!u.alive)continue;
       await takeTurn(B,u);
+      if(B.aborted)return;
       render();
       if(checkEnd(B))break;
       await sleep(B.fast?120:450);
@@ -1774,7 +1896,7 @@ function act(kind){
   render();
 }
 function pickItem(idx){
-  const B=CUR_B,w=B.wait,id=B.items[idx];
+  const B=CUR_B,w=B&&B.wait,id=B&&B.items&&B.items[idx];if(!w||!id)return;
   if(ITEMS[id].battle==="self"||id==="rocket")return resolveHuman({type:"item",idx,target:w.u});
   w.mode="target";w.action={type:"item",idx};w.tt="ally";w.label=ITEMS[id].name;render();
 }
@@ -1785,7 +1907,7 @@ function onUnitClick(uid){
   if(!validTargets(B,w.u,w.tt).includes(t))return;
   resolveHuman({...w.action,target:t});
 }
-function resolveHuman(a){const B=CUR_B,w=B.wait;B.wait=null;w.res(a);}
+function resolveHuman(a){const B=CUR_B,w=B&&B.wait;if(!w)return;B.wait=null;w.res(a);}
 
 /* ---- battle view ---- */
 function unitCard(B,u){
@@ -1837,7 +1959,8 @@ function viewBattle(){
   const me=B.mySide||"A",op=me==="A"?"B":"A";
   return `<div class="btop"><div class="ttl">${B.title}　<span class="dim small">第 ${B.round} 回合</span></div>
     ${B.ctrl.A==="human"&&B.ctrl.B!=="human"?`<button onclick="act('auto')" class="${B.auto?"ok":""}">${B.auto?"自動中":"自動"}</button>`:""}
-    ${B.guest?"":`<button onclick="CUR_B.fast=!CUR_B.fast;render()" class="${B.fast?"ok":""}">${B.fast?"⏩ 快速":"▶ 正常"}</button>`}</div>
+    ${B.guest?"":`<button onclick="CUR_B.fast=!CUR_B.fast;render()" class="${B.fast?"ok":""}">${B.fast?"⏩ 快速":"▶ 正常"}</button>`}
+    <button class="mini" onclick="openStuck()" title="畫面卡住時用">🐞 卡住了</button></div>
     <div class="side B">${B.units.filter(u=>u.side===op).map(u=>unitCard(B,u)).join("")}</div>
     <div class="vs">— ${B.labels[op]} ／ ${B.labels[me]} —</div>
     <div class="side A">${B.units.filter(u=>u.side===me).map(u=>unitCard(B,u)).join("")}</div>
@@ -1845,7 +1968,8 @@ function viewBattle(){
     <div class="blog" id="blog">${B.log.map(l=>`<div class="${l.cls}">${l.html}</div>`).join("")}</div>`;
 }
 function finishBattle(){
-  const B=CUR_B;B.done=true;
+  const B=CUR_B;if(!B||B.done)return; // 連點兩下不會重複結算
+  B.done=true;glog("⚔BATTLE",`結束：${B.title}（${B.over==="A"?"勝":"敗"}）`);
   if(B.auto&&B.wait)B.wait=null;
   B.cfg.onEnd(B.over==="A",B);
 }
@@ -2128,7 +2252,7 @@ function viewOnline(){
 
 
 /* ===================== DATA: 魔王討伐（支線） ===================== */
-// 8 位支線魔王：強度刻意偏高、可以不打。第一條命打完會「爆氣」進入第二階段（換圖、回血、變強、技能冷卻縮短）
+// 8 位支線魔王：強度刻意過強（第 3 位起連練滿的隊伍都打不贏），這是設計，請勿調弱。可以不打。第一條命打完會「爆氣」進入第二階段（換圖、回血、變強、技能冷卻縮短）
 // img:true 的怪物頭像在 images/bosses/{id}_1.webp（一般）與 {id}_2.webp（爆氣）
 const BOSS_LIST=["doomhunter","voidlord","fatejudge","reaper","abyssking","nightemperor","overlord","endwalker"];
 Object.assign(MONSTERS,{
@@ -2251,6 +2375,65 @@ function startBoss(id){
       if(win)openModal(`<h3>⚔ 討伐成功：${M.name}</h3><div class="detail"><div class="av"><img src="images/bosses/${id}_2.webp" alt=""></div><div><p>${notes.join("<br>")}</p></div></div>
         <div class="row"><button class="pri" onclick="openBoss('${id}')">再挑戰一次</button><button onclick="closeModal()">關閉</button></div>`);
     }});
+}
+
+
+/* ===================== 卡住了／回報問題 ===================== */
+function stateDump(){
+  const L=[`遊戲：禁閉逃殺 文字獄`,`時間：${new Date().toLocaleString()}`,`裝置：${navigator.userAgent}`,`畫面：${VIEW}`];
+  if(RUN)L.push(`遠征：${CHAPTERS[RUN.ch].name}（${diffName(RUN.diff)}） 樓層 ${RUN.fi} 進行中=${RUN.active} 場景=${RUN.scene?RUN.scene.title:"選房間"} 選項數=${RUN.scene?RUN.scene.opts.length:(RUN.choices||[]).length}`);
+  else if(SAVE.run)L.push(`有未繼續的遠征：${CHAPTERS[SAVE.run.ch].name} 樓層 ${SAVE.run.fi} 階段=${SAVE.run.stage}`);
+  if(CUR_B)L.push(`戰鬥：${CUR_B.title} 第${CUR_B.round}回合 結束=${CUR_B.over||"否"} 等待輸入=${CUR_B.wait?CUR_B.wait.mode:"否"} 行動中=${CUR_B.active?CUR_B.active.name:"無"}`);
+  return L.join("\n");
+}
+function reportText(){return stateDump()+"\n\n--- 最近紀錄 ---\n"+LOGS.slice(-150).join("\n");}
+function openStuck(){
+  try{$("#gacha").classList.remove("show");}catch(e){}
+  const inRun=!!(RUN&&RUN.active&&SAVE.runCk),inBattle=!!(CUR_B&&!CUR_B.done&&!CUR_B.online);
+  openModal(`<h3>🐞 卡住了／回報問題</h3>
+    <p class="small dim">遇到畫面卡住、按鈕沒反應時，可以先用下面的按鈕自救；也可以把「錯誤紀錄」複製下來傳給開發者。</p>
+    <div class="opts">
+      ${inRun?`<button class="pri" onclick="resetFloor()">🔄 重置這一層（回到選房間前，這一層重新打）</button>`:""}
+      ${inBattle&&!inRun?`<button class="pri" onclick="abortBattle()">⏹ 強制結束這場戰鬥（不會得到獎勵）</button>`:""}
+      ${NET?`<button onclick="closeModal();leaveOnline()">📴 離開網路對戰房間</button>`:""}
+      <button onclick="forceHome()">🏠 強制回到主頁（遠征進度會保留，可以之後繼續）</button>
+      <button onclick="location.reload()">↻ 重新整理網頁（存檔會保留）</button>
+    </div>
+    <h3>錯誤紀錄</h3>
+    <textarea id="logText" readonly style="width:100%;height:160px;font-size:11px">${reportText().replace(/</g,"&lt;")}</textarea>
+    <div class="row"><button class="gold" onclick="copyLog()">📋 複製紀錄</button><button onclick="LOGS=[];glog('🧹LOG','紀錄已清除');openStuck()">清除紀錄</button><button style="margin-left:auto" onclick="closeModal()">關閉</button></div>`);
+}
+function copyLog(){
+  const t=$("#logText");t.select();
+  const ok=()=>toast("已複製，貼給開發者就可以了");
+  try{navigator.clipboard.writeText(t.value).then(ok,()=>{document.execCommand("copy");ok();});}catch(e){document.execCommand("copy");ok();}
+}
+// 重置這一層：回到這一層「選房間」的畫面，這層發生的事全部取消
+function resetFloor(){
+  if(!SAVE.runCk){toast("沒有可以重置的樓層");return;}
+  if(CUR_B){CUR_B.aborted=true;CUR_B.done=true;}
+  CUR_B=null;
+  const ck=JSON.parse(JSON.stringify(SAVE.runCk));delete ck.stage;
+  RUN={...ck,scene:null,sel:null};VIEW="run";
+  glog("🔄RESET",`重置樓層：${CHAPTERS[RUN.ch].name} 樓層 ${RUN.fi}`);
+  persistRun("choose");closeModal();render();toast("已重置這一層，請重新選擇房間");
+}
+// 最後手段：結束戰鬥、關掉所有視窗、離開遠征畫面回主頁（遠征存檔保留，之後可以按「繼續遠征」）
+function forceHome(){
+  glog("🏠FORCE","強制回到主頁："+VIEW);
+  if(CUR_B){CUR_B.aborted=true;CUR_B.done=true;}
+  CUR_B=null;
+  if(NET){try{leaveOnline();}catch(e){NET=null;}}
+  if(DUEL&&DUEL.phase==="battle")DUEL=null;
+  if(RUN&&RUN.active&&!SAVE.run&&SAVE.runCk)SAVE.run=JSON.parse(JSON.stringify(SAVE.runCk));
+  RUN=null;
+  try{$("#gacha").classList.remove("show");}catch(e){}
+  closeModal();VIEW="home";save();render();toast("已回到主頁。遠征可以到「遠征」頁按「繼續遠征」");
+}
+function abortBattle(){
+  const B=CUR_B;if(!B)return closeModal();
+  B.aborted=true;B.done=true;glog("⏹ABORT",`強制結束戰鬥：${B.title}`);
+  const home=BATTLE_HOME;CUR_B=null;VIEW=home;closeModal();render();
 }
 
 /* ===================== RUN: DATA ===================== */
@@ -2521,7 +2704,7 @@ function memberToUnit(m){
   return {id:m.id,stars:m.stars,scale:m.scale,br:m.br||0,name:m.name,hp:m.hp,maxHp:m.maxHp,atk:memberAtk(m),def:(m.bonus.def||0)+(g.def||0),spd:(m.bonus.spd||0)+(g.spd||0),ally:m.ally,ref:m,gx:{crit:g.crit||0,steal:g.steal||0,dodge:g.dodge||0}};
 }
 function gasIdx(){return Math.floor((RUN.time-1)*.9)-1;}
-function addGold(n){n=Math.round(n*(hasRun("rich")?1.3:1));RUN.gold+=n;return n;}
+function addGold(n){n=Math.round(n*(hasRun("rich")?1.3:1)*dMul());RUN.gold+=n;return n;}
 function gainItem(id){RUN.items.push(id);return `${ITEMS[id].icon}${ITEMS[id].name}`;}
 // 遠征中的戰鬥經驗：給自己的角色（盟友不算），倒下的減半；升級要等下次出戰才生效
 function runExp(n){
@@ -2529,12 +2712,24 @@ function runExp(n){
   return expLine(n,ups)+(ups.length?`<br><span class="dim small">（升級的能力下次出戰生效）</span>`:"");
 }
 
-function startRun(c=0){
+// 主線難度：普通＝敵人生命與攻防速 ×2、掉落 ×2；困難 ×3、掉落 ×3（無盡深淵不分難度）
+const DIFFS={1:{name:"簡單",icon:"🟢",desc:"原本的難度"},2:{name:"普通",icon:"🟡",desc:"敵人生命、攻擊、防禦、速度 ×2；金條、突破石、魔王掉落的裝備 ×2"},3:{name:"困難",icon:"🔴",desc:"敵人生命、攻擊、防禦、速度 ×3；金條、突破石、魔王掉落的裝備 ×3"}};
+function diffName(d){return DIFFS[d||1].name;}
+function dMul(){return RUN&&RUN.ch!==ABYSS?(RUN.diff||1):1;}
+function openDiff(c){
+  const C=CHAPTERS[c],dc=(SAVE.prog.dclears||{})[c]||{};
+  openModal(`<h3>${C.icon} 第 ${c+1} 章　${C.name}</h3><p class="dim small">${C.sub}</p><p>選擇難度：</p>
+    <div class="opts">${[1,2,3].map(d=>`<button class="${d===1?"":d===2?"gold":"pri"}" onclick="closeModal();startRun(${c},${d})">${DIFFS[d].icon} ${DIFFS[d].name}${dc[d]?`　✓ 已逃出 ${dc[d]} 次`:""}<br><span class="small dim">${DIFFS[d].desc}</span></button>`).join("")}</div>
+    <div class="row" style="margin-top:10px"><button onclick="closeModal()">取消</button></div>`);
+}
+function startRun(c=0,diff=1){
   const team=SAVE.team.filter(id=>SAVE.owned[id]);
   if(!team.length){toast("先去「隊伍」編隊吧");return;}
   if(!unlocked(c)){toast("尚未解鎖");return;}
   const C=CHAPTERS[c];
-  RUN={active:true,ch:c,fi:0,time:0,food:3,gold:0,items:[],party:team.map(id=>mkMember(id,SAVE.owned[id].stars,{gear:equipBonus(id),scale:lvScale(id),br:brOf(id)})),
+  if(C.abyss)diff=1;
+  glog("🚩RUN",`開始：${C.name}（${diffName(diff)}）`);
+  RUN={active:true,ch:c,diff,fi:0,time:0,food:3,gold:0,items:[],party:team.map(id=>mkMember(id,SAVE.owned[id].stars,{gear:equipBonus(id),scale:lvScale(id),br:brOf(id)})),
     visited:{},choices:null,scene:null,sel:null,log:[],floors:C.abyss?[{label:"D0"}]:C.floors.map(f=>({label:f.label,rooms:f.rooms}))};
   const st=SAVE.stash,packed=st.items.map(gainItem);RUN.food+=st.food;
   const intro=[];if(packed.length||st.food)intro.push(`🎒 你們帶上了從商店買的行囊：${packed.join("、")}${st.food?`${packed.length?"、":""}🥫補給+${st.food}`:""}。`);
@@ -2549,7 +2744,9 @@ function startRun(c=0){
 function persistRun(stage){
   if(!RUN||!RUN.active)return;
   const {scene,sel,...rest}=RUN;
-  SAVE.run=JSON.parse(JSON.stringify({...rest,stage}));save();
+  SAVE.run=JSON.parse(JSON.stringify({...rest,stage}));
+  if(stage==="choose")SAVE.runCk=JSON.parse(JSON.stringify(SAVE.run)); // 這一層的重置點
+  save();
 }
 function resumeRun(){
   const s=SAVE.run;if(!s)return;
@@ -2562,7 +2759,7 @@ function resumeRun(){
   l.push("<span class='dim'>（遠征中途離開：這個房間的事件已經錯過，全員受到少量傷害。）</span>");
   setScene(FL()[RUN.fi].label+" · "+(RUN.visited[RUN.fi]||""),"🔄 繼續遠征",l,cont());render();
 }
-function setScene(loc,title,lines,opts){RUN.scene={loc,title,lines,opts};RUN.choices=null;}
+function setScene(loc,title,lines,opts){RUN.scene={loc,title,lines,opts};RUN.choices=null;glog("📍SCENE",`${loc}｜${title}`);}
 function nextLabel(){ensureFloor(RUN.fi+1);return FL()[RUN.fi+1]?FL()[RUN.fi+1].label:"";}
 function cont(extra=[]){return extra.concat([{label:`${RUN.ch===ABYSS?"⬇":"⬆"} 前往 ${nextLabel()}`,cls:"pri",act:toChoose}]);}
 
@@ -2614,7 +2811,8 @@ function abyssChoices(fi){
 function canRope(){return RUN.items.includes("rope")&&(RUN.ch===ABYSS?(RUN.fi+1)%5!==0:RUN.fi+1<LAST()-1);}
 function canReveal(){return hasRun("reveal");}
 function chooseRoom(i){
-  const ch=RUN.choices[i];SFX.click();
+  if(!RUN||!RUN.choices||!RUN.choices[i]||!tapOk())return;
+  const ch=RUN.choices[i];SFX.click();glog("🚪ROOM",`${FL()[RUN.fi+1].label} 選 ${ch.id}${ch.name?" "+ch.name:""}`);
   RUN.fi++;RUN.visited[RUN.fi]=ch.name||ch.id;
   const lines=[];
   // 補給消耗
@@ -2862,7 +3060,7 @@ function shadeAmbush(ch,L,n){
 function runBattle(ch,group,ambush,intro,after){
   const where=loc(ch),fi=RUN.fi,members=aliveMembers();
   startBattle({title:`${where}`,home:"run",items:RUN.items,ambush,intro,
-    A:members.map(memberToUnit),B:group,
+    A:members.map(memberToUnit),B:group.map(g=>({...g,mult:dMul()})),
     resultNote:B=>B.over==="A"?"":"全隊覆沒……",
     onEnd(win,B){
       B.units.filter(u=>u.ref).forEach(u=>{u.ref.hp=Math.max(0,u.hp);u.ref.alive=u.alive&&u.side==="A";});
@@ -2890,7 +3088,7 @@ function helipad(L){
   const size=aliveMembers().length,hp=C.bossHp(size);
   setScene(C.bossLoc,C.bossTitle,L.concat(C.bossLines),[{label:"⚔️ 決戰",cls:"pri",act(){
     startBattle({title:C.bossLoc+" 決戰",home:"run",items:RUN.items,intro:C.bossIntro,
-      A:aliveMembers().map(memberToUnit),B:[{id:C.boss,stars:1,scale:C.bossScale,maxHp:hp,hp}],
+      A:aliveMembers().map(memberToUnit),B:[{id:C.boss,stars:1,scale:C.bossScale,maxHp:hp,hp,mult:dMul()}],
       onEnd(win,B){
         B.units.filter(u=>u.ref).forEach(u=>{u.ref.hp=Math.max(0,u.hp);u.ref.alive=u.alive&&u.side==="A";});
         RUN.party=RUN.party.filter(m=>!m.betrayed);
@@ -2961,7 +3159,8 @@ function seats(){
 
 /* ---- 結算 ---- */
 function endRun(escaped,lines=[]){
-  const r=RUN;r.active=false;r.escaped=escaped;SAVE.run=null;
+  const r=RUN;r.active=false;r.escaped=escaped;SAVE.run=null;SAVE.runCk=null;
+  glog("🏁RUN",`${CHAPTERS[r.ch].name}（${diffName(r.diff)}）結束：${escaped?"逃出":"失敗"}，到達 ${r.fi}`);
   const reached=r.fi,C=CHAPTERS[r.ch],abyss=r.ch===ABYSS,P=SAVE.prog;
   let bonus=0;
   const out=lines.slice();
@@ -2969,10 +3168,13 @@ function endRun(escaped,lines=[]){
     out.push(`<b style="color:var(--gold)">${abyss?"撤離成功！":"逃出成功！"}</b>`);
     if(abyss)bonus=r.fi*2;
     else{
-      bonus=30*(r.ch+1);P.clears[r.ch]=(P.clears[r.ch]||0)+1;
+      const dm=r.diff||1;
+      bonus=30*(r.ch+1)*dm;P.clears[r.ch]=(P.clears[r.ch]||0)+1;
+      P.dclears=P.dclears||{};P.dclears[r.ch]=P.dclears[r.ch]||{};P.dclears[r.ch][dm]=(P.dclears[r.ch][dm]||0)+1;
+      if(dm>1)out.push(`<span style="color:var(--gold)">${DIFFS[dm].icon} ${DIFFS[dm].name}難度：金條、突破石、裝備 ×${dm}</span>`);
       const q=r.ch>=4?(rnd()<.06?"UR":rnd()<.35?"SSR":"SR"):r.ch>=2?(rnd()<.12?"SSR":"SR"):(rnd()<.3?"SR":"R");
-      out.push(`🎁 ${C.bossRoom}留下了一件裝備：<b>${dropGear(q)}</b>（已放進裝備）`);
-      const st=1+Math.floor(r.ch/2);SAVE.charms.stone+=st;out.push(`💎 撿到突破石 ×${st}`);
+      for(let k=0;k<dm;k++)out.push(`🎁 ${C.bossRoom}留下了一件裝備：<b>${dropGear(q)}</b>（已放進裝備）`);
+      const st=(1+Math.floor(r.ch/2))*dm;SAVE.charms.stone+=st;out.push(`💎 撿到突破石 ×${st}`);
       if(P.cleared<=r.ch){
         P.cleared=r.ch+1;bonus+=FIRST_CLEAR[r.ch];
         out.push(`🏅 首次通關「${C.name}」！額外 🪙${FIRST_CLEAR[r.ch]}`);
@@ -2994,8 +3196,8 @@ function endRun(escaped,lines=[]){
   out.push(`帶回 🪙${gain}（本次遠征共搜得 🪙${r.gold}${bonus?`，${abyss?"深度":"逃出"}獎勵+${bonus}`:""}）`);
   if(abyss){P.abyssBest=Math.max(P.abyssBest,reached);out.push(`<span class="dim">本次到達 D${reached}，最深紀錄 D${P.abyssBest}。</span>`);}
   SAVE.gold+=gain;if(r.ch===0)SAVE.stats.best=Math.max(SAVE.stats.best,reached);save();
-  r.scene={loc:escaped?"夜空":"黑暗",title:escaped?(abyss?"🪜 撤離深淵":`${C.vehIcon} 逃出生天`):"✝ 遠征失敗",lines:out,opts:[{label:"回到主頁",cls:"pri",act(){RUN=null;go("home");}},{label:"再來一次",act(){RUN=null;startRun(r.ch);}},
-    ...(escaped&&!abyss&&CHAPTERS[r.ch+1]&&r.ch+1<ABYSS?[{label:`➡ 前往第 ${r.ch+2} 章`,act(){RUN=null;startRun(r.ch+1);}}]:[])]};
+  r.scene={loc:escaped?"夜空":"黑暗",title:escaped?(abyss?"🪜 撤離深淵":`${C.vehIcon} 逃出生天`):"✝ 遠征失敗",lines:out,opts:[{label:"回到主頁",cls:"pri",act(){RUN=null;go("home");}},{label:"再來一次",act(){RUN=null;startRun(r.ch,r.diff);}},
+    ...(escaped&&!abyss&&CHAPTERS[r.ch+1]&&r.ch+1<ABYSS?[{label:`➡ 前往第 ${r.ch+2} 章`,act(){RUN=null;startRun(r.ch+1,r.diff);}}]:[])]};
   r.choices=null;VIEW="run";render();
 }
 
@@ -3026,7 +3228,7 @@ function viewRun(){
     <div class="row"><button class="pri" onclick="resumeRun()">▶ 繼續遠征</button><button onclick="SAVE.run=null;save();render()">放棄這場遠征</button></div></div>`;
   if(!RUN)return `<h2>逃殺遠征</h2>
     <div class="chapters">${CHAPTERS.map((C,i)=>{const ok=unlocked(i),n=SAVE.prog.clears[i]||0;
-      return `<div class="chap ${ok?"":"lockc"}" ${ok&&SAVE.team.length?`onclick="startRun(${i})"`:""}><div class="ic">${ok?C.icon:"🔒"}</div>
+      return `<div class="chap ${ok?"":"lockc"}" ${ok&&SAVE.team.length?`onclick="${C.abyss?`startRun(${i})`:`openDiff(${i})`}"`:""}><div class="ic">${ok?C.icon:"🔒"}</div>
         <div><b>${C.abyss?"":`第 ${i+1} 章　`}${C.name}</b><div class="dim small">${ok?C.sub:i===ABYSS?"通關第 1 章後解鎖":`通關「${CHAPTERS[i-1].name}」後解鎖`}</div>
         <div class="small" style="color:var(--gold)">${C.abyss?(SAVE.prog.abyssBest?`最深 D${SAVE.prog.abyssBest}`:""):n?`已逃出 ${n} 次`:ok?`首通獎勵 🪙${FIRST_CLEAR[i]}`:""}</div></div></div>`;}).join("")}</div>
     <div class="panel"><p>每層選一個房間往上爬，打倒最上層的魔王就能逃出。後面的章節敵人更強、獎勵更多。</p>
@@ -3070,27 +3272,49 @@ function viewRun(){
       ${m.ally?`<div class="trust"><i style="width:${clamp(m.trust,0,100)}%;background:${m.trust<40?"var(--red)":"var(--gold)"}"></i></div><div class="dim">信任 ${m.trust}</div>`:""}
     </div>${r.sel!=null&&m.alive&&r.active?`<button class="mini gold" onclick="applyOutItem(${i})">使用</button>`:""}</div>`;}).join("");
   const side=`<div class="panel">
+    ${ab?"":`<div class="small" style="margin-bottom:4px">${DIFFS[r.diff||1].icon} 難度：<b>${diffName(r.diff)}</b></div>`}
     <div class="res"><span>🥫 ${r.food}</span><span style="color:var(--gold)">🪙 ${r.gold}</span><span class="dim">⏱ ${r.time}</span></div>
     <div class="gasbar">☣ 毒氣：${g<0?"尚未出現":"已淹到 "+FL()[clamp(g,0,FL().length-1)].label}</div>
     <h3>隊伍</h3>${party}
     ${al&&r.food>0&&r.active?`<button class="mini" onclick="shareFood()">🥫 分補給給盟友（信任+20）</button>`:""}
     <h3>背包</h3><div class="items">${r.items.map((id,i)=>`<span class="item ${r.sel===i?"sel":""}" title="${ITEMS[id].desc}" onclick="useOutItem(${i})">${ITEMS[id].icon}${ITEMS[id].name}</span>`).join("")||"<span class='dim small'>空</span>"}</div>
     ${r.sel!=null?`<div class="small" style="color:var(--gold);margin-top:6px">選擇要使用／裝備的隊員 →</div>`:""}
-    ${r.active?`<button class="mini" style="margin-top:14px" onclick="abandonRun()">放棄遠征</button>`:""}
+    ${r.active?`<div class="row" style="margin-top:14px"><button class="mini" onclick="abandonRun()">放棄遠征</button><button class="mini" onclick="openStuck()">🐞 卡住了／回報問題</button></div>`:""}
   </div>`;
   return `<div class="runwrap"><div class="tower">${tower}</div><div>${main}</div><div>${side}</div></div>`;
 }
-function sceneOpt(i){const o=RUN.scene.opts[i];SFX.click();o.act();}
+// 手機連點：同一個按鈕 0.35 秒內只算一次，避免第二下按到下一個畫面的選項
+let TAP_T=0;
+function tapOk(){const n=Date.now();if(n-TAP_T<350)return false;TAP_T=n;return true;}
+function sceneOpt(i){
+  if(!tapOk())return;
+  const o=RUN&&RUN.scene&&RUN.scene.opts[i];if(!o){glog("❌SCENE","選項不存在："+i);return openStuck();}
+  SFX.click();glog("👉CHOICE",`${RUN.scene.title}：${String(o.label).replace(/<[^>]+>/g,"")}`);
+  try{o.act();}catch(e){glog("❌SCENE",`${RUN.scene&&RUN.scene.title}：${e&&e.stack||e}`);toast("發生錯誤，已記錄。可以按「🐞 卡住了」重置這一層");}
+}
 
 /* ===================== BOOT ===================== */
 // 邀請連結 ?room=XXXXX：直接進網路對戰並加入房間
 (()=>{const q=new URLSearchParams(location.search).get("room");
   if(q&&/^[A-Za-z0-9]{5}$/.test(q)){JOIN_CODE=q.toUpperCase();DUEL_MODE="online";VIEW="duel";history.replaceState(null,"",location.pathname);}})();
+// 開機時檢查存檔：簽章不符或數值異常就清空；之後每 5 秒檢查一次記憶體裡的數值
+const BOOT_BAD=TAMPER||validSave(SAVE);
+if(BOOT_BAD){SAVE=newSave();RUN=null;}
+SAVE_READY=true;save();
+if(BOOT_BAD)setTimeout(()=>tamperNotice(BOOT_BAD),0);
+setInterval(checkIntegrity,5000);
+// 戰鬥看門狗：電腦方行動超過 20 秒沒有進展（不是在等玩家操作），提醒玩家用 🆘
+setInterval(()=>{
+  const B=CUR_B;if(!B||B.done||B.over||B.wait||B.guest||B.rwait)return;
+  const sig=B.round+"|"+B.log.length;
+  if(B.wd!==sig){B.wd=sig;B.wdT=Date.now();return;}
+  if(Date.now()-B.wdT>20000&&!B.wdWarned){B.wdWarned=true;glog("⏰STUCK",`戰鬥 20 秒沒有進展：${B.title} 第${B.round}回合`);toast("戰鬥好像卡住了，可以按右下角 🆘 自救");}
+},5000);
 render();
 loadBgm();
 document.addEventListener("pointerdown",startBgm,{once:true});
 if(JOIN_CODE)joinRoom(JOIN_CODE);
-else if(SAVE.run)resumeRun();
+else if(SAVE.run){try{resumeRun();}catch(e){glog("❌RESUME",e&&e.stack||e);RUN=null;VIEW="run";render();toast("接續遠征時發生錯誤，已記錄。可以在遠征頁重新繼續或放棄");}}
 else if(!SAVE.guided)openGuide(0);
 </script>
 </body>

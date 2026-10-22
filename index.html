@@ -920,6 +920,7 @@ function validSave(s){
     for(const f of fx){const A=AFFIX[f.k];if(!A||!isInt(f.v,1,Math.max(1,Math.round(A.r[1]*AFFIX_MULT[G.q]))))return `${G.name} 詞條數值異常`;}
   }
   for(const k in s.charms)if(!isInt(s.charms[k],0,99999))return "強化道具數量異常";
+  if(s.shards)for(const k in s.shards)if(!isInt(s.shards[k],0,99999))return "碎片數量異常";
   if(!isInt(s.arenaTier,1,100000))return "競技場層數異常";
   if(s.train&&!isInt(s.train.best,0,TRAIN_MAX))return "練功房進度異常";
   if(!isInt(s.prog.cleared,0,ABYSS))return "主線進度異常";
@@ -954,6 +955,7 @@ function migrate(s){
   if(!s.lore)s.lore={};
   s.team=(s.team||[]).filter(id=>s.owned[id]);
   if(s.charms.stone==null)s.charms.stone=0;
+  if(!s.shards)s.shards={R:0,SR:0,SSR:0};
   return s;
 }
 function exportSave(){
@@ -1198,6 +1200,9 @@ function viewGacha(){
       <span class="dim small">距離保底 SSR：${60-SAVE.pity} 抽</span>
     </div>
   </div>
+  <div class="panel small" style="margin-top:10px"><b>🧩 碎片</b>：${["R","SR","SSR"].map(r=>`<span class="r${r}">${r} ×${SAVE.shards[r]}</span>`).join("　")}
+    <button class="mini gold" style="margin-left:8px" onclick="openShards('SSR')">兌換角色</button>
+    <div class="dim small">5★ 後重複抽到、遣散 SR／SSR 角色會得到碎片，可以指定換角色或補星。</div></div>
   <h3>機率</h3>
   <div class="panel small">
     <span class="rSSR">SSR 3%</span>（${POOL.SSR.map(i=>CARDS[i].name).join("、")}）<br>
@@ -1207,6 +1212,29 @@ function viewGacha(){
   </div>
   <h3>賺金條</h3>
   <div class="panel small dim">逃殺遠征（逃出時全額帶走、陣亡帶走一半）・競技場勝利</div>`;
+}
+let SHARD_TAB="SSR";
+function openShards(t){
+  if(t)SHARD_TAB=t;const r=SHARD_TAB,have=SAVE.shards[r];
+  const ids=Object.keys(CARDS).filter(id=>CARDS[id].r===r);
+  openModal(`<h3>🧩 碎片兌換</h3>
+    <div class="filters">${["R","SR","SSR"].map(k=>`<button class="${k===r?"on":""}" onclick="openShards('${k}')">${k} ×${SAVE.shards[k]}</button>`).join("")}</div>
+    <p class="dim small">沒有的角色 🧩${SHARD_NEW[r]} 換 1★；已擁有但未滿 5★ 的角色 🧩${SHARD_STAR[r]} 補 1★。</p>
+    <div style="max-height:50vh;overflow:auto">${ids.map(id=>{const o=SAVE.owned[id],c=CARDS[id];
+      const cost=!o?SHARD_NEW[r]:SHARD_STAR[r],full=o&&o.stars>=5;
+      return `<div class="row" style="align-items:center;margin:4px 0"><div class="av" style="width:36px;height:36px">${avatar(id)}</div>
+        <span class="r${r}">${c.name}</span> <span class="small dim">${o?o.stars+"★":"未獲得"}</span>
+        <button class="mini gold" style="margin-left:auto" onclick="buyShard('${id}')" ${full||have<cost?"disabled":""}>${full?"已 5★":(o?"補 1★ ":"獲得 ")+"🧩"+cost}</button></div>`;}).join("")}</div>
+    <div class="row"><button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
+}
+function buyShard(id){
+  const r=CARDS[id].r,o=SAVE.owned[id];
+  if(o&&o.stars>=5)return;
+  const cost=o?SHARD_STAR[r]:SHARD_NEW[r];
+  if(SAVE.shards[r]<cost){toast("碎片不足");return;}
+  SAVE.shards[r]-=cost;
+  if(o)o.stars++;else SAVE.owned[id]={stars:1};
+  save();SFX.ssr();toast(`${CARDS[id].name} ${o?"升至 "+o.stars+"★":"加入收藏"}`);openShards();render();
 }
 function rollRarity(){
   SAVE.pity++;
@@ -1219,7 +1247,8 @@ function grant(id){
   const o=SAVE.owned[id];
   if(!o){SAVE.owned[id]={stars:1};return {id,isNew:true};}
   if(o.stars<5){o.stars++;return {id,up:o.stars};}
-  SAVE.gold+=5;SAVE.charms.stone++;return {id,refund:5};
+  const sh=SHARD_DUP[CARDS[id].r];
+  SAVE.gold+=5;SAVE.charms.stone++;SAVE.shards[CARDS[id].r]+=sh;return {id,refund:5,sh};
 }
 // 突破：5★ 時消耗突破石嘗試突破。成功率從 30% 起每次 ×0.85 指數下降。
 // 成功：星星回到 1★ 重新累積，之前的能力保留，另外全能力 +1.5%。失敗：突破石消失，星數不變（不會降星）。
@@ -1282,7 +1311,7 @@ function showGacha(res){
         <div class="b">?</div>
         <div class="f"><div class="av">${avatar(x.id)}</div><div class="nm r${c.r}">${c.name}</div>
           <div class="small r${c.r}">${c.r}</div>
-          <div class="badge">${x.isNew?"NEW!":x.up?"升至"+x.up+"★":"🪙+"+x.refund+" 💎+1"}</div></div>
+          <div class="badge">${x.isNew?"NEW!":x.up?"升至"+x.up+"★":"🪙+"+x.refund+" 💎+1 🧩+"+x.sh}</div></div>
       </div></div>`;}).join("")}
     </div>
     <div class="row"><button onclick="flipAll()">全部翻開</button><button class="pri" onclick="closeGacha()">完成</button></div>`;
@@ -1368,6 +1397,10 @@ function showCard(id){
 }
 // 遣散：每顆星算一張卡的價值。期望值低於抽卡價（約5／抽），不會變成刷錢手段
 const SELL_PRICE={R:3,SR:10,SSR:30};
+// 碎片：5★ 後重複抽到、遣散 SR／SSR 才會有。故意很難湊：SSR 新角色要約 20 張 5★ 重複卡的量
+const SHARD_DUP={R:1,SR:3,SSR:10},SHARD_SELL={R:0,SR:1,SSR:3};
+const SHARD_NEW={R:25,SR:80,SSR:200},SHARD_STAR={R:8,SR:25,SSR:70};
+const SHARD_NAME={R:"R 碎片",SR:"SR 碎片",SSR:"SSR 碎片"};
 function sellBlock(id){
   if(SAVE.team.includes(id))return "在出戰隊伍中，先移出隊伍才能遣散";
   if(SAVE.run&&SAVE.run.party.some(m=>!m.ally&&m.id===id))return "正在遠征中，結束後才能遣散";
@@ -1388,13 +1421,14 @@ function sellCard(id,n){
   if(n>=o.stars)n=cardWorth(id);
   const g=SELL_PRICE[CARDS[id].r]*n;
   if(n>=cardWorth(id))delete SAVE.owned[id];else o.stars-=n;
-  SAVE.gold+=g;save();SFX.click();toast(`遣散 ${CARDS[id].name}，🪙+${g}`);
+  const sh=SHARD_SELL[CARDS[id].r]*n;SAVE.shards[CARDS[id].r]+=sh;
+  SAVE.gold+=g;save();SFX.click();toast(`遣散 ${CARDS[id].name}，🪙+${g}${sh?` 🧩+${sh}`:""}`);
   if(SAVE.owned[id])showCard(id);else closeModal();
   render();
 }
 function confirmSell(id){
   const o=SAVE.owned[id],g=SELL_PRICE[CARDS[id].r]*cardWorth(id);
-  openModal(`<h3>遣散 ${CARDS[id].name}？</h3><p class="dim">這張卡（${brOf(id)?`突破${brOf(id)} `:""}${o.stars}★）會從收藏中移除，換得 🪙${g}。之後抽到會從 1★ 重新開始。</p>
+  openModal(`<h3>遣散 ${CARDS[id].name}？</h3><p class="dim">這張卡（${brOf(id)?`突破${brOf(id)} `:""}${o.stars}★）會從收藏中移除，換得 🪙${g}${SHARD_SELL[CARDS[id].r]?` 和 🧩${SHARD_NAME[CARDS[id].r]} ×${SHARD_SELL[CARDS[id].r]*cardWorth(id)}`:""}。之後抽到會從 1★ 重新開始。</p>
     <div class="row"><button class="pri" onclick="sellCard('${id}',99)">遣散</button><button onclick="showCard('${id}')">取消</button></div>`);
 }
 // 一鍵：把不在隊伍裡的 R 卡全部遣散（保留至少 3 名角色）

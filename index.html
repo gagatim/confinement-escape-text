@@ -217,7 +217,24 @@ b.sA{color:var(--sideA)} b.sB{color:var(--sideB)}
 .ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .gcard{background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:10px;cursor:pointer;transition:.15s;position:relative}
 .gcard:hover{transform:translateY(-2px)}
-.gcard.R{border-color:#2c5a86}.gcard.SR{border-color:var(--purple)}.gcard.SSR{border-color:var(--gold);box-shadow:0 0 12px rgba(245,196,81,.25)}
+.gcard.N{border-color:#4a525c}.gcard.R{border-color:#2c5a86}.gcard.SR{border-color:var(--purple)}.gcard.SSR{border-color:var(--gold);box-shadow:0 0 12px rgba(245,196,81,.25)}
+.gcard.UR{border-color:#ff5e8a;box-shadow:0 0 16px rgba(255,94,138,.45)}
+.gcard.EX{border-color:#5ef0ff;box-shadow:0 0 18px rgba(94,240,255,.5);background:linear-gradient(160deg,#0f2a33,var(--panel))}
+.rEX{color:#6ff3ff;text-shadow:0 0 8px rgba(94,240,255,.7)}
+.bossgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.bosscard{background:var(--panel);border:2px solid #3a2340;border-radius:12px;padding:8px;cursor:pointer;transition:.15s;text-align:center}
+.bosscard:hover{transform:translateY(-2px);border-color:var(--red)}
+.bosscard.lockc{opacity:.45}
+.bosscard .bav{width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center}
+.bosscard .bav img{width:100%;height:100%;object-fit:cover}
+.bosscard .bn{font-weight:800;margin-top:4px}
+.ucard.bossu{width:170px;border-color:#7a2a3a}
+.ucard.bossu.p2{border-color:var(--red);box-shadow:0 0 22px rgba(229,72,77,.7);animation:rage 1.2s infinite}
+@keyframes rage{50%{box-shadow:0 0 34px rgba(229,72,77,.95)}}
+.rN{color:#a3acb6}.rUR{color:#ff6b95;text-shadow:0 0 8px rgba(255,94,138,.6)}
+.gfx{font-size:11px;color:#7fe3ff}
+.req{font-size:11px;color:var(--dim)}.req.bad{color:var(--red);font-weight:700}
+.setb{font-size:12px;margin-top:4px}.setb .on{color:var(--green)}.setb .off{color:var(--dim)}
 .gcard .gi{font-size:30px}
 .gcard .gn{font-weight:700}
 .gcard .lv{position:absolute;top:6px;right:8px;font-weight:900;color:var(--gold)}
@@ -514,6 +531,9 @@ function clsTag(id){const c=CLASSES[CARDS[id].cls];return `<span class="ctag c-$
 /* ===================== DATA: GEAR ===================== */
 // 角色裝備（永久）：武器有職業限制，防具、飾品全職業可用。強化每 +1 基礎數值 +8%
 const GEAR={
+  stick:{name:"木棍",icon:"🪵",slot:"weapon",q:"N",st:{atk:1}},
+  rags:{name:"破布衣",icon:"👕",slot:"armor",q:"N",st:{hp:3}},
+  band:{name:"橡皮筋",icon:"➰",slot:"acc",q:"N",st:{hp:2}},
   pipe:{name:"鐵管",icon:"🔧",slot:"weapon",q:"R",st:{atk:2}},
   axe:{name:"消防斧",icon:"🪓",slot:"weapon",q:"R",cls:["warrior","tank"],st:{atk:3,hp:3}},
   dagger:{name:"匕首",icon:"🔪",slot:"weapon",q:"R",cls:["assassin"],st:{atk:2,spd:1}},
@@ -534,21 +554,60 @@ const GEAR={
   scythe:{name:"死神鐮刀",icon:"🌙",slot:"weapon",q:"SSR",cls:["warrior","assassin"],st:{atk:6,hp:8}},
   aegis:{name:"神盾",icon:"🔰",slot:"weapon",q:"SSR",cls:["tank","support"],st:{atk:4,def:4,hp:14}},
   exo:{name:"外骨骼裝甲",icon:"🤖",slot:"armor",q:"SSR",st:{hp:18,def:3,atk:2}},
-  watch:{name:"主辦人的懷錶",icon:"⏱️",slot:"acc",q:"SSR",st:{spd:2,atk:3,hp:6}}
+  watch:{name:"主辦人的懷錶",icon:"⏱️",slot:"acc",q:"SSR",st:{spd:2,atk:3,hp:6}},
+  gavel:{name:"審判之槌",icon:"🔨",slot:"weapon",q:"UR",st:{atk:9,hp:10,spd:1}},
+  abyssmail:{name:"深淵之甲",icon:"🧿",slot:"armor",q:"UR",st:{hp:24,def:4,atk:2}},
+  scales:{name:"天秤徽章",icon:"⚖️",slot:"acc",q:"UR",st:{atk:4,spd:2,hp:8}},
+  // 魔王專屬（EX）：只從支線魔王掉落，全職業可用
+  doomrifle:{name:"滅世狙擊槍",icon:"🎯",slot:"weapon",q:"EX",st:{atk:13,spd:1}},
+  reaperscythe:{name:"死神之鐮",icon:"⚰️",slot:"weapon",q:"EX",st:{atk:12,hp:12}},
+  fatecompass:{name:"命運羅盤",icon:"🧭",slot:"weapon",q:"EX",st:{atk:10,def:3,hp:10}},
+  endchain:{name:"終焉鎖鏈",icon:"⛓️",slot:"weapon",q:"EX",st:{atk:11,spd:2}},
+  nightrobe:{name:"永夜王袍",icon:"🦇",slot:"armor",q:"EX",st:{hp:30,def:5,atk:3}},
+  overlordmantle:{name:"霸主金袍",icon:"🌟",slot:"armor",q:"EX",st:{hp:26,def:6,atk:2}},
+  voidterm:{name:"虛空終端",icon:"💠",slot:"acc",q:"EX",st:{atk:5,spd:3,hp:8}},
+  abysscrown:{name:"深淵王冠",icon:"👑",slot:"acc",q:"EX",st:{atk:6,hp:14,def:2}}
+};
+// 稀有度（由低到高）、穿戴等級、隨機詞條、套裝
+const GQ=["N","R","SR","SSR","UR","EX"];
+const GQ_NAME={N:"普通",R:"稀有",SR:"精良",SSR:"史詩",UR:"傳說",EX:"魔王專屬"};
+const GEAR_REQ={N:1,R:1,SR:5,SSR:10,UR:15,EX:12};
+const GEAR_ROLL={N:[85,115],R:[85,115],SR:[90,115],SSR:[95,120],UR:[100,125],EX:[100,130]};
+const AFFIX={atk:{n:"攻擊",r:[1,2]},hp:{n:"生命",r:[3,8]},def:{n:"防禦",r:[1,1]},spd:{n:"速度",r:[1,1]},
+  crit:{n:"暴擊",r:[3,6],pct:1},steal:{n:"吸血",r:[5,10],pct:1},dodge:{n:"閃避",r:[3,6],pct:1}};
+const AFFIX_MULT={N:1,R:1,SR:1.3,SSR:1.6,UR:2,EX:2.2};
+function affixCount(q){return q==="N"?0:q==="R"?(rnd()<.3?1:0):q==="SR"?1:q==="SSR"?1+(rnd()<.5?1:0):q==="EX"?3:2+(rnd()<.3?1:0);}
+// 套裝：同稀有度的裝備穿 2 件、3 件有額外效果（3 件會同時拿到 2 件的效果）
+const SETS={
+  N:{name:"破爛套裝",2:{hp:3},3:{atk:1,spd:1}},
+  R:{name:"囚犯套裝",2:{hp:6},3:{atk:2,crit:3}},
+  SR:{name:"特勤套裝",2:{def:2,hp:6},3:{atk:2,crit:6}},
+  SSR:{name:"主辦人套裝",2:{atk:3,hp:10},3:{crit:5,steal:10}},
+  UR:{name:"審判套裝",2:{atk:5,def:2,hp:15},3:{crit:10,steal:12,dodge:6}},
+  EX:{name:"魔王套裝",2:{atk:6,hp:20,def:2},3:{crit:12,steal:15,dodge:8}}
 };
 const SLOTS={weapon:"武器",armor:"防具",acc:"飾品"};
-const ST_LBL={hp:"❤",atk:"⚔",def:"🛡",spd:"💨"};
+const ST_LBL={hp:"❤",atk:"⚔",def:"🛡",spd:"💨",crit:"暴擊",steal:"吸血",dodge:"閃避"};
+const ST_PCT={crit:1,steal:1,dodge:1};
 const ENH_MAX=10;
 const ENH_RATE=[100,95,90,80,70,60,50,40,32,25]; // 依目前等級：+0→+1 為 100%
-const GEAR_SELL={R:5,SR:15,SSR:40};
+const GEAR_SELL={N:2,R:5,SR:15,SSR:40,UR:100,EX:150};
 function enhCost(lv){return 5+lv*5;}
-function gearStats(g){const b=GEAR[g.base].st,o={};for(const k in b)o[k]=Math.round(b[k]*(1+.08*g.lv));return o;}
-function statStr(o){return Object.keys(ST_LBL).filter(k=>o[k]).map(k=>`${ST_LBL[k]}+${o[k]}`).join(" ");}
+// 數值 = 基礎 × 浮動品質(roll%) × 強化；詞條是固定加值，不吃強化
+function gearStats(g){
+  const b=GEAR[g.base].st,o={},roll=(g.roll||100)/100;
+  for(const k in b)o[k]=Math.max(1,Math.round(b[k]*roll*(1+.08*g.lv)));
+  (g.fx||[]).forEach(f=>o[f.k]=(o[f.k]||0)+f.v);
+  return o;
+}
+function statStr(o){return Object.keys(ST_LBL).filter(k=>o[k]).map(k=>ST_PCT[k]?`${ST_LBL[k]}+${o[k]}%`:`${ST_LBL[k]}+${o[k]}`).join(" ");}
+function fxStr(g){return (g.fx||[]).map(f=>`✦${AFFIX[f.k].n}+${f.v}${AFFIX[f.k].pct?"%":""}`).join(" ");}
 function gearName(g){return `${GEAR[g.base].icon}${GEAR[g.base].name}${g.lv?" +"+g.lv:""}`;}
 function gearCls(base){const c=GEAR[base].cls;return c?c.map(k=>CLASSES[k].icon+CLASSES[k].name).join("／"):"全職業";}
 
-function avatar(id){
+function avatar(id,p2){
   const d=DEF(id);
+  if(d.img) return `<img src="images/bosses/${id}_${p2?2:1}.webp" alt="" draggable="false">`;
   if(d.emoji) return `<span class="emo">${d.emoji}</span>`;
   return `<img src="images/avatars/${id}.webp" alt="" draggable="false" onerror="this.outerHTML='<span class=emo>${d.name.charAt(0)}</span>'">`;
 }
@@ -592,6 +651,7 @@ function migrate(s){
   if(!s.stash)s.stash={items:[],food:0};
   if(!s.charms)s.charms={protect:0,luck:0};
   if(!s.train)s.train={best:0};
+  if(!s.bosses)s.bosses={};
   if(s.charms.stone==null)s.charms.stone=0;
   return s;
 }
@@ -934,7 +994,8 @@ function showCard(id){
     <div>${clsTag(id)} <span class="dim small">${CLASSES[c.cls].desc}</span></div>${o?lvBar(id):""}
     <div class="small">❤ ${sv("hp",s.maxHp)}　⚔ ${sv("atk",s.atk)}　🛡 ${sv("def",s.def)}　💨 ${sv("spd",s.spd)}</div>
     ${o?`<div class="gslots">${Object.keys(SLOTS).map(sl=>{const g=gearById(o.eq&&o.eq[sl]);
-      return `<div class="gslot ${g?"has "+GEAR[g.base].q:""}" onclick="openSlot('${id}','${sl}')"><div class="gi">${g?GEAR[g.base].icon:"＋"}</div>${g?`<b class="r${GEAR[g.base].q}">${GEAR[g.base].name}${g.lv?" +"+g.lv:""}</b>`:`<span class="dim">${SLOTS[sl]}</span>`}</div>`;}).join("")}</div>`:""}
+      return `<div class="gslot ${g?"has "+GEAR[g.base].q:""}" onclick="openSlot('${id}','${sl}')"><div class="gi">${g?GEAR[g.base].icon:"＋"}</div>${g?`<b class="r${GEAR[g.base].q}">${GEAR[g.base].name}${g.lv?" +"+g.lv:""}</b>${lvOk(id,g.base)?"":`<div class="req bad">⚠ 需 Lv.${GEAR_REQ[GEAR[g.base].q]}，未生效</div>`}`:`<span class="dim">${SLOTS[sl]}</span>`}</div>`;}).join("")}</div>
+    ${setHtml(id)}${e.crit||e.steal||e.dodge?`<div class="gfx">裝備特效：${statStr({crit:e.crit,steal:e.steal,dodge:e.dodge})}</div>`:""}`:""}
     </div></div>
     ${skillHtml(c)}
     <div class="row" style="margin-top:12px">
@@ -1108,17 +1169,35 @@ function toggleTeam(id){
 function gearById(uid){return uid?SAVE.gear.find(g=>g.uid===uid):null;}
 function gearOwner(uid){return Object.keys(SAVE.owned).find(id=>{const e=SAVE.owned[id].eq;return e&&Object.values(e).includes(uid);})||null;}
 function canWear(id,base){const c=GEAR[base].cls;return !c||c.includes(CARDS[id].cls);}
-function addGear(base,lv=0){const g={uid:++SAVE.gearUid,base,lv};SAVE.gear.push(g);return g;}
+function lvOk(id,base){return lvOf(id)>=GEAR_REQ[GEAR[base].q];}
+function reqTag(id,base){const r=GEAR_REQ[GEAR[base].q];if(r<=1)return "";return `<span class="req ${id&&!lvOk(id,base)?"bad":""}">需 Lv.${r}</span>`;}
+// 新裝備：數值在範圍內浮動，並依稀有度抽隨機詞條（同一種詞條不重複）
+function addGear(base,lv=0){
+  const q=GEAR[base].q,[lo,hi]=GEAR_ROLL[q],fx=[];
+  const keys=shuffle(Object.keys(AFFIX)).slice(0,affixCount(q));
+  keys.forEach(k=>{const [a,b]=AFFIX[k].r;fx.push({k,v:Math.max(1,Math.round(ri(a,b)*AFFIX_MULT[q]))});});
+  const g={uid:++SAVE.gearUid,base,lv,roll:ri(lo,hi),fx};SAVE.gear.push(g);return g;
+}
 function rollGear(q){return pick(Object.keys(GEAR).filter(k=>GEAR[k].q===q));}
 function dropGear(q){return gearName(addGear(rollGear(q)));}
+// 身上生效的裝備（等級不足的不算）
+function wornGear(id){const o=SAVE.owned[id];return o&&o.eq?Object.values(o.eq).map(gearById).filter(g=>g&&lvOk(id,g.base)):[];}
+function setCounts(id){const c={};wornGear(id).forEach(g=>{const q=GEAR[g.base].q;c[q]=(c[q]||0)+1;});return c;}
 function equipBonus(id){
-  const o=SAVE.owned[id],s={hp:0,atk:0,def:0,spd:0};
-  if(o&&o.eq)Object.values(o.eq).forEach(uid=>{const g=gearById(uid);if(g){const t=gearStats(g);for(const k in t)s[k]+=t[k];}});
+  const s={hp:0,atk:0,def:0,spd:0,crit:0,steal:0,dodge:0};
+  wornGear(id).forEach(g=>{const t=gearStats(g);for(const k in t)s[k]+=t[k];});
+  Object.entries(setCounts(id)).forEach(([q,n])=>[2,3].forEach(k=>{if(n>=k)for(const st in SETS[q][k])s[st]+=SETS[q][k][st];}));
   return s;
+}
+function setHtml(id){
+  const c=setCounts(id),qs=Object.keys(c).filter(q=>c[q]>=1);
+  if(!qs.length)return "";
+  return `<div class="setb">${qs.map(q=>`<div><b class="r${q}">${SETS[q].name}</b> ${c[q]}/3　<span class="${c[q]>=2?"on":"off"}">2件：${statStr(SETS[q][2])}</span>　<span class="${c[q]>=3?"on":"off"}">3件：${statStr(SETS[q][3])}</span></div>`).join("")}</div>`;
 }
 function unequip(uid){const w=gearOwner(uid);if(w)Object.keys(SAVE.owned[w].eq).forEach(sl=>{if(SAVE.owned[w].eq[sl]===uid)delete SAVE.owned[w].eq[sl];});}
 function equipTo(id,uid){
   const g=gearById(uid);if(!g||!canWear(id,g.base))return;
+  if(!lvOk(id,g.base)){toast(`${CARDS[id].name} 等級不足（需 Lv.${GEAR_REQ[GEAR[g.base].q]}）`);return;}
   unequip(uid);const o=SAVE.owned[id];o.eq=o.eq||{};o.eq[GEAR[g.base].slot]=uid;
   save();SFX.click();toast(`${CARDS[id].name} 裝備了 ${GEAR[g.base].name}`);
 }
@@ -1127,19 +1206,21 @@ function takeOff(id,sl){delete SAVE.owned[id].eq[sl];save();showCard(id);render(
 function openSlot(id,sl){
   const cur=SAVE.owned[id].eq&&SAVE.owned[id].eq[sl];
   const list=SAVE.gear.filter(g=>GEAR[g.base].slot===sl&&g.uid!==cur).sort(gearSort);
-  const ok=list.filter(g=>canWear(id,g.base)),no=list.filter(g=>!canWear(id,g.base));
+  const ok=list.filter(g=>canWear(id,g.base)&&lvOk(id,g.base)),no=list.filter(g=>!canWear(id,g.base)),low=list.filter(g=>canWear(id,g.base)&&!lvOk(id,g.base));
   openModal(`<h3>${CARDS[id].name} 的${SLOTS[sl]} ${clsTag(id)}</h3>
     ${cur?`<div class="row" style="margin-bottom:8px"><span>目前：<b>${gearName(gearById(cur))}</b> ${statStr(gearStats(gearById(cur)))}</span><button class="mini" style="margin-left:auto" onclick="takeOff('${id}','${sl}')">卸下</button></div>`:""}
     <div class="ggrid">${ok.map(g=>gearCard(g,`equipTo('${id}',${g.uid});showCard('${id}');render()`)).join("")||`<span class="dim">沒有可以穿的${SLOTS[sl]}。去「商店」買，或在遠征、競技場打倒敵人掉落。</span>`}</div>
+    ${low.length?`<p class="small" style="color:var(--red)">等級不足（目前 Lv.${lvOf(id)}）：${low.map(g=>`${GEAR[g.base].name}（需 Lv.${GEAR_REQ[GEAR[g.base].q]}）`).join("、")}</p>`:""}
     ${no.length?`<p class="dim small">職業不符（${no.map(g=>GEAR[g.base].name).join("、")}）</p>`:""}
+    <p class="dim small">穿戴等級：普通／稀有 不限、精良 Lv.5、史詩 Lv.10、傳說 Lv.15。同稀有度穿 2、3 件有套裝效果。</p>
     <div class="row" style="margin-top:12px"><button onclick="showCard('${id}')">← 返回角色</button></div>`);
 }
-function gearSort(a,b){return R_ORDER[GEAR[a.base].q]-R_ORDER[GEAR[b.base].q]||b.lv-a.lv||a.uid-b.uid;}
+function gearSort(a,b){return GQ.indexOf(GEAR[b.base].q)-GQ.indexOf(GEAR[a.base].q)||b.lv-a.lv||a.uid-b.uid;}
 function gearCard(g,onclick){
   const G=GEAR[g.base],w=gearOwner(g.uid);
   return `<div class="gcard ${G.q}" onclick="${onclick}">${g.lv?`<span class="lv">+${g.lv}</span>`:""}<div class="gi">${G.icon}</div>
-    <div class="gn r${G.q}">${G.name}</div><div class="small">${statStr(gearStats(g))}</div>
-    <div class="small dim">${SLOTS[G.slot]}・${gearCls(g.base)}</div>${w?`<div class="who">👤 ${CARDS[w].name}</div>`:""}</div>`;
+    <div class="gn r${G.q}">${G.name}</div><div class="small">${statStr(gearStats(g))}</div>${g.fx&&g.fx.length?`<div class="gfx">${fxStr(g)}</div>`:""}
+    <div class="small dim">${GQ_NAME[G.q]}・${SLOTS[G.slot]}・${gearCls(g.base)} ${reqTag(null,g.base)}</div>${w?`<div class="who">👤 ${CARDS[w].name}</div>`:""}</div>`;
 }
 let GEAR_TAB="";
 function viewGear(){
@@ -1153,11 +1234,15 @@ function viewGear(){
 }
 function openGear(uid){
   const g=gearById(uid);if(!g)return closeModal();
-  const G=GEAR[g.base],w=gearOwner(uid),cands=Object.keys(SAVE.owned).filter(id=>canWear(id,g.base)&&id!==w).sort((a,b)=>R_ORDER[CARDS[a].r]-R_ORDER[CARDS[b].r]);
+  const G=GEAR[g.base],w=gearOwner(uid),cands=Object.keys(SAVE.owned).filter(id=>canWear(id,g.base)&&lvOk(id,g.base)&&id!==w).sort((a,b)=>R_ORDER[CARDS[a].r]-R_ORDER[CARDS[b].r]);
   const sell=GEAR_SELL[G.q]+g.lv*4;
   openModal(`<div class="detail"><div style="font-size:64px;text-align:center;min-width:90px">${G.icon}</div><div style="flex:1">
-    <div class="r${G.q}">${G.q}・${SLOTS[G.slot]}</div><h2 style="margin:2px 0">${G.name}${g.lv?` <span style="color:var(--gold)">+${g.lv}</span>`:""}</h2>
-    <div>${statStr(gearStats(g))}</div><div class="small dim">可裝備：${gearCls(g.base)}</div>
+    <div class="r${G.q}">${G.q}（${GQ_NAME[G.q]}）・${SLOTS[G.slot]}</div><h2 style="margin:2px 0">${G.name}${g.lv?` <span style="color:var(--gold)">+${g.lv}</span>`:""}</h2>
+    <div>${statStr(gearStats(g))}</div>
+    <div class="small dim">品質 ${g.roll||100}%（同種裝備數值會浮動）</div>
+    ${g.fx&&g.fx.length?`<div class="gfx">隨機詞條：${fxStr(g)}</div>`:`<div class="small dim">沒有隨機詞條</div>`}
+    <div class="small dim">可裝備：${gearCls(g.base)}・穿戴等級 Lv.${GEAR_REQ[G.q]}</div>
+    <div class="small dim">套裝：${SETS[G.q].name}（2件 ${statStr(SETS[G.q][2])}／3件 ${statStr(SETS[G.q][3])}）</div>
     ${w?`<div class="small" style="color:var(--green)">👤 ${CARDS[w].name} 正在使用</div>`:""}</div></div>
     <div class="row" style="margin-top:12px">
       <button class="pri" onclick="openEnhance(${uid})" ${g.lv>=ENH_MAX?"disabled":""}>🔨 強化${g.lv>=ENH_MAX?"（已滿）":""}</button>
@@ -1218,11 +1303,18 @@ function doEnhance(uid){
 
 /* ===================== SHOP ===================== */
 // 用金條買裝備、強化符和遠征物資；遠征物資放進「行囊」，下一次出發時自動帶上
-const GEAR_PRICE={R:25,SR:70};
+const GEAR_PRICE={N:10,R:25,SR:70};
 const BOXES={
-  box:{name:"裝備補給箱",icon:"📦",price:30,desc:"隨機裝備：R 70%／SR 27%／SSR 3%",roll:()=>{const r=rnd();return r<.03?"SSR":r<.3?"SR":"R";}},
-  goldbox:{name:"黃金裝備箱",icon:"🎁",price:100,desc:"隨機裝備：SR 82%／SSR 18%",roll:()=>rnd()<.18?"SSR":"SR"}
+  box:{name:"裝備補給箱",icon:"📦",price:30,desc:"隨機裝備：N 20%／R 52%／SR 25%／SSR 3%",roll:()=>{const r=rnd();return r<.03?"SSR":r<.28?"SR":r<.8?"R":"N";}},
+  goldbox:{name:"黃金裝備箱",icon:"🎁",price:100,desc:"隨機裝備：SR 78%／SSR 20%／UR 2%",roll:()=>{const r=rnd();return r<.02?"UR":r<.22?"SSR":"SR";}}
 };
+const GEAR_HELP=`<div class="sk small"><b>📖 裝備說明</b><ul style="padding-left:18px;margin:4px 0">
+  <li><b>稀有度</b>：N 普通 ＜ R 稀有 ＜ SR 精良 ＜ SSR 史詩 ＜ UR 傳說。</li>
+  <li><b>穿戴等級</b>：普通、稀有不限；精良要角色 Lv.5、史詩 Lv.10、傳說 Lv.15。等級不足穿不上（之前穿著的會失效）。</li>
+  <li><b>數值浮動</b>：每件裝備有自己的「品質 %」，同一種裝備數值會有高低。</li>
+  <li><b>隨機詞條</b>：稀有度越高詞條越多（稀有 0～1、精良 1、史詩 1～2、傳說 2～3），可能是攻擊、生命、防禦、速度、暴擊、吸血、閃避。詞條不吃強化。</li>
+  <li><b>套裝</b>：同一稀有度的武器／防具／飾品穿 2 件、3 件會有額外效果（例如史詩 3 件：暴擊+5%、吸血+10%）。</li>
+  <li><b>EX 魔王專屬</b>：只會從「魔王討伐（支線）」的 8 位魔王掉落，每位一件，需 Lv.12，固定 3 條詞條，有自己的「魔王套裝」。</li></ul></div>`;
 const CHARMS={stone:{name:"突破石",icon:"💎",price:15,desc:"角色 5★ 突破用的材料（成功率 30% 起遞減，失敗會消失）"},protect:{name:"保護符",icon:"🧿",price:20,desc:"強化失敗時不掉級、不損毀（失敗才消耗）"},luck:{name:"幸運符",icon:"🍀",price:12,desc:"強化成功率 +10%（每次強化消耗）"}};
 const SUPPLY={pill:6,adrenaline:8,wine:4,rope:9,gasmask:7,rocket:12,knife:8,pistol:12};
 const STASH_MAX=6,FOOD_PRICE=5,FOOD_MAX=5;
@@ -1234,10 +1326,11 @@ function viewShop(){
     body=`<h3>裝備箱</h3><div class="shopsec">${Object.entries(BOXES).map(([k,b])=>`<div class="sitem"><div class="gi">${b.icon}</div><b>${b.name}</b><div class="small dim">${b.desc}</div>
         <button class="gold" onclick="buyBox('${k}')" ${SAVE.gold<b.price?"disabled":""}>🪙${b.price}</button></div>`).join("")}</div>
       <h3>直接購買</h3><div class="shopsec">${Object.keys(GEAR).filter(k=>GEAR_PRICE[GEAR[k].q]).map(k=>{const G=GEAR[k];
-        return `<div class="sitem" style="border-color:${G.q==="SR"?"var(--purple)":"#2c5a86"}"><div class="gi">${G.icon}</div><b class="r${G.q}">${G.name}</b>
-        <div class="small">${statStr(G.st)}</div><div class="small dim">${SLOTS[G.slot]}・${gearCls(k)}</div>
+        return `<div class="sitem" style="border-color:${G.q==="SR"?"var(--purple)":G.q==="R"?"#2c5a86":"#4a525c"}"><div class="gi">${G.icon}</div><b class="r${G.q}">${G.name}</b>
+        <div class="small">${statStr(G.st)} <span class="dim">（±浮動）</span></div><div class="small dim">${GQ_NAME[G.q]}・${SLOTS[G.slot]}・${gearCls(k)} ${reqTag(null,k)}</div>
         <button onclick="buyGear('${k}')" ${SAVE.gold<GEAR_PRICE[G.q]?"disabled":""}>🪙${GEAR_PRICE[G.q]}</button></div>`;}).join("")}</div>
-      <p class="dim small">SSR 裝備只能從裝備箱、主線魔王或深淵守門者取得。</p>`;
+      <p class="dim small">SSR（史詩）只能從裝備箱、主線魔王或深淵守門者取得；UR（傳說）只能從黃金裝備箱、第 5～6 章魔王或深淵 D20 以下的守門者取得。</p>
+      ${GEAR_HELP}`;
   }else if(SHOP_TAB==="charm"){
     body=`<div class="shopsec">${Object.entries(CHARMS).map(([k,c])=>`<div class="sitem"><div class="gi">${c.icon}</div><b>${c.name}</b><div class="small dim">${c.desc}</div>
       <div class="small">持有 ×${SAVE.charms[k]}</div>
@@ -1259,15 +1352,15 @@ function pay(n){if(SAVE.gold<n){toast("金條不足");return false;}SAVE.gold-=n
 function buyGear(k){
   if(!pay(GEAR_PRICE[GEAR[k].q]))return;
   const g=addGear(k);save();SFX.click();render();
-  openModal(`<h3>🛒 購買成功</h3><p>獲得 <b class="r${GEAR[k].q}">${gearName(g)}</b>（${statStr(gearStats(g))}）。</p>
+  openModal(`<h3>🛒 購買成功</h3><p>獲得 <b class="r${GEAR[k].q}">${gearName(g)}</b>（品質 ${g.roll}%：${statStr(gearStats(g))}${g.fx.length?" "+fxStr(g):""}）。</p>
     <div class="row"><button class="pri" onclick="openGear(${g.uid})">查看／裝備</button><button onclick="closeModal()">關閉</button></div>`);
 }
 function buyBox(k){
   const b=BOXES[k];if(!pay(b.price))return;
-  const q=b.roll(),g=addGear(rollGear(q));save();q==="SSR"?SFX.ssr():q==="SR"?SFX.sr():SFX.flip();render();
+  const q=b.roll(),g=addGear(rollGear(q));save();q==="SSR"||q==="UR"?SFX.ssr():q==="SR"?SFX.sr():SFX.flip();render();
   openModal(`<h3>${b.icon} 打開${b.name}</h3><div style="text-align:center;font-size:64px">${GEAR[g.base].icon}</div>
     <h2 style="text-align:center;margin:4px 0" class="r${q}">${q}　${GEAR[g.base].name}</h2>
-    <p style="text-align:center">${statStr(gearStats(g))}<br><span class="dim small">${SLOTS[GEAR[g.base].slot]}・${gearCls(g.base)}</span></p>
+    <p style="text-align:center">${statStr(gearStats(g))}${g.fx.length?`<br><span class="gfx">${fxStr(g)}</span>`:""}<br><span class="dim small">${GQ_NAME[q]}・品質 ${g.roll}%・${SLOTS[GEAR[g.base].slot]}・${gearCls(g.base)}・需 Lv.${GEAR_REQ[q]}</span></p>
     <div class="row"><button class="gold" onclick="buyBox('${k}')" ${SAVE.gold<b.price?"disabled":""}>再開一個（🪙${b.price}）</button>
     <button class="pri" onclick="openGear(${g.uid})">查看／裝備</button><button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
 }
@@ -1280,7 +1373,7 @@ function buyFood(){if(SAVE.stash.food>=FOOD_MAX){toast("補給包已達上限");
 // 我方隊伍成員（含等級與永久裝備加成），競技場、練功房用
 function teamUnit(id){
   const o=SAVE.owned[id],e=equipBonus(id),sc=lvScale(id),br=brOf(id),s=cardStats(id,o.stars,sc,br);
-  return {id,stars:o.stars,scale:sc,br,maxHp:s.maxHp+e.hp,atk:e.atk,def:e.def,spd:e.spd};
+  return {id,stars:o.stars,scale:sc,br,maxHp:s.maxHp+e.hp,atk:e.atk,def:e.def,spd:e.spd,gx:{crit:e.crit,steal:e.steal,dodge:e.dodge}};
 }
 
 /* ===================== LEVEL ===================== */
@@ -1351,7 +1444,7 @@ function startTrain(){
         notes.push(expLine(r.exp,gainExp(ids,r.exp,dead)));
         SAVE.gold+=r.gold;notes.push(`🪙+${r.gold}`);
         if(rnd()<.08){SAVE.charms.stone++;notes.push("💎 撿到突破石 ×1");}
-        if(rnd()<.1)notes.push(`🎁 怪物掉下了 <b>${dropGear(s>=15&&rnd()<.3?"SR":"R")}</b>（已放進裝備）`);
+        if(rnd()<.1)notes.push(`🎁 怪物掉下了 <b>${dropGear(s<5?"N":s>=15&&rnd()<.3?"SR":"R")}</b>（已放進裝備）`);
         if(s>trainBest()){SAVE.train.best=s;if(s<TRAIN_MAX)notes.push(`🔓 解鎖第 ${s+1} 關`);}
       }
       save();CUR_B=null;VIEW="train";render();
@@ -1365,7 +1458,7 @@ function mkUnit(o){
   const d=DEF(o.id),s=cardStats(o.id,o.stars||1,o.scale||1,o.br||0);
   const u={uid:++UID,id:o.id,name:o.name||d.name,side:o.side,stars:o.stars||1,
     maxHp:o.maxHp||s.maxHp,atk:s.atk+(o.atk||0),def:s.def+(o.def||0),spd:s.spd+(o.spd||0),
-    cd:0,buffs:[],st:{},perm:{},flags:{},alive:true,ally:!!o.ally,ref:o.ref||null};
+    cd:0,buffs:[],st:{},perm:{},flags:{},alive:true,ally:!!o.ally,ref:o.ref||null,gx:o.gx||{}};
   u.hp=o.hp!=null?Math.min(o.hp,u.maxHp):u.maxHp;
   if(u.hp<=0)u.alive=false;
   return u;
@@ -1415,7 +1508,7 @@ function hit(B,a,t,mult,o={}){
       if(g&&rnd()<.4){blog(B,`${nm(g)} 撲過去替 ${nm(t)} 擋刀！`);t=g;}
     }
   }
-  const evadeChance=t.id==="lucky"?.15:(DEF(t.id).evade||0);
+  const evadeChance=(t.id==="lucky"?.15:(DEF(t.id).evade||0))+((t.gx&&t.gx.dodge)||0)/100;
   if(!o.fixed&&!o.pierce&&((t.st.evade||0)>0||rnd()<evadeChance)){
     if(t.st.evade>0)t.st.evade--;
     blog(B,`${nm(a)} 的攻擊被 ${nm(t)} 閃過了。`);fx(B,t,"MISS","miss");SFX.miss();return 0;
@@ -1426,7 +1519,7 @@ function hit(B,a,t,mult,o={}){
     d=stat(a,"atk")*mult*(.9+rnd()*.2);
     if(!o.pierce)d-=stat(t,"def")*.7;
     if(B.casting===a&&clsOf(a)==="mage")d*=1.2;
-    let cc=a.id==="sniper"?.2:a.id==="lucky"?.25:.08;
+    let cc=(a.id==="sniper"?.2:a.id==="lucky"?.25:.08)+((a.gx&&a.gx.crit)||0)/100;
     if(clsOf(a)==="ranger")cc+=.12;else if(clsOf(a)==="assassin")cc+=.06;
     if(a.id==="detective"&&t.st.mark)cc+=.3;
     if(o.crit||rnd()<cc){crit=true;d*=1.5;}
@@ -1449,6 +1542,7 @@ function hit(B,a,t,mult,o={}){
   fx(B,t,(crit?"💥":"")+"-"+d,crit?"crit":"dmg");
   crit?SFX.crit():SFX.hit();
   if(a.id==="butcher"&&a.alive)heal(B,a,Math.max(1,Math.round(d*.3)));
+  if(a.gx&&a.gx.steal&&a.alive&&a!==t)heal(B,a,Math.max(1,Math.round(d*a.gx.steal/100)));
   if(t.hp<=0)handleDeath(B,t,a);
   else if(!o.counter&&a.alive&&a!==t){
     if(t.id==="tamer"&&rnd()<.25){blog(B,`🐕 獵犬撲向 ${nm(a)}！`);hit(B,t,a,1,{fixed:3,counter:true});}
@@ -1461,6 +1555,10 @@ function handleDeath(B,t,killer){
   const pm=B.units.find(x=>x.side===t.side&&x.alive&&x.id==="paramedic"&&x!==t);
   if(pm&&!B.flags["pm"+t.side]){B.flags["pm"+t.side]=1;t.hp=1;blog(B,`🚑 ${nm(pm)} 的黃金十分鐘！${nm(t)} 撐住了最後一口氣。`,"big");return;}
   if(t.id==="exorcist"&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*.3);t.perm.spd=(t.perm.spd||0)+1;blog(B,`${nm(t)} 的臨終祝禱生效，從死亡中歸來！`,"big");fx(B,t,"復活","heal");return;}
+  if(DEF(t.id).boss2&&!t.flags.p2){
+    const b2=DEF(t.id).boss2;t.flags.p2=1;t.hp=Math.ceil(t.maxHp*b2.hp);t.st={};t.buffs=t.buffs.filter(b=>b.v>0);
+    t.perm.atk=(t.perm.atk||0)+Math.round(t.atk*b2.atk);t.perm.spd=(t.perm.spd||0)+b2.spd;t.cd=0;
+    blog(B,`💢 ${nm(t)} 的氣場爆發了！——第二階段！`,"bad");blog(B,`「${DEF(t.id).quote}」`,"big");fx(B,t,"爆氣！","crit");SFX.ssr();return;}
   if(DEF(t.id).revive&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*DEF(t.id).revive);blog(B,`⚖ ${nm(t)} 重新站了起來：「判決，還沒有結束。」`,"big");fx(B,t,"復活","heal");return;}
   if(t.id==="host"&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*.3);blog(B,`🎭 ${nm(t)} 拍了拍身上的灰：「我說過，莊家不會輸。」`,"big");fx(B,t,"復活","heal");return;}
   t.hp=0;t.alive=false;t.st={};t.buffs=[];
@@ -1572,7 +1670,7 @@ async function battleLoop(B){
       if(checkEnd(B))break;
       await sleep(B.fast?120:450);
     }
-    if(B.round>60){B.over="B";blog(B,"戰鬥拖太久，毒氣淹沒了一切……","bad");}
+    if(B.round>(B.cfg.maxRound||60)){B.over="B";blog(B,"戰鬥拖太久，毒氣淹沒了一切……","bad");}
   }
   B.active=null;B.wait=null;
   blog(B,B.over==="A"?`🏆 ${B.labels.A} 獲勝！`:`☠ ${B.labels.B} 獲勝。`,"big");
@@ -1627,7 +1725,7 @@ function doAction(B,u,a){
   else if(a.type==="skill"){
     const sk=DEF(u.id).skill;
     blog(B,`✦ ${nm(u)} 發動【${sk.name}】`);fx(B,u,sk.name,"sk");
-    B.casting=u;sk.use(B,u,a.target);B.casting=null;u.cd=sk.cd;
+    B.casting=u;sk.use(B,u,a.target);B.casting=null;u.cd=sk.cd-(u.flags.p2?1:0);
   }
   else if(a.type==="guard"){u.st.guard=1;blog(B,`${nm(u)} 擺出防禦架勢（受到傷害減半）。`);heal(B,u,1);}
   else if(a.type==="item")useBattleItem(B,u,a.idx,a.target);
@@ -1689,8 +1787,8 @@ function unitCard(B,u){
   if(u.buffs.some(b=>b.v>0))st.push("▲");
   if(u.buffs.some(b=>b.v<0))st.push("▼");
   const d=DEF(u.id),cl=CARDS[u.id]?CLASSES[CARDS[u.id].cls]:null;
-  return `<div class="ucard s${u.side} ${u.alive?"":"dead"} ${B.active===u&&!B.over?"active":""} ${tg?"targetable":""}" id="u${u.uid}" onclick="onUnitClick(${u.uid})" title="${d.skill.name}：${d.skill.desc}\n${d.passive.name}：${d.passive.desc}">
-    <div class="uav">${avatar(u.id)}</div>
+  return `<div class="ucard s${u.side} ${d.boss2?"bossu":""} ${u.flags&&u.flags.p2?"p2":""} ${u.alive?"":"dead"} ${B.active===u&&!B.over?"active":""} ${tg?"targetable":""}" id="u${u.uid}" onclick="onUnitClick(${u.uid})" title="${d.skill.name}：${d.skill.desc}\n${d.passive.name}：${d.passive.desc}">
+    <div class="uav">${avatar(u.id,u.flags&&u.flags.p2)}</div>
     ${u.cd>0&&u.alive?`<div class="cdbadge">✦${u.cd}</div>`:""}
     <div class="uname">${cl?`<span title="${cl.name}：${cl.desc}">${cl.icon}</span>`:""}${u.ally?"🤝":""}${u.name}</div>
     <div class="hpbar ${pct>50?"hi":""}"><i style="width:${pct}%"></i><span>${Math.max(0,u.hp)}/${u.maxHp}</span></div>
@@ -1755,7 +1853,7 @@ function viewArena(){
   <div class="row" style="margin-top:14px"><button class="pri" onclick="startArena()" ${SAVE.team.length?"":"disabled"}>⚔ 開戰</button>
   <button onclick="genArenaFoes();render()">換一批對手</button></div>`;
 }
-function showFoe(id){openModal(`<div class="detail"><div class="av">${avatar(id)}</div><div><h2>${CARDS[id].name}</h2></div></div>${skillHtml(CARDS[id])}<div class="row" style="margin-top:12px"><button onclick="closeModal()">關閉</button></div>`);}
+function showFoe(id){openModal(`<div class="detail"><div class="av">${avatar(id)}</div><div><h2>${DEF(id).name}</h2></div></div>${skillHtml(DEF(id))}<div class="row" style="margin-top:12px"><button onclick="closeModal()">關閉</button></div>`);}
 function startArena(){
   if(!SAVE.team.length)return;
   const reward=arenaReward();
@@ -2013,6 +2111,133 @@ function viewOnline(){
   <p class="dim small">右鍵（或長按）查看技能。</p>`:`<h3>選角完成，即將開打……</h3>`}`;
 }
 
+
+/* ===================== DATA: 魔王討伐（支線） ===================== */
+// 8 位支線魔王：強度刻意偏高、可以不打。第一條命打完會「爆氣」進入第二階段（換圖、回血、變強、技能冷卻縮短）
+// img:true 的怪物頭像在 images/bosses/{id}_1.webp（一般）與 {id}_2.webp（爆氣）
+const BOSS_LIST=["doomhunter","voidlord","fatejudge","reaper","abyssking","nightemperor","overlord","endwalker"];
+Object.assign(MONSTERS,{
+  doomhunter:{name:"滅世獵手",img:true,r:"SSR",hp:420,atk:14,def:3,spd:7,boss2:{hp:.6,atk:.25,spd:2},gx:{crit:25},
+    quote:"追蹤、狩獵，直到目標消失。",
+    skill:{name:"鎖定狙殺",cd:3,t:"none",kind:"dmg",desc:"狙擊生命最低的敵人（2.4倍、無視防禦）。爆氣後改為3倍，並對其他敵人掃射0.6倍。",
+      use(B,u){const f=foes(B,u).sort((a,b)=>a.hp-b.hp);if(!f.length)return;blog(B,"🎯 紅色雷射點停在了獵物的眉心。","bad");
+        hit(B,u,f[0],u.flags.p2?3:2.4,{pierce:true});if(u.flags.p2)foes(B,u).filter(x=>x!==f[0]).forEach(t=>hit(B,u,t,.6));}},
+    passive:{name:"獵殺本能",desc:"暴擊率+25%。"}},
+  voidlord:{name:"虛空主宰",img:true,r:"SSR",hp:480,atk:14,def:4,spd:6,boss2:{hp:.6,atk:.25,spd:2},gx:{dodge:15},
+    quote:"我掌控的不只是數據，而是整個禁閉區的規則。",
+    skill:{name:"系統覆寫",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.8倍傷害，每人40%機率暈眩1回合。爆氣後再清除敵人所有增益並攻擊-2。",
+      use(B,u){blog(B,"💠 所有螢幕同時跳出同一行字：「權限已轉移」。","bad");foes(B,u).forEach(t=>{hit(B,u,t,.8);if(t.alive&&rnd()<.4)stun(B,t,1);
+        if(u.flags.p2&&t.alive){t.buffs=t.buffs.filter(b=>b.v<0);buff(B,t,"atk",-2,2);}});}},
+    passive:{name:"虛體",desc:"閃避率+15%。"}},
+  fatejudge:{name:"命運裁決者",img:true,r:"SSR",hp:540,atk:15,def:4,spd:5,dr:2,boss2:{hp:.6,atk:.25,spd:2},
+    quote:"你的命運，由我來決定。",
+    skill:{name:"命運之輪",cd:3,t:"none",kind:"dmg",desc:"轉動命運之輪，隨機：全體1倍傷害／自身恢復8%生命／單體2.5倍傷害。爆氣後一次轉兩格。",
+      use(B,u){for(let n=0;n<(u.flags.p2?2:1);n++){const k=ri(1,3),f=foes(B,u);if(!f.length)break;
+        if(k===1){blog(B,"☸ 命運之輪停在「審判」。","bad");f.forEach(t=>hit(B,u,t,1));}
+        else if(k===2){blog(B,"☸ 命運之輪停在「延命」。","bad");heal(B,u,Math.round(u.maxHp*.08));}
+        else{blog(B,"☸ 命運之輪停在「處刑」。","bad");hit(B,u,pick(f),2.5);}}}},
+    passive:{name:"定數",desc:"受到的傷害-2。"}},
+  reaper:{name:"死神代行者",img:true,r:"SSR",hp:600,atk:17,def:4,spd:6,boss2:{hp:.6,atk:.25,spd:2},gx:{steal:20},
+    quote:"死亡不是終點，而是我的任務。",
+    skill:{name:"收割",cd:3,t:"none",kind:"dmg",desc:"對生命最低的敵人揮下鐮刀（1.8倍）。爆氣後全體敵人再中毒（4點×3回合）。",
+      use(B,u){const f=foes(B,u).sort((a,b)=>a.hp-b.hp);if(!f.length)return;blog(B,"⚰ 鎖鏈嘩啦作響，鐮刀落下。","bad");hit(B,u,f[0],1.8);
+        if(u.flags.p2)foes(B,u).forEach(t=>poison(B,t,4,3));}},
+    passive:{name:"魂之收割",desc:"造成傷害時恢復傷害20%的生命。"}},
+  abyssking:{name:"深淵君王",img:true,r:"SSR",hp:680,atk:17,def:6,spd:4,dr:3,regen:6,boss2:{hp:.6,atk:.25,spd:2},
+    quote:"這片禁閉區，現在由我來支配。",
+    skill:{name:"王權壓制",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.9倍傷害，攻擊-3（2回合）。爆氣後傷害提高到1.2倍。",
+      use(B,u){blog(B,"👑 「跪下。」整個房間的空氣沉了下來。","bad");foes(B,u).forEach(t=>{hit(B,u,t,u.flags.p2?1.2:.9);if(t.alive)buff(B,t,"atk",-3,2);});}},
+    passive:{name:"王之軀",desc:"受到的傷害-3；每回合恢復6生命。"}},
+  nightemperor:{name:"永夜帝王",img:true,r:"SSR",hp:760,atk:18,def:6,spd:5,regen:8,boss2:{hp:.6,atk:.25,spd:2},gx:{dodge:10},
+    quote:"黑夜，是我的王座。",
+    skill:{name:"永夜降臨",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.7倍傷害並中毒（3點×3回合），自身恢復5%生命。爆氣後中毒加重為5點。",
+      use(B,u){blog(B,"🌑 燈全滅了。黑暗裡只剩下那雙紫色的眼睛。","bad");foes(B,u).forEach(t=>{hit(B,u,t,.7);if(t.alive)poison(B,t,u.flags.p2?5:3,3);});heal(B,u,Math.round(u.maxHp*.05));}},
+    passive:{name:"夜之主",desc:"每回合恢復8生命；閃避率+10%。"}},
+  overlord:{name:"天命霸主",img:true,r:"SSR",hp:850,atk:20,def:7,spd:5,dr:3,boss2:{hp:.6,atk:.25,spd:2},gx:{crit:15},
+    quote:"命運？由我來定義！",
+    skill:{name:"天命審判",cd:3,t:"none",kind:"dmg",desc:"對單一敵人造成2倍傷害、其他敵人0.8倍，自身攻擊+3（3回合）。",
+      use(B,u){const f=foes(B,u);if(!f.length)return;const t=pick(f);blog(B,"🌟 金色的光球從天而降。","bad");hit(B,u,t,2);foes(B,u).filter(x=>x!==t).forEach(x=>hit(B,u,x,.8));buff(B,u,"atk",3,3);}},
+    passive:{name:"霸者之威",desc:"受到的傷害-3；暴擊率+15%。"}},
+  endwalker:{name:"終焉行者",img:true,r:"SSR",hp:950,atk:22,def:7,spd:7,dr:3,boss2:{hp:.6,atk:.25,spd:2},gx:{crit:15,steal:15},
+    quote:"最後一個站著的，才是真正的勝者。",
+    skill:{name:"終焉",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成1.2倍傷害。爆氣後改為1.6倍，每人30%機率暈眩。",
+      use(B,u){blog(B,"⛓ 「遊戲結束。」","bad");foes(B,u).forEach(t=>{hit(B,u,t,u.flags.p2?1.6:1.2);if(u.flags.p2&&t.alive&&rnd()<.3)stun(B,t,1);});}},
+    passive:{name:"最後的勝者",desc:"受到的傷害-3；暴擊率+15%、吸血15%。"}}
+});
+// 魔王的個人故事
+const BOSS_STORY={
+  doomhunter:["他原本是禁閉逃殺第一屆的冠軍——唯一一個靠自己爬上直升機的人。","主辦方沒有放他走，而是給了他一把狙擊槍和一份新合約：「每抓回一個逃跑者，你就離自由近一步。」",
+    "他已經抓了九百九十九個。編號一千的那個人，聽說會讓他「真正下班」。他在望遠鏡裡看到了你。"],
+  voidlord:["他是禁閉區系統的原始設計者，因為想偷偷改掉「只有三個座位」這條規則，被主辦方關進了自己寫的伺服器裡。",
+    "在數據的牢房裡待了三年，他發現自己不需要逃出去——只要把整個禁閉區也拖進來就好。","現在每一扇門、每一盞燈、每一條廣播，都是他的手指。"],
+  fatejudge:["她是禁閉逃殺的「莊家」，每一場遊戲的賠率都由她親手計算。","她從來沒有算錯過，直到有一次她押注的隊伍全滅，而她押輸的那個人活著走了出去。",
+    "從那天起，她不再相信機率。她要親自轉動命運之輪——連你下一步會踏出哪隻腳，都要由她決定。"],
+  reaper:["他在停屍間工作了二十年，負責把每一個失敗者裝進鐵櫃。","某一天，他打開一個鐵櫃，裡面躺著的是他自己。",
+    "他不記得自己是什麼時候死的，只記得主辦人遞給他一把鐮刀：「既然你已經死了，就幫我把剩下的人也帶過來吧。」"],
+  abyssking:["無盡深淵的最底層，有一張用逃殺者骨頭堆成的王座。","他是第一個下到底的人。他沒有找到出口，於是乾脆坐了下來，宣布自己是這裡的王。",
+    "每個掉下來的人都會變成他的臣民——或者王座上的另一塊骨頭。他說，這片禁閉區總要有人來支配。"],
+  nightemperor:["他曾是黑塔的主人，主辦人背後的金主。他出錢買下了整座城市的黑夜。",
+    "當黑塔燒起來的那一晚，他沒有逃。他坐在燃燒的王座上，看著火光把夜空照亮——然後發誓再也不讓光出現。","從此，只要他在的地方，太陽就不會升起。"],
+  overlord:["他自稱「天命所歸」。他不是被抓進禁閉區的，而是自己走進來的。","他買下了前三屆的所有冠軍，把他們的號碼牌串成項鍊。他說，命運只是有錢人還沒買下的東西。",
+    "現在他盯上了你。「你的命，開個價吧。」"],
+  endwalker:["沒有人知道他是誰。他的號碼牌上只刻著一個字：「終」。","傳說他是每一屆禁閉逃殺的最後一名倖存者——但他從來沒有坐上直升機。他總是留下來，等待下一屆。",
+    "他說他在找一個能打倒他的人，好讓這場遊戲真正結束。最後一個站著的，才是真正的勝者。"]
+};
+// 魔王專屬裝備（EX 稀有度，只會從對應的魔王掉落）
+const BOSS_DROP={doomhunter:"doomrifle",voidlord:"voidterm",fatejudge:"fatecompass",reaper:"reaperscythe",abyssking:"abysscrown",nightemperor:"nightrobe",overlord:"overlordmantle",endwalker:"endchain"};
+const BOSS_REQ=1; // 主線通關幾章後開放（第一位）
+function bossUnlocked(i){return SAVE.prog.cleared>=BOSS_REQ&&(i===0||(SAVE.bosses[BOSS_LIST[i-1]]||0)>0);}
+function bossReward(i){return {gold:60+i*25,exp:60+i*20,first:150+i*60,stone:3+i};}
+function bossCard(id,i){
+  const M=MONSTERS[id],ok=bossUnlocked(i),n=SAVE.bosses[id]||0;
+  return `<div class="bosscard ${ok?"":"lockc"}" onclick="${ok?`openBoss('${id}')`:"toast('先打倒上一位魔王')"}">
+    <div class="bav">${ok?`<img src="images/bosses/${id}_1.webp" alt="">`:`<span class="emo">🔒</span>`}</div>
+    <div class="bn">${i+1}. ${M.name}</div><div class="small dim">${ok?M.quote:"打倒上一位魔王後解鎖"}</div>
+    <div class="small" style="color:${n?"var(--green)":"var(--gold)"}">${n?`已討伐 ${n} 次`:ok?"未討伐":""}</div></div>`;
+}
+function viewBosses(){
+  if(SAVE.prog.cleared<BOSS_REQ)return `<h3>⚔ 魔王討伐（支線）</h3><div class="panel dim">逃出第 1 章「禁閉室」後開放。</div>`;
+  return `<h3>⚔ 魔王討伐（支線・可以不打）</h3>
+    <p class="dim small">8 位強度偏高的魔王，打倒一位才會出現下一位。打倒第一條命後魔王會<b style="color:var(--red)">爆氣</b>進入第二階段：換上氣場、回復生命、攻擊和速度上升、技能冷卻縮短。打贏有機會掉落魔王專屬的 <b class="rEX">EX 裝備</b>。</p>
+    <div class="bossgrid">${BOSS_LIST.map(bossCard).join("")}</div>`;
+}
+function openBoss(id){
+  const i=BOSS_LIST.indexOf(id),M=MONSTERS[id],r=bossReward(i),n=SAVE.bosses[id]||0,G=GEAR[BOSS_DROP[id]];
+  openModal(`<div class="detail"><div class="av"><img src="images/bosses/${id}_1.webp" alt=""></div><div style="flex:1">
+    <div class="rEX">支線魔王 ${i+1}／8</div><h2 style="margin:2px 0">${M.name}</h2><div class="small" style="font-style:italic">「${M.quote}」</div>
+    <div class="small">❤${M.hp}（爆氣後再 ${Math.round(M.hp*M.boss2.hp)}）　⚔${M.atk}　🛡${M.def}　💨${M.spd}</div></div></div>
+    <div class="sk"><b>📜 ${M.name}的故事</b>${BOSS_STORY[id].map(p=>`<p style="margin:6px 0">${p}</p>`).join("")}</div>
+    ${skillHtml(M)}
+    <div class="sk"><b>💢 爆氣（第二階段）</b><br>第一條命打完後立刻爆氣：生命回復到 ${Math.round(M.boss2.hp*100)}%、攻擊+${Math.round(M.boss2.atk*100)}%、速度+${M.boss2.spd}、解除身上的減益與中毒、技能冷卻 -1。</div>
+    <div class="sk"><b>🎁 獎勵</b><br>每次討伐：🪙${r.gold}、經驗 +${r.exp}${n?"":`<br>首次討伐：額外 🪙${r.first}、💎突破石 ×${r.stone}`}<br>
+      專屬裝備 <b class="rEX">${G.icon}${G.name}</b>（${statStr(G.st)}）：${n?"2%":"首次 5%"} 機率掉落</div>
+    <div class="row" style="margin-top:12px"><button class="pri" onclick="startBoss('${id}')" ${SAVE.team.length?"":"disabled"}>⚔ 挑戰</button><button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
+}
+function startBoss(id){
+  if(!SAVE.team.length)return;
+  closeModal();
+  const i=BOSS_LIST.indexOf(id),M=MONSTERS[id],r=bossReward(i),ids=SAVE.team.slice();
+  startBattle({title:`魔王討伐・${M.name}`,home:"run",maxRound:120,A:ids.map(teamUnit),B:[{id,stars:1,gx:M.gx}],
+    intro:`「${M.quote}」`,
+    resultNote:B=>B.over==="A"?`${M.name} 倒下了。`:"魔王太強了……升級、升星、換裝備後再來。",
+    onEnd(win,B){
+      const notes=[];
+      if(win){
+        const first=!SAVE.bosses[id],dead=B.units.filter(u=>u.side==="A"&&!u.alive).map(u=>u.id);
+        SAVE.bosses[id]=(SAVE.bosses[id]||0)+1;
+        SAVE.gold+=r.gold;notes.push(`🪙+${r.gold}`);
+        if(first){SAVE.gold+=r.first;SAVE.charms.stone+=r.stone;notes.push(`🏅 首次討伐：🪙+${r.first}、💎突破石 ×${r.stone}`);}
+        notes.push(expLine(r.exp,gainExp(ids,r.exp,dead)));
+        if(rnd()<(first?.05:.02)){const g=addGear(BOSS_DROP[id]);notes.push(`🎁 <b class="rEX">魔王專屬裝備：${gearName(g)}</b>（${statStr(gearStats(g))}${g.fx.length?" "+fxStr(g):""}）`);SFX.ssr();}
+        if(i+1<BOSS_LIST.length&&first)notes.push(`🔓 下一位魔王出現了：<b>${MONSTERS[BOSS_LIST[i+1]].name}</b>`);
+        if(i+1===BOSS_LIST.length&&first)notes.push("🎬 <b>8 位魔王全部討伐完成！</b>");
+      }
+      save();CUR_B=null;VIEW="run";render();
+      if(win)openModal(`<h3>⚔ 討伐成功：${M.name}</h3><div class="detail"><div class="av"><img src="images/bosses/${id}_2.webp" alt=""></div><div><p>${notes.join("<br>")}</p></div></div>
+        <div class="row"><button class="pri" onclick="openBoss('${id}')">再挑戰一次</button><button onclick="closeModal()">關閉</button></div>`);
+    }});
+}
+
 /* ===================== RUN: DATA ===================== */
 // 樓層與房間取自本體地圖（B7 停屍間 → 2F 停機坪）
 const FLOORS=[
@@ -2244,7 +2469,7 @@ function mkMember(id,stars,extra={}){
 }
 function memberToUnit(m){
   const g=m.gear||{};
-  return {id:m.id,stars:m.stars,scale:m.scale,br:m.br||0,name:m.name,hp:m.hp,maxHp:m.maxHp,atk:memberAtk(m),def:(m.bonus.def||0)+(g.def||0),spd:(m.bonus.spd||0)+(g.spd||0),ally:m.ally,ref:m};
+  return {id:m.id,stars:m.stars,scale:m.scale,br:m.br||0,name:m.name,hp:m.hp,maxHp:m.maxHp,atk:memberAtk(m),def:(m.bonus.def||0)+(g.def||0),spd:(m.bonus.spd||0)+(g.spd||0),ally:m.ally,ref:m,gx:{crit:g.crit||0,steal:g.steal||0,dodge:g.dodge||0}};
 }
 function gasIdx(){return Math.floor((RUN.time-1)*.9)-1;}
 function addGold(n){n=Math.round(n*(hasRun("rich")?1.3:1));RUN.gold+=n;return n;}
@@ -2641,7 +2866,7 @@ function abyssBoss(L){
         if(!win||runLost())return endRun(false,["你們被深淵吞沒了。"]);
         const g=addGold(10+fi*2),t=gainItem(pick(LOOT_TABLE)),l=[`守門者化成一灘黑水。🪙+${g}，還留下了 ${t}。`,runExp(20+fi*2)];
         SAVE.charms.stone++;l.push("💎 撿到突破石 ×1");
-        if(rnd()<.35)l.push(`🎁 黑水裡沉著一件裝備：<b>${dropGear(fi>=15&&rnd()<.3?"SSR":"SR")}</b>（已放進裝備）`);
+        if(rnd()<.35)l.push(`🎁 黑水裡沉著一件裝備：<b>${dropGear(fi>=20&&rnd()<.05?"UR":fi>=15&&rnd()<.3?"SSR":"SR")}</b>（已放進裝備）`);
         SAVE.prog.abyssBest=Math.max(SAVE.prog.abyssBest,fi);
         persistRun("post");
         abyssPost(l);
@@ -2696,7 +2921,7 @@ function endRun(escaped,lines=[]){
     if(abyss)bonus=r.fi*2;
     else{
       bonus=30*(r.ch+1);P.clears[r.ch]=(P.clears[r.ch]||0)+1;
-      const q=r.ch>=4?(rnd()<.35?"SSR":"SR"):r.ch>=2?(rnd()<.12?"SSR":"SR"):(rnd()<.3?"SR":"R");
+      const q=r.ch>=4?(rnd()<.06?"UR":rnd()<.35?"SSR":"SR"):r.ch>=2?(rnd()<.12?"SSR":"SR"):(rnd()<.3?"SR":"R");
       out.push(`🎁 ${C.bossRoom}留下了一件裝備：<b>${dropGear(q)}</b>（已放進裝備）`);
       const st=1+Math.floor(r.ch/2);SAVE.charms.stone+=st;out.push(`💎 撿到突破石 ×${st}`);
       if(P.cleared<=r.ch){
@@ -2765,7 +2990,8 @@ function viewRun(){
       <li>遠征會自動存檔，中途關掉網頁，下次打開可以接著玩。</li>
     </ul></div>
     <h3>出戰隊伍</h3><div class="cardgrid">${SAVE.team.map(id=>cardTile(id,`showCard('${id}')`)).join("")||"<span class='dim'>尚未編隊</span>"}</div>
-    <p class="dim small">點上面的章節開始遠征。</p>`;
+    <p class="dim small">點上面的章節開始遠征。</p>
+    ${viewBosses()}`;
   const r=RUN,g=gasIdx(),ab=r.ch===ABYSS;
   if(ab)ensureFloor(Math.max(0,r.fi-3)+7);
   const idx=ab?Array.from({length:8},(_,k)=>Math.max(0,r.fi-3)+k):FL().map((f,i)=>i);

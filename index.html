@@ -562,6 +562,7 @@ function migrate(s){
   if(!s.gear){s.gear=[];s.gearUid=0;}
   if(!s.stash)s.stash={items:[],food:0};
   if(!s.charms)s.charms={protect:0,luck:0};
+  if(!s.train)s.train={best:0};
   return s;
 }
 function exportSave(){
@@ -621,7 +622,7 @@ function toggleMute(){SAVE.muted=!SAVE.muted;save();renderHeader();}
 
 /* ===================== VIEW ROUTER ===================== */
 let VIEW="home";
-const NAV=[["home","主頁"],["gacha","招募"],["team","隊伍"],["gear","裝備"],["shop","商店"],["run","遠征"],["arena","競技場"],["duel","雙人對決"]];
+const NAV=[["home","主頁"],["gacha","招募"],["team","隊伍"],["gear","裝備"],["shop","商店"],["run","遠征"],["train","練功房"],["arena","競技場"],["duel","雙人對決"]];
 function locked(){return (RUN&&RUN.active)||(CUR_B&&!CUR_B.done)||(DUEL&&DUEL.phase==="battle")||!!NET;}
 function go(v){
   if(locked()&&v!==VIEW){toast("進行中無法離開（遠征中可按「放棄遠征」）");return;}
@@ -635,7 +636,7 @@ function renderHeader(){
 let BATTLE_HOME="arena";
 function render(){
   renderHeader();
-  const f={home:viewHome,gacha:viewGacha,team:viewTeam,gear:viewGear,shop:viewShop,run:viewRun,arena:viewArena,duel:viewDuel,battle:viewBattle}[VIEW];
+  const f={home:viewHome,gacha:viewGacha,team:viewTeam,gear:viewGear,shop:viewShop,run:viewRun,train:viewTrain,arena:viewArena,duel:viewDuel,battle:viewBattle}[VIEW];
   $("#view").innerHTML=f();
   if(VIEW==="battle"){const l=$("#blog");if(l)l.scrollTop=l.scrollHeight;}
   if(CUR_B&&CUR_B.online&&!CUR_B.guest)pushSnap(CUR_B);
@@ -658,7 +659,7 @@ const GUIDE=[
   {ic:"🛒",t:"③ 裝備與商店",b:["「商店」可以買裝備、強化符和遠征物資（下一次遠征自動帶上）。","在角色卡片點 <b>武器／防具／飾品</b> 欄位就能穿上。武器有職業限制。","「裝備」頁可以強化到 +10。<b>強化可能失敗</b>：+5 以上會掉級，+8 以上還可能損毀，用 🧿保護符 可以保住。"]},
   {ic:"🪜",t:"④ 出發遠征",b:["每一層選一扇門進去：可能是物資、敵人、或其他逃殺者。","注意 <b>🥫補給</b>（每層吃 1 份）和 <b>☣毒氣</b>（從底層往上淹）。","遇到人可以結盟、交易或開打。打倒最上層的魔王就逃出了！"]},
   {ic:"⚔️",t:"⑤ 戰鬥",b:["輪到你的角色時，按「普通攻擊」或「技能」，再點目標。","懶得操作就按「自動」，讓 AI 幫你打。"]},
-  {ic:"🏆",t:"⑥ 然後呢？",b:["主線共 6 章，逃出一章解鎖下一章；逃出第 1 章後解鎖 <b>🕳 無盡深淵</b>。","「競技場」打 AI 賺金條；「雙人對決」可以和朋友網路對戰。","進度會自動存檔，換裝置用主頁的「匯出／匯入存檔」。"]}
+  {ic:"🏆",t:"⑥ 然後呢？",b:["主線共 6 章，逃出一章解鎖下一章；逃出第 1 章後解鎖 <b>🕳 無盡深淵</b>。","「練功房」重複打怪練等級（每級全能力 +2%）；「競技場」打 AI 賺金條；「雙人對決」可以和朋友網路對戰。","進度會自動存檔，換裝置用主頁的「匯出／匯入存檔」。"]}
 ];
 function openGuide(i){
   const g=GUIDE[i],last=i===GUIDE.length-1;
@@ -694,6 +695,7 @@ function viewHome(){
     <div class="mode" onclick="go('team')"><div class="ic">👥</div><b>隊伍</b><p>已收集 ${own}/${Object.keys(CARDS).length} 名職業，挑 3 人出戰</p></div>
     <div class="mode" onclick="go('shop')"><div class="ic">🛒</div><b>商店・裝備</b><p>買裝備、強化到 +10（可能失敗！），還能買遠征物資帶上路</p></div>
     <div class="mode" onclick="go('run')"><div class="ic">🪜</div><b>逃殺遠征</b><p>文字冒險主線 ${CHAPTERS.length-1} 章＋無盡深淵：選房間、搜物資、躲毒氣、結盟或背叛。目前進度：${progText()}</p></div>
+    <div class="mode" onclick="go('train')"><div class="ic">🏋</div><b>練功房</b><p>重複打怪物練等級（每級全能力+2%），已解鎖到第 ${Math.min(TRAIN_MAX,trainBest()+1)} 關</p></div>
     <div class="mode" onclick="go('arena')"><div class="ic">⚔️</div><b>競技場</b><p>對戰 AI 小隊爬塔，第 ${SAVE.arenaTier} 層。贏了拿金條</p></div>
     <div class="mode" onclick="go('duel')"><div class="ic">🆚</div><b>雙人對決</b><p>同機輪流操作，或建立房間和朋友網路連線互毆</p></div>
   </div>
@@ -801,7 +803,7 @@ function cardTile(id,onclick,extraCls=""){
   const c=CARDS[id],o=SAVE.owned[id];
   return `<div class="ccard ${c.r} ${o?"":"locked"} ${SAVE.team.includes(id)?"inteam":""} ${extraCls}" onclick="${onclick}">
     <div class="av">${avatar(id)}</div><div class="nm">${c.name}</div>
-    <div class="stars">${o?starStr(o.stars):"未獲得"}</div><div class="small"><span class="r${c.r}">${c.r}</span> ${clsTag(id)}</div></div>`;
+    <div class="stars">${o?starStr(o.stars):"未獲得"}</div><div class="small"><span class="r${c.r}">${c.r}</span>${o?` <b>Lv.${lvOf(id)}</b>`:""} ${clsTag(id)}</div></div>`;
 }
 let TEAM_CLS="";
 function clsFilter(cur,fn){
@@ -826,11 +828,11 @@ function skillHtml(d){
   <div class="sk"><b>◈ ${d.passive.name}</b> <span class="dim small">被動</span><br>${d.passive.desc}</div>`;
 }
 function showCard(id){
-  const c=CARDS[id],o=SAVE.owned[id],s=cardStats(id,o?o.stars:1),inT=SAVE.team.includes(id),e=equipBonus(id);
+  const c=CARDS[id],o=SAVE.owned[id],s=cardStats(id,o?o.stars:1,o?lvScale(id):1),inT=SAVE.team.includes(id),e=equipBonus(id);
   const sv=(k,v)=>`${v}${e[k]?`<span style="color:var(--green)">+${e[k]}</span>`:""}`;
   openModal(`<div class="detail"><div class="av">${avatar(id)}</div><div style="flex:1">
     <div class="r${c.r}">${c.r} ${o?starStr(o.stars):""}</div><h2 style="margin:2px 0">${c.name}</h2>
-    <div>${clsTag(id)} <span class="dim small">${CLASSES[c.cls].desc}</span></div>
+    <div>${clsTag(id)} <span class="dim small">${CLASSES[c.cls].desc}</span></div>${o?lvBar(id):""}
     <div class="small">❤ ${sv("hp",s.maxHp)}　⚔ ${sv("atk",s.atk)}　🛡 ${sv("def",s.def)}　💨 ${sv("spd",s.spd)}</div>
     ${o?`<div class="gslots">${Object.keys(SLOTS).map(sl=>{const g=gearById(o.eq&&o.eq[sl]);
       return `<div class="gslot ${g?"has "+GEAR[g.base].q:""}" onclick="openSlot('${id}','${sl}')"><div class="gi">${g?GEAR[g.base].icon:"＋"}</div>${g?`<b class="r${GEAR[g.base].q}">${GEAR[g.base].name}${g.lv?" +"+g.lv:""}</b>`:`<span class="dim">${SLOTS[sl]}</span>`}</div>`;}).join("")}</div>`:""}
@@ -1100,10 +1102,85 @@ function buySupply(id){
   if(!pay(SUPPLY[id]))return;SAVE.stash.items.push(id);save();SFX.click();toast(`${ITEMS[id].name} 放進行囊`);render();
 }
 function buyFood(){if(SAVE.stash.food>=FOOD_MAX){toast("補給包已達上限");return;}if(!pay(FOOD_PRICE))return;SAVE.stash.food++;save();SFX.click();render();}
-// 我方隊伍成員（含永久裝備加成），競技場用
+// 我方隊伍成員（含等級與永久裝備加成），競技場、練功房用
 function teamUnit(id){
-  const o=SAVE.owned[id],e=equipBonus(id),s=cardStats(id,o.stars);
-  return {id,stars:o.stars,maxHp:s.maxHp+e.hp,atk:e.atk,def:e.def,spd:e.spd};
+  const o=SAVE.owned[id],e=equipBonus(id),sc=lvScale(id),s=cardStats(id,o.stars,sc);
+  return {id,stars:o.stars,scale:sc,maxHp:s.maxHp+e.hp,atk:e.atk,def:e.def,spd:e.spd};
+}
+
+/* ===================== LEVEL ===================== */
+// 角色等級：戰鬥勝利得經驗，每級全能力 +2%（用 cardStats 的 scale 疊上去），上限 Lv.20
+const LV_MAX=20;
+function lvOf(id){const o=SAVE.owned[id];return o&&o.lv||1;}
+function lvScale(id){return 1+.02*(lvOf(id)-1);}
+function lvNeed(lv){return 8+lv*6;}
+// 給經驗：ids 是參戰的自己角色，dead 裡的只拿一半；回傳升級訊息
+function gainExp(ids,n,dead=[]){
+  const ups=[];
+  ids.forEach(id=>{
+    const o=SAVE.owned[id];if(!o)return;
+    o.lv=o.lv||1;o.exp=o.exp||0;if(o.lv>=LV_MAX)return;
+    o.exp+=dead.includes(id)?Math.ceil(n/2):n;
+    const from=o.lv;
+    while(o.lv<LV_MAX&&o.exp>=lvNeed(o.lv)){o.exp-=lvNeed(o.lv);o.lv++;}
+    if(o.lv>=LV_MAX)o.exp=0;
+    if(o.lv>from)ups.push(`⬆ ${CARDS[id].name} 升到 <b style="color:var(--gold)">Lv.${o.lv}</b>！`);
+  });
+  return ups;
+}
+function expLine(n,ups){return [`📈 參戰角色獲得經驗 +${n}`,...ups].join("<br>");}
+function lvBar(id){
+  const o=SAVE.owned[id],lv=lvOf(id);if(!o)return "";
+  if(lv>=LV_MAX)return `<div class="small"><b>Lv.${LV_MAX}</b> <span class="dim">（已滿級）</span></div>`;
+  const e=o.exp||0,need=lvNeed(lv);
+  return `<div class="small"><b>Lv.${lv}</b> <span class="dim">經驗 ${e}/${need}・每級全能力+2%</span></div><div class="ratebar" style="height:6px"><i style="width:${e/need*100}%"></i></div>`;
+}
+
+/* ===================== TRAINING ===================== */
+// 練功房：可以無限重打的怪物關，難度自選（打贏才解鎖下一關），主要給經驗
+const TRAIN_MAX=30;
+const TRAIN_MOBS=["ghost","mutant","guard","drone","deepone","mirror"];
+let TRAIN_SEL=1;
+function trainBest(){return SAVE.train.best||0;}
+function trainFoes(s){
+  const pool=TRAIN_MOBS.slice(0,Math.min(TRAIN_MOBS.length,2+Math.floor(s/5))),n=s<3?2:3;
+  return Array.from({length:n},()=>({id:pick(pool),stars:1,scale:.55+s*.07}));
+}
+function trainReward(s){return {exp:6+s*3,gold:1+Math.floor(s/2)};}
+function viewTrain(){
+  const best=trainBest(),top=Math.min(TRAIN_MAX,best+1);TRAIN_SEL=clamp(TRAIN_SEL,1,top);
+  const r=trainReward(TRAIN_SEL),sample=trainFoes(TRAIN_SEL)[0],ss=cardStats(sample.id,1,sample.scale);
+  return `<h2>🏋 練功房</h2>
+  <p class="dim">地下室的鐵籠裡關著抓來的怪物，可以一直重打。打贏一關會解鎖下一關；打低等關卡穩穩練等也可以。</p>
+  <div class="panel">
+    <div class="row"><b>選擇關卡</b><span class="dim small">（已解鎖到第 ${top} 關／共 ${TRAIN_MAX} 關）</span></div>
+    <div class="filters">${Array.from({length:top},(_,i)=>i+1).map(i=>`<button class="${i===TRAIN_SEL?"on":""}" onclick="TRAIN_SEL=${i};render()">${i}${i<=best?"✓":""}</button>`).join("")}</div>
+    <div class="small">第 ${TRAIN_SEL} 關：${TRAIN_SEL<3?2:3} 隻怪物（每隻約 ❤${ss.maxHp} ⚔${ss.atk}）</div>
+    <div class="small" style="color:var(--gold)">勝利：每名參戰角色經驗 +${r.exp}・🪙${r.gold}・10% 機率掉裝備</div>
+    <div class="small dim">戰敗沒有懲罰；倒下的角色經驗減半。</div>
+  </div>
+  <h3>你的隊伍</h3><div class="cardgrid">${SAVE.team.map(id=>cardTile(id,`showCard('${id}')`)).join("")||"<span class='dim'>尚未編隊</span>"}</div>
+  <div class="row" style="margin-top:14px"><button class="pri" onclick="startTrain()" ${SAVE.team.length?"":"disabled"}>⚔ 開始修練</button>
+  ${top>1?`<button onclick="TRAIN_SEL=${top};render()">跳到最新關卡</button>`:""}</div>`;
+}
+function startTrain(){
+  if(!SAVE.team.length)return;
+  const s=TRAIN_SEL,r=trainReward(s),ids=SAVE.team.slice();
+  startBattle({title:`練功房 第${s}關`,home:"train",A:ids.map(teamUnit),B:trainFoes(s),
+    intro:"鐵籠的門拉開了。",
+    resultNote:B=>B.over==="A"?`經驗 +${r.exp}、🪙${r.gold}`:"打不贏就先回去打低一點的關卡吧。",
+    onEnd(win,B){
+      const notes=[];
+      if(win){
+        const dead=B.units.filter(u=>u.side==="A"&&!u.alive).map(u=>u.id);
+        notes.push(expLine(r.exp,gainExp(ids,r.exp,dead)));
+        SAVE.gold+=r.gold;notes.push(`🪙+${r.gold}`);
+        if(rnd()<.1)notes.push(`🎁 怪物掉下了 <b>${dropGear(s>=15&&rnd()<.3?"SR":"R")}</b>（已放進裝備）`);
+        if(s>trainBest()){SAVE.train.best=s;if(s<TRAIN_MAX)notes.push(`🔓 解鎖第 ${s+1} 關`);}
+      }
+      save();CUR_B=null;VIEW="train";render();
+      if(win)openModal(`<h3>🏋 修練完成</h3><p>${notes.join("<br>")}</p><div class="row"><button class="pri" onclick="closeModal();startTrain()">再打一次</button><button onclick="closeModal()">關閉</button></div>`);
+    }});
 }
 
 /* ===================== BATTLE ENGINE ===================== */
@@ -1510,10 +1587,13 @@ function startArena(){
     A:SAVE.team.map(teamUnit),B:ARENA_FOES,
     intro:"鐵籠落下，觀眾開始鼓譟——",
     resultNote:B=>B.over==="A"?`獲得 🪙${reward}，晉級第 ${SAVE.arenaTier+1} 層`:"再接再厲。抽更多卡或升星後再來。",
-    onEnd(win){
-      if(win){SAVE.gold+=reward;SAVE.arenaTier++;SAVE.stats.arenaWins++;
+    onEnd(win,B){
+      let ups=[];
+      if(win){const xp=8+SAVE.arenaTier*3;SAVE.gold+=reward;SAVE.arenaTier++;SAVE.stats.arenaWins++;
+        ups=gainExp(SAVE.team.slice(),xp,B.units.filter(u=>u.side==="A"&&!u.alive).map(u=>u.id));toast(`📈 參戰角色經驗 +${xp}`);
         if(rnd()<.3)toast("🎁 觀眾丟下了 "+dropGear(SAVE.arenaTier>=8&&rnd()<.35?"SR":"R")+"（已放進裝備）");}
       save();genArenaFoes();CUR_B=null;VIEW="arena";render();
+      if(ups.length)openModal(`<h3>升級！</h3><p>${ups.join("<br>")}</p><div class="row"><button onclick="closeModal()">關閉</button></div>`);
     }});
 }
 
@@ -1993,13 +2073,18 @@ function memberToUnit(m){
 function gasIdx(){return Math.floor((RUN.time-1)*.9)-1;}
 function addGold(n){n=Math.round(n*(hasRun("rich")?1.3:1));RUN.gold+=n;return n;}
 function gainItem(id){RUN.items.push(id);return `${ITEMS[id].icon}${ITEMS[id].name}`;}
+// 遠征中的戰鬥經驗：給自己的角色（盟友不算），倒下的減半；升級要等下次出戰才生效
+function runExp(n){
+  const mine=own(),ups=gainExp(mine.map(m=>m.id),n,mine.filter(m=>!m.alive).map(m=>m.id));
+  return expLine(n,ups)+(ups.length?`<br><span class="dim small">（升級的能力下次出戰生效）</span>`:"");
+}
 
 function startRun(c=0){
   const team=SAVE.team.filter(id=>SAVE.owned[id]);
   if(!team.length){toast("先去「隊伍」編隊吧");return;}
   if(!unlocked(c)){toast("尚未解鎖");return;}
   const C=CHAPTERS[c];
-  RUN={active:true,ch:c,fi:0,time:0,food:3,gold:0,items:[],party:team.map(id=>mkMember(id,SAVE.owned[id].stars,{gear:equipBonus(id)})),
+  RUN={active:true,ch:c,fi:0,time:0,food:3,gold:0,items:[],party:team.map(id=>mkMember(id,SAVE.owned[id].stars,{gear:equipBonus(id),scale:lvScale(id)})),
     visited:{},choices:null,scene:null,sel:null,log:[],floors:C.abyss?[{label:"D0"}]:C.floors.map(f=>({label:f.label,rooms:f.rooms}))};
   const st=SAVE.stash,packed=st.items.map(gainItem);RUN.food+=st.food;
   const intro=[];if(packed.length||st.food)intro.push(`🎒 你們帶上了從商店買的行囊：${packed.join("、")}${st.food?`${packed.length?"、":""}🥫補給+${st.food}`:""}。`);
@@ -2341,6 +2426,7 @@ function runBattle(ch,group,ambush,intro,after){
         else if(rnd()<.6)l.push("還撿到 "+gainItem(pick(LOOT_TABLE))+"。");
       }
       if(hasRun("courier")&&rnd()<.3)l.push("郵差從對方包裡翻出 "+gainItem(pick(LOOT_TABLE))+"。");
+      l.push(runExp(4+fi+RUN.ch*3+n*2));
       const al=allyMember();if(al){al.trust+=5;l.push(`<span class="dim">${al.name} 對你們多了幾分信任。</span>`);}
       if(B.units.some(u=>u.ref&&u.ref.betrayed))l.push("叛徒的屍體倒在你們腳邊。");
       if(after)return after();
@@ -2360,6 +2446,7 @@ function helipad(L){
         RUN.party=RUN.party.filter(m=>!m.betrayed);
         CUR_B=null;VIEW="run";
         if(!win||runLost())return endRun(false,[C.lose]);
+        RUN.xpNote=runExp(25+RUN.ch*12);
         seats();
       }});
   }}]);render();
@@ -2376,7 +2463,7 @@ function abyssBoss(L){
         RUN.party=RUN.party.filter(m=>!m.betrayed);
         CUR_B=null;VIEW="run";
         if(!win||runLost())return endRun(false,["你們被深淵吞沒了。"]);
-        const g=addGold(10+fi*2),t=gainItem(pick(LOOT_TABLE)),l=[`守門者化成一灘黑水。🪙+${g}，還留下了 ${t}。`];
+        const g=addGold(10+fi*2),t=gainItem(pick(LOOT_TABLE)),l=[`守門者化成一灘黑水。🪙+${g}，還留下了 ${t}。`,runExp(20+fi*2)];
         if(rnd()<.35)l.push(`🎁 黑水裡沉著一件裝備：<b>${dropGear(fi>=15&&rnd()<.3?"SSR":"SR")}</b>（已放進裝備）`);
         SAVE.prog.abyssBest=Math.max(SAVE.prog.abyssBest,fi);
         persistRun("post");
@@ -2442,6 +2529,7 @@ function endRun(escaped,lines=[]){
         if(r.ch===0)out.push(`🔓 解鎖：<b>🕳 無盡深淵</b>（沒有出口，每 5 層一個守門者）`);
       }
     }
+    if(r.xpNote)out.push(r.xpNote);
     const al=r.party.find(m=>m.ally&&m.alive);
     if(al){
       const gr=grant(al.id);

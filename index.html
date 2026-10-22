@@ -313,6 +313,8 @@ footer.credit a{color:var(--gold)}
 .gslot .gi .gimg{width:44px;height:44px}
 .sitem .gi .gimg{width:56px;height:56px}
 .bigicon .gimg{width:120px;height:120px}
+.sitem .gi .gimg.box{width:120px;height:120px}
+.gimg.sm{display:inline-block;width:44px;height:44px;vertical-align:middle;margin:0 4px 0 0}
 .gimg.inl{display:inline-block;width:24px;height:24px;vertical-align:middle;margin:0 2px 0 0}
 .gi:has(.gimg),.bigicon:has(.gimg){filter:none!important}
 .bigicon.fx-SR{filter:drop-shadow(0 0 10px rgba(176,124,255,.8))}
@@ -346,6 +348,8 @@ footer.credit a{color:var(--gold)}
 .gslot.fitsel{outline:2px solid var(--gold);outline-offset:1px}
 .fitgear.sel .gcard{outline:3px solid var(--gold);outline-offset:2px}
 .fitgear.cant{opacity:.45}
+.gcard.dexlock{opacity:.5;filter:grayscale(.55)}
+.gcard.dexlock:hover{opacity:.85}
 
 /* duel */
 .draftside{display:flex;gap:6px;min-height:70px;flex-wrap:wrap}
@@ -664,6 +668,8 @@ const MONSTERS={
     passive:{name:"衛冕者",desc:"受到的傷害-3；被攻擊時15%機率閃避；第一次倒下時以50%生命重新站起。"}}
 };
 const DEF=id=>CARDS[id]||MONSTERS[id];
+// 有插圖的主線小怪（images/monsters/{代號}.webp）；沒有圖的小怪、或圖片載入失敗時，退回用表情符號
+["ghost","guard","drone","mutant","doppel","echo","deepone","mirror"].forEach(k=>{if(MONSTERS[k])MONSTERS[k].pic=true;});
 const POOL={SSR:[],SR:[],R:[]};
 Object.keys(CARDS).forEach(id=>POOL[CARDS[id].r].push(id));
 const R_ORDER={SSR:0,SR:1,R:2};
@@ -750,6 +756,11 @@ const SETS={
 };
 const SLOTS={weapon:"武器",armor:"防具",acc:"飾品"};
 // 有插圖的裝備（images/equipment/{代號}.webp，256×256 透明底）。沒有插圖的（目前只有狗牌）、或圖片載入失敗時，退回用表情符號
+// 裝備箱插圖（images/boxes/{箱子代號}.webp），載入失敗時退回表情符號
+function boxImg(k,cls=""){
+  const b=BOXES[k];
+  return `<img class="gimg ${cls}" src="images/boxes/${k}.webp" alt="${b.name}" draggable="false" onerror="this.outerHTML='${b.icon}'">`;
+}
 const GEAR_IMG=new Set(["stick","rags","band","pipe","axe","dagger","rifle","doll","baton","jacket","coin","dogtag","chainsaw","katana","crossbow","grimoire","riot","vest","bracer","railgun","scythe","aegis","exo","watch","gavel","abyssmail","scales","endchain","reaperscythe","fatecompass","doomrifle","voidterm","nightrobe","overlordmantle","abysscrown"]);
 function gearImg(base,cls=""){
   const G=GEAR[base];if(!GEAR_IMG.has(base))return G.icon;
@@ -776,6 +787,7 @@ function gearCls(base){const c=GEAR[base].cls;return c?c.map(k=>CLASSES[k].icon+
 function avatar(id,p2){
   const d=DEF(id);
   if(d.img) return `<img class="avimg" src="images/bosses/${id}_${p2?2:1}.webp" alt="" draggable="false">`;
+  if(d.pic) return `<img class="avimg" src="images/monsters/${id}.webp" alt="" draggable="false" onerror="this.outerHTML='<span class=emo>${d.emoji}</span>'">`;
   if(d.emoji) return `<span class="emo">${d.emoji}</span>`;
   return `<img class="avimg" src="images/avatars/${id}.webp" alt="" draggable="false" onerror="this.outerHTML='<span class=emo>${d.name.charAt(0)}</span>'">`;
 }
@@ -1559,7 +1571,8 @@ function gearCard(g,onclick){
 let GEAR_MODE="bag",FIT_CHAR="",FIT_SLOT="weapon",FIT_PICK=0;
 function modeToggle(){
   return `<div class="filters" style="margin-top:0"><button class="${GEAR_MODE==="bag"?"on":""}" onclick="GEAR_MODE='bag';render()">📦 倉庫</button>
-    <button class="${GEAR_MODE==="fit"?"on":""}" onclick="GEAR_MODE='fit';render()">🧍 角色裝備調整</button></div>`;
+    <button class="${GEAR_MODE==="fit"?"on":""}" onclick="GEAR_MODE='fit';render()">🧍 角色裝備調整</button>
+    <button class="${GEAR_MODE==="dex"?"on":""}" onclick="GEAR_MODE='dex';render()">📖 裝備圖鑑</button></div>`;
 }
 // 角色的最終素質（基礎＋等級＋星數＋突破＋裝備＋套裝）；eq 可以傳入假設的裝備組合來預覽
 function fitStats(id,eq){
@@ -1572,6 +1585,50 @@ function fitStatHtml(cur,nw){
     const pct=ST_PCT[k]?"%":"",c=cur[k],n=nw?nw[k]:c,d=n-c;
     if(ST_PCT[k]&&!c&&!n)return "";
     return `<div class="stcell"><span class="dim small">${l}</span><b>${n}${pct}</b>${nw&&d?`<span class="${d>0?"dpos":"dneg"} small">${d>0?"▲+":"▼"}${d}${pct}</span>`:""}</div>`;}).join("")}</div>`;
+}
+
+/* ===== 裝備圖鑑：35 件裝備全部展示（沒拿過的也看得到），點開看詳細資料與取得方式 ===== */
+let DEX_Q="";
+const GET_HOW={
+  N:"商店直購（🪙10）、📦裝備補給箱、練功房第 1～4 關掉落",
+  R:"商店直購（🪙25）、📦裝備補給箱、競技場、練功房掉落",
+  SR:"商店直購（🪙70）、📦／🎁裝備箱、章節魔王、深淵守門者",
+  SSR:"📦裝備補給箱（1%）、🎁黃金裝備箱（8%）、主線章節魔王、深淵守門者",
+  UR:"🎁黃金裝備箱（2%）、第 5 章以後的章節魔王（6%）、深淵 D20 以下的守門者（5%）",
+  EX:"只有對應的支線魔王會掉：首次討伐必掉，之後每次 2%"
+};
+function dexOwned(k){const l=SAVE.gear.filter(g=>g.base===k);return {n:l.length,best:l.reduce((a,g)=>Math.max(a,g.lv),-1)};}
+function viewDex(){
+  const keys=Object.keys(GEAR).sort((a,b)=>GQ.indexOf(GEAR[a].q)-GQ.indexOf(GEAR[b].q)||["weapon","armor","acc"].indexOf(GEAR[a].slot)-["weapon","armor","acc"].indexOf(GEAR[b].slot));
+  const have=keys.filter(k=>dexOwned(k).n).length,show=keys.filter(k=>!DEX_Q||GEAR[k].q===DEX_Q);
+  return `<h2>裝備</h2>${modeToggle()}
+  <div class="panel"><b>圖鑑收集 ${have}／${keys.length} 種</b><div class="ratebar"><i style="width:${have/keys.length*100}%"></i></div>
+    <span class="dim small">倉庫裡有的會亮起來，沒有的顯示成暗色，點開可以看詳細資料和取得方式。</span></div>
+  <div class="filters"><button class="${DEX_Q?"":"on"}" onclick="DEX_Q='';render()">全部（${keys.length}）</button>${GQ.map(q=>`<button class="${DEX_Q===q?"on":""}" onclick="DEX_Q='${q}';render()">${q}（${keys.filter(k=>GEAR[k].q===q).length}）</button>`).join("")}</div>
+  <div class="ggrid">${show.map(k=>{const G=GEAR[k],o=dexOwned(k);
+    return `<div class="gcard ${G.q} ${o.n?"":"dexlock"}" onclick="openDex('${k}')">${o.n?`<span class="lv" style="color:var(--green)">×${o.n}</span>`:""}
+      <div class="gi">${gearImg(k)}</div><div class="gn r${G.q}">${G.name}</div><div class="small">${statStr(G.st)}</div>
+      <div class="small dim">${GQ_NAME[G.q]}・${SLOTS[G.slot]}・${gearCls(k)} ${reqTag(null,k)}</div>${o.n?"":`<div class="small dim">未擁有</div>`}</div>`;}).join("")}</div>
+  <h3 style="margin-top:18px">🧩 套裝效果</h3>
+  <p class="dim small" style="margin-top:0">同稀有度的武器、防具、飾品穿 2 件、3 件有額外效果（3 件會同時拿到 2 件的效果）。</p>
+  <div class="panel small">${GQ.map(q=>`<div style="margin-bottom:6px"><b class="r${q}">${GQ_NAME[q]}・${SETS[q].name}</b>　2 件：${statStr(SETS[q][2])}　3 件：${statStr(SETS[q][3])}</div>`).join("")}</div>`;
+}
+function openDex(k){
+  const G=GEAR[k],o=dexOwned(k),[lo,hi]=GEAR_ROLL[G.q],m=AFFIX_MULT[G.q];
+  const rng=Object.keys(G.st).map(s=>{const a=Math.max(1,Math.round(G.st[s]*lo/100)),b=Math.max(1,Math.round(G.st[s]*hi/100));return `${ST_LBL[s]}${a===b?a:a+"～"+b}`;}).join(" ");
+  const max=Object.keys(G.st).map(s=>`${ST_LBL[s]}${Math.max(1,Math.round(G.st[s]*(1+.08*ENH_MAX)))}`).join(" ");
+  const cnt={N:"0 條",R:"0～1 條",SR:"1 條",SSR:"1～2 條",UR:"2～3 條",EX:"3 條"}[G.q];
+  const aff=Object.entries(AFFIX).map(([a,A])=>`${A.n} +${Math.max(1,Math.round(A.r[0]*m))}～${Math.max(1,Math.round(A.r[1]*m))}${A.pct?"%":""}`).join("、");
+  const boss=Object.keys(BOSS_DROP).find(b=>BOSS_DROP[b]===k);
+  openModal(`<div class="detail"><div class="bigicon fx-${G.q}">${gearImg(k)}</div><div style="flex:1">
+    <div class="r${G.q}">${G.q}（${GQ_NAME[G.q]}）・${SLOTS[G.slot]}</div><h2 style="margin:2px 0">${G.name}</h2>
+    <div class="small">${o.n?`倉庫裡有 <b>${o.n}</b> 件，最高 +${o.best}`:`<span class="dim">倉庫裡還沒有</span>`}</div>
+    <div class="small dim">可裝備：${gearCls(k)}・穿戴等級 Lv.${GEAR_REQ[G.q]}</div></div></div>
+    <div class="sk"><b>📊 數值</b><br>基礎：${statStr(G.st)}<br>品質浮動（${lo}%～${hi}%）：${rng}<br>強化到 +${ENH_MAX}：${max}（以 100% 品質計）</div>
+    <div class="sk"><b>✦ 隨機詞條</b>（${cnt}）<br><span class="small">${aff}</span></div>
+    <div class="sk"><b>🧩 套裝</b>：${SETS[G.q].name}<br>2 件：${statStr(SETS[G.q][2])}　3 件：${statStr(SETS[G.q][3])}</div>
+    <div class="sk"><b>🎁 怎麼取得</b><br>${GET_HOW[G.q]}${boss?`<br><b class="rEX">掉落自：${MONSTERS[boss].name}</b>`:""}</div>
+    <div class="row" style="margin-top:12px">${GEAR_PRICE[G.q]?`<button class="gold" onclick="closeModal();SHOP_TAB='gear';go('shop')">🛒 去商店</button>`:""}<button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
 }
 function fitSel(id){FIT_CHAR=id;FIT_PICK=0;SFX.click();render();}
 function fitSlot(sl){FIT_SLOT=sl;FIT_PICK=0;SFX.click();render();}
@@ -1622,7 +1679,7 @@ function viewFit(){
     return `<div class="fitgear ${FIT_PICK===g.uid?"sel":""} ${why?"cant":""}">${gearCard(g,`fitPick(${g.uid})`)}${note}${why?`<div class="small" style="color:var(--red)">✕ ${why}</div>`:""}</div>`;}).join("")||`<span class="dim">倉庫裡沒有${SLOTS[FIT_SLOT]}。去「商店」買，或打倒敵人掉落。</span>`}</div>`;
 }
 let GEAR_TAB="";
-function viewGear(){return GEAR_MODE==="fit"?viewFit():viewBag();}
+function viewGear(){return GEAR_MODE==="fit"?viewFit():GEAR_MODE==="dex"?viewDex():viewBag();}
 function viewBag(){
   const list=SAVE.gear.filter(g=>!GEAR_TAB||GEAR[g.base].slot===GEAR_TAB).sort(gearSort);
   return `<h2>裝備</h2>${modeToggle()}
@@ -1720,7 +1777,7 @@ function viewShop(){
   const st=SAVE.stash,tabs={gear:"⚔ 裝備",charm:"🔨 強化道具",supply:"🎒 遠征物資"};
   let body="";
   if(SHOP_TAB==="gear"){
-    body=`<h3>裝備箱</h3><div class="shopsec">${Object.entries(BOXES).map(([k,b])=>`<div class="sitem"><div class="gi">${b.icon}</div><b>${b.name}</b><div class="small dim">${b.desc}</div>
+    body=`<h3>裝備箱</h3><div class="shopsec">${Object.entries(BOXES).map(([k,b])=>`<div class="sitem"><div class="gi">${boxImg(k,"box")}</div><b>${b.name}</b><div class="small dim">${b.desc}</div>
         <button class="gold" onclick="buyBox('${k}')" ${SAVE.gold<b.price?"disabled":""}>🪙${b.price}</button></div>`).join("")}</div>
       <h3>直接購買</h3><div class="shopsec">${Object.keys(GEAR).filter(k=>GEAR_PRICE[GEAR[k].q]).map(k=>{const G=GEAR[k];
         return `<div class="sitem" style="border-color:${G.q==="SR"?"var(--purple)":G.q==="R"?"#2c5a86":"#4a525c"}"><div class="gi">${gearImg(k)}</div><b class="r${G.q}">${G.name}</b>
@@ -1755,7 +1812,7 @@ function buyGear(k){
 function buyBox(k){
   const b=BOXES[k];if(!pay(b.price))return;
   const q=b.roll(),g=addGear(rollGear(q));save();q==="SSR"||q==="UR"?SFX.ssr():q==="SR"?SFX.sr():SFX.flip();render();
-  openModal(`<h3>${b.icon} 打開${b.name}</h3><div class="bigicon fx-${q}" style="margin:6px 0">${gearImg(g.base)}</div>
+  openModal(`<h3>${boxImg(k,"sm")} 打開${b.name}</h3><div class="bigicon fx-${q}" style="margin:6px 0">${gearImg(g.base)}</div>
     <h2 style="text-align:center;margin:4px 0" class="r${q}">${q}　${GEAR[g.base].name}</h2>
     <p style="text-align:center">${statStr(gearStats(g))}${g.fx.length?`<br><span class="gfx">${fxStr(g)}</span>`:""}<br><span class="dim small">${GQ_NAME[q]}・品質 ${g.roll}%・${SLOTS[GEAR[g.base].slot]}・${gearCls(g.base)}・需 Lv.${GEAR_REQ[q]}</span></p>
     <div class="row"><button class="gold" onclick="buyBox('${k}')" ${SAVE.gold<b.price?"disabled":""}>再開一個（🪙${b.price}）</button>

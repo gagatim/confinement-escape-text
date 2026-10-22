@@ -368,6 +368,14 @@ footer.credit a{color:var(--gold)}
 .kingrow p{margin:4px 0;font-size:14px;line-height:1.65}
 .kingrow.bossst{border-left-color:var(--red);background:rgba(229,72,77,.06)}
 
+
+/* 鍵盤選取框 */
+.kbsel{outline:3px solid #5ef0ff!important;outline-offset:2px;box-shadow:0 0 16px rgba(94,240,255,.85)!important}
+.kbtgt{outline:3px solid #ffd24d!important;outline-offset:2px;box-shadow:0 0 18px rgba(255,210,77,.9)!important;position:relative}
+.kbtgt::before{content:"🎯";position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:22px;z-index:5;animation:floaty 1s ease-in-out infinite;pointer-events:none}
+.kbhint{margin-top:6px;font-size:12px;color:var(--dim)}
+@media (hover:none){.kbhint{display:none}}
+
 /* duel */
 .draftside{display:flex;gap:6px;min-height:70px;flex-wrap:wrap}
 .draftside .av{width:60px;height:60px;border-radius:8px;overflow:hidden;border:2px solid var(--line)}
@@ -1055,7 +1063,7 @@ function renderInner(){
   renderHeader();
   const f={home:viewHome,gacha:viewGacha,team:viewTeam,gear:viewGear,shop:viewShop,run:viewRun,train:viewTrain,arena:viewArena,ach:viewAch,story:viewStory,duel:viewDuel,battle:viewBattle}[VIEW]||viewHome;
   $("#view").innerHTML=f();
-  if(VIEW==="battle"){const l=$("#blog");if(l)l.scrollTop=l.scrollHeight;}
+  if(VIEW==="battle"){const l=$("#blog");if(l)l.scrollTop=l.scrollHeight;kbApply();}
   if(CUR_B&&CUR_B.online&&!CUR_B.guest)pushSnap(CUR_B);
   syncBgm();
 }
@@ -2226,7 +2234,7 @@ function useBattleItem(B,u,idx,t){
 }
 
 /* ---- human input ---- */
-function waitHuman(B,u){return new Promise(res=>{B.wait={u,res,mode:"menu"};render();});}
+function waitHuman(B,u){return new Promise(res=>{KB_SEL="";B.wait={u,res,mode:"menu"};render();});}
 function act(kind){
   const B=CUR_B;if(!B)return;
   if(kind==="auto"){B.auto=!B.auto;SFX.click();if(B.auto&&B.wait)return resolveHuman(aiChoose(B,B.wait.u));render();return;}
@@ -2253,6 +2261,7 @@ function onUnitClick(uid){
   const B=CUR_B,w=B&&B.wait;if(!w||w.mode!=="target")return;
   const t=B.units.find(x=>x.uid===uid);
   if(!validTargets(B,w.u,w.tt).includes(t))return;
+  kbRemember(w.tt,uid);
   resolveHuman({...w.action,target:t});
 }
 function resolveHuman(a){const B=CUR_B,w=B&&B.wait;if(!w)return;B.wait=null;w.res(a);}
@@ -2285,30 +2294,158 @@ function actionPanel(B){
     const hot=B.ctrl.A==="human"&&B.ctrl.B==="human",win=B.over===B.mySide;
     const head=hot?`${B.labels[B.over]} 勝利！`:win?"勝利":"敗北";
     return `<div class="result ${win||hot?"win":"lose"}"><h2>${head}</h2><div class="dim">${B.cfg.resultNote?B.cfg.resultNote(B):""}</div>
-      <button class="pri" style="margin-top:8px" onclick="finishBattle()">繼續</button></div>`;
+      <button class="pri" data-kb="continue" style="margin-top:8px" onclick="finishBattle()">繼續</button>${KB_HINT}</div>`;
   }
   const w=B.wait;
   if(!w)return `<div class="apanel dim">${B.active?nm(B.active)+" 行動中……":"……"}</div>`;
   const u=w.u,sk=DEF(u.id).skill,who=B.ctrl.A==="human"&&B.ctrl.B==="human"?`<span class="tag">${B.labels[u.side]}</span> `:"";
-  if(w.mode==="target")return `<div class="apanel"><div class="who">${who}${nm(u)}：選擇【${w.label}】的目標（點選發光的角色）</div><div class="btns"><button onclick="cancelTarget()">✕ 取消</button></div></div>`;
+  if(w.mode==="target")return `<div class="apanel"><div class="who">${who}${nm(u)}：選擇【${w.label}】的目標（點選發光的角色）</div><div class="btns"><button data-kb="back" onclick="cancelTarget()">✕ 取消</button></div>${KB_HINT}</div>`;
   if(w.mode==="items")return `<div class="apanel"><div class="who">選擇道具</div><div class="btns">
-    ${B.items.map((id,i)=>ITEMS[id].battle?`<button onclick="pickItem(${i})" title="${ITEMS[id].desc}">${ITEMS[id].icon}${ITEMS[id].name}</button>`:"").join("")||"<span class='dim'>沒有可在戰鬥中使用的道具</span>"}
-    <button onclick="cancelTarget()">返回</button></div></div>`;
+    ${B.items.map((id,i)=>ITEMS[id].battle?`<button data-kb="item${i}" onclick="pickItem(${i})" title="${ITEMS[id].desc}">${ITEMS[id].icon}${ITEMS[id].name}</button>`:"").join("")||"<span class='dim'>沒有可在戰鬥中使用的道具</span>"}
+    <button data-kb="back" onclick="cancelTarget()">返回</button></div>${KB_HINT}</div>`;
   const usable=B.items?B.items.filter(id=>ITEMS[id].battle).length:0;
   return `<div class="apanel"><div class="who">${who}${nm(u)} 的回合</div><div class="btns">
-    <button class="atk" onclick="act('attack')">⚔ 攻擊</button>
-    <button onclick="act('skill')" ${canUseSkill(B,u)?"":"disabled"} class="${canUseSkill(B,u)?"pri":""}">✦ ${sk.name}${u.cd>0?`（${u.cd}）`:""}</button>
-    <button onclick="act('guard')">🛡 防禦</button>
-    ${B.items?`<button onclick="act('items')" ${usable?"":"disabled"}>🎒 道具 ${usable}</button>`:""}
-  </div>${B.guest?`<div class="skdesc">（${REMOTE_TIMEOUT/1000} 秒內沒有行動會自動出手）</div>`:""}<div class="skdesc">✦ ${sk.desc}　◈ ${DEF(u.id).passive.name}：${DEF(u.id).passive.desc}</div></div>`;
+    <button class="atk" data-kb="attack" onclick="act('attack')">⚔ 攻擊</button>
+    <button data-kb="skill" onclick="act('skill')" ${canUseSkill(B,u)?"":"disabled"} class="${canUseSkill(B,u)?"pri":""}">✦ ${sk.name}${u.cd>0?`（${u.cd}）`:""}</button>
+    <button data-kb="guard" onclick="act('guard')">🛡 防禦</button>
+    ${B.items?`<button data-kb="items" onclick="act('items')" ${usable?"":"disabled"}>🎒 道具 ${usable}</button>`:""}
+  </div>${KB_HINT}${B.guest?`<div class="skdesc">（${REMOTE_TIMEOUT/1000} 秒內沒有行動會自動出手）</div>`:""}<div class="skdesc">✦ ${sk.desc}　◈ ${DEF(u.id).passive.name}：${DEF(u.id).passive.desc}</div></div>`;
 }
+
+/* ---- 鍵盤操作（戰鬥中） ----
+   平常（輪到我方、選行動的時候）就已經「預先選好一隻目標」：↑↓（或 W S）選行動，←→（或 A D）換目標，
+   Enter 直接執行——攻擊不用再點敵人。進到選道具／選目標畫面時，←→ 換目標、Enter 確認、Esc 返回。 */
+let KB_SEL="",KB_TE=0,KB_TA=0; // KB_TE／KB_TA：最近選的敵人／我方目標（還活著、還能選就沿用）
+const KB_ACT=["attack","skill","guard","items"];
+const kbKey=e=>(e.dataset&&e.dataset.kb)||e.id;
+function kbMenu(){const B=CUR_B;return !!(B&&VIEW==="battle"&&B.wait&&B.wait.mode==="menu");}
+function kbActions(){return Array.from(document.querySelectorAll("#view .apanel [data-kb]:not([disabled])")).filter(e=>KB_ACT.includes(kbKey(e)));}
+function kbTargetType(a){ // 這個行動需要選哪一種目標：enemy／ally／mate，不用選就回傳 null
+  const B=CUR_B,u=B&&B.wait&&B.wait.u;if(!u)return null;
+  if(a==="attack")return "enemy";
+  if(a==="skill"){const t=DEF(u.id).skill.t;return ["enemy","ally","mate"].includes(t)?t:null;}
+  return null;
+}
+function kbTargets(tt){ // 可選的目標，依畫面由左到右排好（回傳 uid 陣列）
+  const B=CUR_B;if(!B||!B.wait||!tt)return [];
+  const xOf=u=>{const el=document.getElementById("u"+u.uid);return el?el.getBoundingClientRect().left:0;};
+  return validTargets(B,B.wait.u,tt).slice().sort((a,b)=>xOf(a)-xOf(b)).map(u=>u.uid);
+}
+function kbPickTarget(tt,list){ // 自動選目標：沿用上次選的；沒有就敵人選最左邊、治療類選生命比例最低的
+  const B=CUR_B;
+  if(!list.length)return 0;
+  if(tt==="enemy"&&list.includes(KB_TE))return KB_TE;
+  if(tt!=="enemy"&&list.includes(KB_TA))return KB_TA;
+  if(tt==="ally"){const u=list.map(id=>B.units.find(x=>x.uid===id)).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0];return u?u.uid:list[0];}
+  return list[0];
+}
+function kbCurTarget(a){const tt=kbTargetType(a||KB_SEL),list=kbTargets(tt);return {tt,list,id:kbPickTarget(tt,list)};}
+function kbRemember(tt,uid){if(tt==="enemy")KB_TE=uid;else KB_TA=uid;}
+function kbItems(){
+  const B=CUR_B;if(!B||VIEW!=="battle")return [];
+  const q=s=>Array.from(document.querySelectorAll(s));
+  if(B.over)return q('#view [data-kb="continue"]');
+  const w=B.wait;if(!w)return [];
+  if(w.mode==="target")return q("#view .ucard.targetable");
+  if(w.mode==="menu")return kbActions();
+  return q('#view .apanel [data-kb]:not([disabled])'); // 道具選單
+}
+function kbCur(items){return items.find(e=>kbKey(e)===KB_SEL);}
+// 每次畫面重畫後呼叫：標出目前選到的行動（青框）與目標（金框＋🎯）
+function kbApply(){
+  try{
+    document.querySelectorAll("#view .kbsel,#view .kbtgt").forEach(e=>e.classList.remove("kbsel","kbtgt"));
+    const B=CUR_B;if(!B||VIEW!=="battle")return;
+    const items=kbItems();if(!items.length)return;
+    if(kbMenu()){
+      let cur=kbCur(items);
+      if(!cur){cur=items.find(e=>kbKey(e)==="attack")||items[0];KB_SEL=kbKey(cur);}
+      cur.classList.add("kbsel");
+      const t=kbCurTarget();if(t.id){const el=document.getElementById("u"+t.id);if(el)el.classList.add("kbtgt");}
+      return;
+    }
+    let cur=kbCur(items);
+    if(!cur){
+      const w=B.wait;
+      if(w&&w.mode==="target"){const id=kbPickTarget(w.tt,kbTargets(w.tt));cur=items.find(e=>e.id==="u"+id);}
+      cur=cur||items.find(e=>kbKey(e)==="continue")||items.find(e=>e.closest(".apanel"))||items[0];
+      KB_SEL=kbKey(cur);
+    }
+    cur.classList.add("kbsel");
+  }catch(e){}
+}
+// 非選單畫面（選目標、道具選單）用：把選項依位置分成一排一排，左右鍵同排移動（繞回），上下鍵換排
+function kbRows(items){
+  const pts=items.map(e=>{const b=e.getBoundingClientRect();return {e,x:b.left+b.width/2,y:b.top+b.height/2,h:b.height};}).sort((a,b)=>a.y-b.y);
+  const rows=[];
+  pts.forEach(p=>{const r=rows[rows.length-1];if(r&&Math.abs(p.y-r.y)<=Math.max(14,r.h*.5))r.list.push(p);else rows.push({y:p.y,h:p.h,list:[p]});});
+  rows.forEach(r=>r.list.sort((a,b)=>a.x-b.x));
+  return rows;
+}
+function kbMove(dx,dy){
+  if(kbMenu()){
+    if(dy){ // 上下：選行動
+      const acts=kbActions();if(!acts.length)return;
+      const i=Math.max(0,acts.findIndex(e=>kbKey(e)===KB_SEL));
+      KB_SEL=kbKey(acts[(i+dy+acts.length)%acts.length]);kbApply();return;
+    }
+    const t=kbCurTarget(); // 左右：換目標
+    if(t.list.length>1){const nid=t.list[(t.list.indexOf(t.id)+dx+t.list.length)%t.list.length];kbRemember(t.tt,nid);kbApply();}
+    return;
+  }
+  const items=kbItems();if(!items.length)return;
+  const cur=kbCur(items)||items[0],rows=kbRows(items);
+  let ri=rows.findIndex(r=>r.list.some(p=>p.e===cur));if(ri<0)ri=0;
+  const row=rows[ri],ci=Math.max(0,row.list.findIndex(p=>p.e===cur));
+  let nx=cur;
+  if(dx){nx=row.list[(ci+dx+row.list.length)%row.list.length].e;}
+  else if(dy){
+    const tr=rows[ri+dy];if(!tr)return;
+    const cx=row.list[ci].x;nx=tr.list.reduce((a,b)=>Math.abs(b.x-cx)<Math.abs(a.x-cx)?b:a).e;
+  }
+  if(nx===cur)return;
+  KB_SEL=kbKey(nx);kbApply();
+  try{nx.scrollIntoView({block:"nearest",inline:"nearest"});}catch(e){}
+}
+// 在選單按 Enter：攻擊／要選目標的技能，直接對預先選好的目標出手；其他行動照常執行
+function kbExec(a){
+  if(a==="attack"||a==="skill"){
+    const t=kbCurTarget(a);
+    act(a);
+    const w=CUR_B&&CUR_B.wait;
+    if(w&&w.mode==="target"&&t.id){kbRemember(t.tt,t.id);onUnitClick(t.id);}
+  }else act(a);
+}
+function kbKeydown(e){
+  const B=CUR_B;
+  if(VIEW!=="battle"||!B||e.ctrlKey||e.altKey||e.metaKey)return;
+  const tg=e.target;if(tg&&/^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName))return;
+  const m=$("#modal"),g=$("#gacha");
+  if((m&&m.classList.contains("show"))||(g&&g.classList.contains("show")))return;
+  if(!B.over&&!B.wait)return; // 對手行動中不攔截按鍵，避免誤觸
+  const k=e.key.length===1?e.key.toLowerCase():e.key;
+  const D={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1],a:[-1,0],d:[1,0],w:[0,-1],s:[0,1]};
+  if(D[k]){e.preventDefault();kbMove(D[k][0],D[k][1]);return;}
+  if(k==="Enter"||k===" "){
+    const items=kbItems(),cur=kbCur(items);
+    if(!cur)return;
+    e.preventDefault();try{document.activeElement.blur();}catch(x){}
+    if(kbMenu())kbExec(KB_SEL);else cur.click();
+    return;
+  }
+  if(k==="Escape"||k==="Backspace"){
+    const w=B.wait;
+    if(w&&(w.mode==="target"||w.mode==="items")){e.preventDefault();cancelTarget();}
+  }
+}
+const KB_HINT=`<div class="kbhint">⌨ ↑↓（W S）選行動　←→（A D）換目標　Enter 確認　Esc 返回</div>`;
 function viewBattle(){
   const B=CUR_B;if(!B)return "";
   const me=B.mySide||"A",op=me==="A"?"B":"A";
   return `<div class="btop"><div class="ttl">${B.title}　<span class="dim small">第 ${B.round} 回合</span></div>
-    ${B.ctrl.A==="human"&&B.ctrl.B!=="human"?`<button onclick="act('auto')" class="${B.auto?"ok":""}">${B.auto?"自動中":"自動"}</button>`:""}
-    ${B.guest?"":`<button onclick="CUR_B.fast=!CUR_B.fast;render()" class="${B.fast?"ok":""}">${B.fast?"⏩ 快速":"▶ 正常"}</button>`}
-    <button class="mini" onclick="openStuck()" title="畫面卡住時用">🐞 卡住了</button></div>
+    ${B.ctrl.A==="human"&&B.ctrl.B!=="human"?`<button data-kb="auto" onclick="act('auto')" class="${B.auto?"ok":""}">${B.auto?"自動中":"自動"}</button>`:""}
+    ${B.guest?"":`<button data-kb="fast" onclick="CUR_B.fast=!CUR_B.fast;render()" class="${B.fast?"ok":""}">${B.fast?"⏩ 快速":"▶ 正常"}</button>`}
+    <button class="mini" data-kb="stuck" onclick="openStuck()" title="畫面卡住時用">🐞 卡住了</button></div>
     <div class="side B">${B.units.filter(u=>u.side===op).map(u=>unitCard(B,u)).join("")}</div>
     <div class="vs">— ${B.labels[op]} ／ ${B.labels[me]} —</div>
     <div class="side A">${B.units.filter(u=>u.side===me).map(u=>unitCard(B,u)).join("")}</div>
@@ -3602,7 +3739,7 @@ function runEvent(ch,pre){
       setScene(where,"🎰 樂透房",[`🎲 ${d}——${r}`],cont(plays<3?[play()]:[]));render();}});
     return S("🎰 樂透房",["一台還插著電的拉霸機在角落閃爍。"],cont([play()]));}
   case "respec":return S("🧬 操作室",["一台改造艙。螢幕上寫著：「強化實驗・僅限一人」。"],[
-    ...aliveMembers().filter(m=>!m.ally).map(m=>({label:`🧬 讓 ${m.name} 進去（攻擊+2）`,act(){m.bonus.atk+=2;setScene(where,"強化完成",[`${m.name} 從艙裡出來，肌肉明顯緊繃了不少。攻擊永久+2（本次遠征）。`],cont());render();}})),
+    ...aliveMembers().filter(m=>!m.ally).map(m=>({label:`🧬 讓 ${m.name} 進去（本次遠征攻擊 +2）`,act(){m.bonus.atk+=2;setScene(where,"強化完成",[`${m.name} 從艙裡出來，肌肉明顯緊繃了不少。本次遠征攻擊 +2。`],cont());render();}})),
     ...cont()]);
   case "surgery":{
     const alive=aliveMembers().length,dead=own().filter(m=>!m.alive);
@@ -3630,7 +3767,7 @@ function runEvent(ch,pre){
     aliveMembers().forEach(m=>{const spd=CARDS[m.id].spd+(m.bonus.spd||0);if(spd<5&&rnd()<.5){m.hp-=5;l.push(`${m.name} 被雷射掃到，-5！`);}else l.push(`${m.name} 靈巧地閃過。`);});
     checkMemberDeaths(l);if(runLost())return endRun(false,L.concat(l));
     l.push("房間盡頭的能量核心還在發光。");
-    return S("🔴 激光室",l,[...aliveMembers().filter(m=>!m.ally).map(m=>({label:`⚡ 讓 ${m.name} 吸收核心（攻擊+2）`,act(){m.bonus.atk+=2;setScene(where,"能量灌注",[`${m.name} 的雙眼泛起紅光。攻擊永久+2（本次遠征）。`],cont());render();}})),...cont()]);}
+    return S("🔴 激光室",l,[...aliveMembers().filter(m=>!m.ally).map(m=>({label:`⚡ 讓 ${m.name} 吸收核心（本次遠征攻擊 +2）`,act(){m.bonus.atk+=2;setScene(where,"能量灌注",[`${m.name} 的雙眼泛起紅光。本次遠征攻擊 +2。`],cont());render();}})),...cont()]);}
   case "gene":return S("🧪 基因庫",[CH().prep],
     aliveMembers().filter(m=>!m.ally).flatMap(m=>[
       {label:`🧪 ${m.name}：生命上限+8`,act(){m.maxHp+=8;m.hp+=8;geneDone(m,"生命上限+8");}},
@@ -4022,6 +4159,7 @@ render();
 bootAcct();
 loadBgm();
 document.addEventListener("pointerdown",startBgm,{once:true});
+document.addEventListener("keydown",kbKeydown);
 if(JOIN_CODE)joinRoom(JOIN_CODE);
 else if(SAVE.run){try{resumeRun();}catch(e){glog("❌RESUME",e&&e.stack||e);RUN=null;VIEW="run";render();toast("接續遠征時發生錯誤，已記錄。可以在遠征頁重新繼續或放棄");}}
 else if(!SAVE.guided)openGuide(0);

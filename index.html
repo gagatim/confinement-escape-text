@@ -499,7 +499,23 @@ const MONSTERS={
   judge:{name:"審判者",emoji:"⚖️",r:"SSR",hp:130,atk:9,def:3,spd:4,dr:2,revive:.4,
     skill:{name:"最終審判",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.8倍傷害，再對生命最低的敵人追加1.2倍傷害。",
       use(B,u){blog(B,"⚖ 「被告，全員有罪。」","bad");foes(B,u).forEach(t=>hit(B,u,t,.8));const f=foes(B,u).sort((a,b)=>a.hp-b.hp)[0];if(f)hit(B,u,f,1.2);}},
-    passive:{name:"不朽",desc:"受到的傷害-2；第一次倒下時以40%生命重新站起。"}}
+    passive:{name:"不朽",desc:"受到的傷害-2；第一次倒下時以40%生命重新站起。"}},
+  // 第7、8章
+  echo:{name:"時間殘響",emoji:"👥",r:"R",hp:24,atk:8,def:2,spd:5,regen:3,
+    skill:{name:"重播",cd:2,t:"enemy",kind:"dmg",desc:"把上一回合的攻擊再放一次：造成1.4倍傷害。",use(B,u,t){hit(B,u,t,1.4);}},
+    passive:{name:"回溯",desc:"每回合開始恢復3生命。"}},
+  loopkeeper:{name:"輪迴看守",emoji:"⏳",r:"SSR",hp:140,atk:10,def:4,spd:4,dr:2,regen:5,
+    skill:{name:"時間停止",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.8倍傷害，每人40%機率暈眩1回合。",
+      use(B,u){blog(B,"⏳ 沙漏翻轉。所有人的動作都停在半空中。","bad");foes(B,u).forEach(t=>{hit(B,u,t,.8);if(t.alive&&rnd()<.4)stun(B,t,1);});}},
+    passive:{name:"永恆",desc:"受到的傷害-2；每回合恢復5生命。"}},
+  doppel:{name:"另一個你",emoji:"👤",r:"R",hp:26,atk:9,def:2,spd:5,evade:.15,
+    skill:{name:"模仿",cd:2,t:"enemy",kind:"dmg",desc:"學你的招式：造成1.6倍傷害。",use(B,u,t){hit(B,u,t,1.6);}},
+    passive:{name:"似曾相識",desc:"被攻擊時15%機率閃避。"}},
+  origin:{name:"創始者",emoji:"👁️",r:"SSR",hp:160,atk:11,def:4,spd:5,dr:2,revive:.5,
+    skill:{name:"重寫世界",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成1倍傷害，並隨機施加：攻擊-3／防禦-3／中毒（4點×2回合）。",
+      use(B,u){blog(B,"👁 「這個世界，是我寫的。」","bad");foes(B,u).forEach(t=>{hit(B,u,t,1);if(!t.alive)return;const k=ri(1,3);
+        if(k===1)buff(B,t,"atk",-3,2);else if(k===2)buff(B,t,"def",-3,2);else poison(B,t,4,2);});}},
+    passive:{name:"作者權限",desc:"受到的傷害-2；第一次倒下時以50%生命重新站起。"}}
 };
 const DEF=id=>CARDS[id]||MONSTERS[id];
 const POOL={SSR:[],SR:[],R:[]};
@@ -647,6 +663,8 @@ function migrate(s){
   if(s.run===undefined)s.run=null;
   // 第5、6章插在無盡深淵前面：舊存檔的深淵遠征 ch 從 4 改成 6
   if(!s.chv){if(s.run&&s.run.ch===4)s.run.ch=6;s.chv=2;}
+  // 第7、8章插在無盡深淵前面：深淵 ch 從 6 改成 8
+  if(s.chv<3){if(s.run&&s.run.ch===6)s.run.ch=8;s.chv=3;}
   if(!s.gear){s.gear=[];s.gearUid=0;}
   if(!s.stash)s.stash={items:[],food:0};
   if(!s.charms)s.charms={protect:0,luck:0};
@@ -781,10 +799,10 @@ const GUIDE=[
   {ic:"⛓",t:"這是什麼遊戲？",b:["你和同伴被關在禁閉室，要一路往上爬、搶上只有 <b>三個座位</b> 的直升機。","玩法只有三件事：<b>抽角色 → 組隊 → 出發遠征</b>。"]},
   {ic:"🎴",t:"① 抽角色",b:["到「招募」花金條抽卡。<b>第一次十連必出 SSR</b>，開局的金條剛好夠。","抽到重複的角色會升星（最多 5★），每 1 星能力 +10%。","5★ 後可以用 💎突破石「突破」：星星回到 1★ 再升，能力保留並再 +1.5%。成功率從 30% 起越來越低，失敗不會降星。"]},
   {ic:"👥",t:"② 組隊",b:["到「隊伍」點角色 →「加入隊伍」，最多 3 人。","每個角色有 <b>職業</b>（🛡坦克／⚔戰士／🗡刺客／🎯射手／✚輔助／🔮術士），各有不同加成。","不要的角色可以「遣散」換金條、「合成」成更高稀有度，或「🔥熔煉」：2 名同稀有度 → 1 名同稀有度的其他角色（等級取較低的）。"]},
-  {ic:"🛒",t:"③ 裝備與商店",b:["「商店」可以買裝備、強化符和遠征物資（下一次遠征自動帶上）。","在角色卡片點 <b>武器／防具／飾品</b> 欄位就能穿上。武器有職業限制。","「裝備」頁可以強化到 +10。<b>強化可能失敗</b>：+5 以上會掉級，+8 以上還可能損毀，用 🧿保護符 可以保住。"]},
+  {ic:"🛒",t:"③ 裝備與商店",b:["「商店」可以買裝備、強化符和遠征物資（下一次遠征自動帶上）。","在角色卡片點 <b>武器／防具／飾品</b> 欄位就能穿上。武器有職業限制。","「裝備」頁可以強化到 +10。<b>強化可能失敗</b>：+5 以上失敗會掉 1 級（裝備不會碎），用 🧿保護符 可以保住等級。"]},
   {ic:"🪜",t:"④ 出發遠征",b:["每一層選一扇門進去：可能是物資、敵人、或其他逃殺者。","注意 <b>🥫補給</b>（每層吃 1 份）和 <b>☣毒氣</b>（從底層往上淹）。","遇到人可以結盟、交易或開打。打倒最上層的魔王就逃出了！"]},
   {ic:"⚔️",t:"⑤ 戰鬥",b:["輪到你的角色時，按「普通攻擊」或「技能」，再點目標。","懶得操作就按「自動」，讓 AI 幫你打。"]},
-  {ic:"🏆",t:"⑥ 然後呢？",b:["主線共 6 章，逃出一章解鎖下一章；逃出第 1 章後解鎖 <b>🕳 無盡深淵</b>。","「練功房」重複打怪練等級（每級全能力 +2%）；「競技場」打 AI 賺金條；「雙人對決」可以和朋友網路對戰。","進度會自動存檔，換裝置用主頁的「匯出／匯入存檔」。"]}
+  {ic:"🏆",t:"⑥ 然後呢？",b:["主線共 8 章，逃出一章解鎖下一章；逃出第 1 章後解鎖 <b>🕳 無盡深淵</b>。","「練功房」重複打怪練等級（每級全能力 +2%）；「競技場」打 AI 賺金條；「雙人對決」可以和朋友網路對戰。","進度會自動存檔，換裝置用主頁的「匯出／匯入存檔」。"]}
 ];
 function openGuide(i){
   const g=GUIDE[i],last=i===GUIDE.length-1;
@@ -1227,7 +1245,7 @@ function viewGear(){
   const list=SAVE.gear.filter(g=>!GEAR_TAB||GEAR[g.base].slot===GEAR_TAB).sort(gearSort);
   return `<h2>裝備</h2>
   <p class="dim small">點裝備可以「強化」或「分解」；要穿到角色身上，到「隊伍」點角色→點裝備欄。武器有職業限制，防具、飾品全職業可用。<br>
-  強化：+1～+4 失敗沒有損失；+5～+7 失敗會掉 1 級；+8～+10 失敗會掉 1 級，還有 20% 機率裝備損毀。🧿保護符可以防止掉級和損毀。</p>
+  強化：+1～+4 失敗沒有損失；+5～+10 失敗會掉 1 級（裝備不會碎）。🧿保護符可以防止掉級。</p>
   <div class="row small"><span>💎 突破石 ×${SAVE.charms.stone}</span><span>🧿 保護符 ×${SAVE.charms.protect}</span><span>🍀 幸運符 ×${SAVE.charms.luck}</span><button class="mini gold" style="margin-left:auto" onclick="go('shop')">🛒 去商店</button></div>
   <div class="filters"><button class="${GEAR_TAB?"":"on"}" onclick="GEAR_TAB='';render()">全部（${SAVE.gear.length}）</button>${Object.keys(SLOTS).map(k=>`<button class="${GEAR_TAB===k?"on":""}" onclick="GEAR_TAB='${k}';render()">${SLOTS[k]}</button>`).join("")}</div>
   <div class="ggrid">${list.map(g=>gearCard(g,`openGear(${g.uid})`)).join("")||`<span class="dim">還沒有裝備。去「商店」買一件，或在遠征、競技場打倒敵人掉落。</span>`}</div>`;
@@ -1260,7 +1278,7 @@ function sellGear(uid){
   const g=gearById(uid);if(!g)return;const p=GEAR_SELL[GEAR[g.base].q]+g.lv*4;
   unequip(uid);SAVE.gear=SAVE.gear.filter(x=>x!==g);SAVE.gold+=p;save();closeModal();toast(`分解完成，🪙+${p}`);render();
 }
-// 強化：成功率依目前等級遞減；幸運符 +10%；保護符防止失敗時掉級／損毀
+// 強化：成功率依目前等級遞減；幸運符 +10%；保護符防止失敗時掉級。裝備不會因強化失敗而損毀
 let ENH={uid:0,protect:false,luck:false,res:null};
 function openEnhance(uid){
   if(ENH.uid!==uid)ENH={uid,protect:false,luck:false,res:null};
@@ -1269,13 +1287,13 @@ function openEnhance(uid){
   if(!SAVE.charms.protect)ENH.protect=false;
   if(!SAVE.charms.luck)ENH.luck=false;
   const max=g.lv>=ENH_MAX,rate=max?0:Math.min(100,ENH_RATE[g.lv]+(ENH.luck?10:0)),cost=enhCost(g.lv);
-  const risk=g.lv<4?"失敗：沒有損失":g.lv<7?"失敗：掉 1 級":"失敗：掉 1 級，20% 機率損毀";
+  const risk=g.lv<4?"失敗：沒有損失":"失敗：掉 1 級";
   const nx={...g,lv:g.lv+1};
   openModal(`<h3>🔨 強化 ${gearName(g)}</h3>
     ${ENH.res?`<div class="enhres ${ENH.res.ok?"ok":"bad"}">${ENH.res.msg}</div>`:""}
     ${max?`<p>已經強化到 +${ENH_MAX}，無法再強化。</p>`:`
     <div>${statStr(gearStats(g))} <b>→</b> <span style="color:var(--green)">${statStr(gearStats(nx))}</span></div>
-    <div style="margin-top:8px">成功率 <b style="color:var(--gold)">${rate}%</b>　<span class="dim small">${ENH.protect?"🧿 已使用保護符：失敗不掉級、不損毀":risk}</span></div>
+    <div style="margin-top:8px">成功率 <b style="color:var(--gold)">${rate}%</b>　<span class="dim small">${ENH.protect?"🧿 已使用保護符：失敗不掉級":risk}</span></div>
     <div class="ratebar"><i style="width:${rate}%"></i></div>
     <div class="row small" style="margin-top:6px">
       <label><input type="checkbox" ${ENH.protect?"checked":""} ${SAVE.charms.protect?"":"disabled"} onchange="ENH.protect=this.checked;openEnhance(${uid})"> 🧿 保護符（剩 ${SAVE.charms.protect}）</label>
@@ -1294,10 +1312,7 @@ function doEnhance(uid){
   if(rnd()*100<rate){g.lv++;ENH.res={ok:true,msg:`✨ 強化成功！+${from} → +${g.lv}`};g.lv>=7?SFX.ssr():SFX.sr();}
   else if(from<4){ENH.res={ok:false,msg:`💥 強化失敗……（+${from}，沒有損失）`};SFX.lose();}
   else if(prot){SAVE.charms.protect--;ENH.res={ok:false,msg:`💥 強化失敗！🧿 保護符碎了，等級保住在 +${from}`};SFX.miss();}
-  else if(from>=7&&rnd()<.2){
-    const nmx=gearName(g);unequip(uid);SAVE.gear=SAVE.gear.filter(x=>x!==g);
-    ENH.res={ok:false,msg:`💀 強化失敗……${nmx} 碎成了廢鐵！`};SFX.death();
-  }else{g.lv--;ENH.res={ok:false,msg:`💥 強化失敗！+${from} → +${g.lv}`};SFX.lose();}
+  else{g.lv--;ENH.res={ok:false,msg:`💥 強化失敗！+${from} → +${g.lv}`};SFX.lose();}
   save();renderHeader();openEnhance(uid);
 }
 
@@ -1315,7 +1330,7 @@ const GEAR_HELP=`<div class="sk small"><b>📖 裝備說明</b><ul style="paddin
   <li><b>隨機詞條</b>：稀有度越高詞條越多（稀有 0～1、精良 1、史詩 1～2、傳說 2～3），可能是攻擊、生命、防禦、速度、暴擊、吸血、閃避。詞條不吃強化。</li>
   <li><b>套裝</b>：同一稀有度的武器／防具／飾品穿 2 件、3 件會有額外效果（例如史詩 3 件：暴擊+5%、吸血+10%）。</li>
   <li><b>EX 魔王專屬</b>：只會從「魔王討伐（支線）」的 8 位魔王掉落，每位一件，需 Lv.12，固定 3 條詞條，有自己的「魔王套裝」。</li></ul></div>`;
-const CHARMS={stone:{name:"突破石",icon:"💎",price:15,desc:"角色 5★ 突破用的材料（成功率 30% 起遞減，失敗會消失）"},protect:{name:"保護符",icon:"🧿",price:20,desc:"強化失敗時不掉級、不損毀（失敗才消耗）"},luck:{name:"幸運符",icon:"🍀",price:12,desc:"強化成功率 +10%（每次強化消耗）"}};
+const CHARMS={stone:{name:"突破石",icon:"💎",price:15,desc:"角色 5★ 突破用的材料（成功率 30% 起遞減，失敗會消失）"},protect:{name:"保護符",icon:"🧿",price:20,desc:"強化失敗時不掉級（失敗才消耗）"},luck:{name:"幸運符",icon:"🍀",price:12,desc:"強化成功率 +10%（每次強化消耗）"}};
 const SUPPLY={pill:6,adrenaline:8,wine:4,rope:9,gasmask:7,rocket:12,knife:8,pistol:12};
 const STASH_MAX=6,FOOD_PRICE=5,FOOD_MAX=5;
 let SHOP_TAB="gear";
@@ -2348,12 +2363,26 @@ Object.assign(ROOM_EV,{
   潛水裝備室:"warehouse",排水閘:"teleport",海底酒吧:"wine",反應爐:"laser",海水淡化廠:"water",逃生物資庫:"gene",浮出口:"helipad",
   審判所大廳:"morgue",候審室:"prisoncell",證物室:"warehouse",陪審團休息室:"chapel",鏡廳:"shade",判決前廳:"gene",審判庭:"helipad"
 });
-const ABYSS=6;
+// 第7、8章的樓層：只給房號，有名字的房間在 ROOM_NAME 裡
+function mkFloors(pre,sizes){return sizes.map((n,i)=>({label:pre+(i+1),rooms:Array.from({length:n},(_,k)=>`${pre}${i+1}${String(k+1).padStart(2,"0")}`)}));}
+const FLOORS_LOOP=mkFloors("R",[1,4,5,5,6,5,5,4,5,4,2]);
+const FLOORS_ORIGIN=mkFloors("O",[1,4,5,5,6,5,6,5,4,5,4,2]);
+Object.assign(ROOM_NAME,{
+  R101:"停屍間",R201:"酒窖",R203:"配給站",R301:"藥房",R303:"倒轉走廊",R401:"武器庫",R404:"樂透房",R501:"時計室",R503:"冷凍艙",R505:"黑市",
+  R601:"手術室",R603:"殘響之間",R701:"賭場",R702:"控制室",R801:"禮拜堂",R803:"金庫",R901:"強化艙",R903:"雷射走廊",R1001:"配給站",R1003:"水塔",
+  R1101:"鐘塔",R1102:"時之門",
+  O101:"第一會場",O201:"後台",O203:"配給站",O301:"放映室",O303:"藥房",O401:"道具倉庫",O403:"黑市",O501:"鏡廳",O503:"賭場",O505:"冷凍艙",
+  O601:"評審席",O603:"樂透房",O701:"手術室",O703:"武器庫",O705:"金庫",O801:"禮拜堂",O803:"強化艙",O901:"雷射走廊",O903:"控制室",
+  O1001:"配給站",O1003:"水塔",O1101:"另一個你的房間",O1103:"黑市",O1201:"作者的書房",O1202:"真正的出口"
+});
+Object.assign(ROOM_EV,{倒轉走廊:"shade",時計室:"control",殘響之間:"shade",鐘塔:"gene",時之門:"helipad",
+  第一會場:"morgue",後台:"warehouse",放映室:"control",道具倉庫:"warehouse",評審席:"vault","另一個你的房間":"shade",作者的書房:"gene",真正的出口:"helipad"});
+const ABYSS=8;
 // 深淵的特殊房間（不放傳送、基因庫這類依賴固定樓層的事件）
 const ABYSS_ROOMS={ration:"配給站",pharmacy:"藥房",armory:"武器庫",blackmarket:"黑市",casino:"賭場",surgery:"手術室",cryo:"冷凍艙",
   lotto:"樂透房",control:"控制室",respec:"操作室",water:"水塔",chapel:"禮拜堂",laser:"激光室",vault:"金庫",warehouse:"大倉庫",
   granary:"糧倉",prisoncell:"牢房",wine:"酒窖"};
-const FIRST_CLEAR=[50,100,150,300,350,500];
+const FIRST_CLEAR=[50,100,150,300,350,500,600,800];
 const CHAPTERS=[
   {name:"禁閉室",sub:"B7 停屍間 → 2F 停機坪",icon:"⛓",floors:FLOORS,minion:"ghost",boss:"warden",bossScale:1,bossHp:n=>48+n*12,
     veh:"直升機",vehIcon:"🚁",bossLoc:"2F · 202 停機坪",bossRoom:"停機坪",prepLoc:"2F · 201 基因庫",
@@ -2420,7 +2449,27 @@ const CHAPTERS=[
     prep:"判決前廳。一張桌上擺著幾份「辯護資料」——其實是藥劑。只能選一份。",
     bossTitle:"⚖️ 審判庭",bossLines:["巨大的天秤懸在審判庭中央，後面是一扇發光的門。","法官席上坐著一個沒有臉的人，手裡握著木槌——<b style='color:var(--red)'>審判者</b>。「所有遊戲，都由我裁決。」"],
     bossIntro:"審判者敲下木槌：「開庭。」",lose:"審判者宣判：「有罪。」你們被押回了停屍間的鐵櫃。",
-    fall:"審判者的天秤斷成兩截。",escape:"審判者的天秤斷成兩截。自由之門緩緩打開——門外是你在停屍間醒來前的那個早晨。這一次，真的結束了。"},
+    fall:"審判者的天秤斷成兩截。",escape:"審判者的天秤斷成兩截。自由之門緩緩打開——門外是你在停屍間醒來前的那個早晨。……然後，鬧鐘響了。"},
+  {name:"輪迴之獄",sub:"R1 停屍間 → R11 時之門",icon:"⏳",floors:FLOORS_LOOP,minion:"echo",boss:"loopkeeper",bossScale:1.4,bossHp:n=>95+n*22,
+    veh:"時之門",vehIcon:"🌀",bossLoc:"R11 · R1102 時之門",bossRoom:"時之門",prepLoc:"R11 · R1101 鐘塔",
+    startLoc:"R101 · 停屍間",startTitle:"🔁 又一次",
+    intro:it=>["鬧鐘響了。你在停屍間冰冷的鐵櫃裡醒來，手腕上綁著號碼牌。","……一模一樣的天花板。一模一樣的廣播：<b>「直升機只有三個座位。」</b>",
+      "但這次，鐵櫃內側多了一道刮痕——是你自己的筆跡：「<b>第 37 次。別相信時之門。</b>」",`你們在屍袋旁摸到了 ${it}。`,"時間在這裡會倒流。往上爬吧，這次要爬得比上次更遠。"],
+    shade:["走廊盡頭站著一個人——是十分鐘前的你們。","牆上的時鐘逆時針轉了一圈。","你聽見自己的腳步聲，從你身後傳來。"],
+    prep:"鐘塔頂層。齒輪間卡著幾支沙漏，每支都封著一段「多出來的時間」。只能帶走一支。",
+    bossTitle:"🌀 時之門",bossLines:["巨大的時鐘指針停在十二點前一秒。指針下方是一扇旋轉的門。","門前坐著一個身體半透明的老人，手裡捧著沙漏——<b style='color:var(--red)'>輪迴看守</b>。「第三十八次了。你們每次都在這裡輸。」"],
+    bossIntro:"輪迴看守翻轉沙漏：「再一次。」",lose:"沙漏翻轉。鬧鐘響了。",
+    fall:"沙漏碎成一地閃光的沙。",escape:"沙漏碎成一地閃光的沙。時之門停止旋轉——門後不是停屍間，而是一條從來沒見過的走廊。輪迴，終於斷了。"},
+  {name:"原點",sub:"O1 第一會場 → O12 真正的出口",icon:"👁️",floors:FLOORS_ORIGIN,minion:"doppel",boss:"origin",bossScale:1.5,bossHp:n=>105+n*25,
+    veh:"真正的出口",vehIcon:"🌅",bossLoc:"O12 · O1202 真正的出口",bossRoom:"真正的出口",prepLoc:"O12 · O1201 作者的書房",
+    startLoc:"O101 · 第一會場",startTitle:"📜 原點",
+    intro:it=>["走廊的盡頭是一座老舊的體育館。牆上的橫幅已經褪色：「第一屆 禁閉逃殺」。","觀眾席上空無一人，只有正中央一台還在運轉的放映機，播著你們這一路走來的畫面。",
+      `舞台邊放著一個寫著你名字的紙箱，裡面是 ${it}。`,"螢幕最後一格寫著：<b>「歡迎回到原點。想離開，就來見寫下這一切的人。」</b>往上走吧。"],
+    shade:["一個跟你長得一模一樣的人擋在門口，連表情都一樣。","「你確定你是真的嗎？」——說話的是另一個你。","鏡子裡的你先動了。"],
+    prep:"作者的書房。桌上攤著一份手稿，標題是「禁閉逃殺：完結篇」。最後一頁還沒寫——你可以替自己寫一行。",
+    bossTitle:"🌅 真正的出口",bossLines:["屋頂上沒有直升機，只有一扇普通的木門，門縫透出晨光。","門前站著一個沒有臉的人，手裡握著一支筆——<b style='color:var(--red)'>創始者</b>。「每一關、每一個房間、每一句廣播，都是我寫的。包括你。」"],
+    bossIntro:"創始者翻開手稿：「最後一章，由我來寫。」",lose:"創始者寫下：「全員，回到第一頁。」",
+    fall:"創始者的筆斷了，手稿散落一地。",escape:"創始者的筆斷了，手稿散落一地。你推開木門——外面是真正的早晨，沒有號碼牌、沒有廣播、沒有座位限制。<b>這一次，是你自己寫的結局。</b>"},
   {name:"無盡深淵",sub:"沒有出口。每 5 層一個守門者，打倒後可以選擇撤離",icon:"🕳",abyss:true,
     startLoc:"D0 · 深淵入口",startTitle:"🕳 深淵",
     intro:it=>["禁閉室的停屍間底下還有一道暗門。門後的樓梯一直往下，看不到盡頭。",
@@ -2802,7 +2851,7 @@ function allyBetrays(al,lines,ch){
   }
 }
 function shadeAmbush(ch,L,n){
-  const fi=RUN.fi,c=RUN.ch,id=c===ABYSS?pick(["ghost","mutant","guard","drone","deepone","mirror"]):CH().minion,M=MONSTERS[id];
+  const fi=RUN.fi,c=RUN.ch,id=c===ABYSS?pick(["ghost","mutant","guard","drone","deepone","mirror","echo","doppel"]):CH().minion,M=MONSTERS[id];
   const scale=c===0?.8+fi*.07:c===ABYSS?1+fi*.04:.8+fi*.05+c*.08;
   const g=Array.from({length:n},()=>({id,stars:1,scale}));
   setScene(loc(ch),`${M.emoji} ${M.name}`,L,[
@@ -2854,7 +2903,7 @@ function helipad(L){
 }
 /* ---- 深淵守門者 ---- */
 function abyssBoss(L){
-  const fi=RUN.fi,id=pick(["warden","zero","chief","host","kraken","judge"]),size=aliveMembers().length,hp=Math.round((50+size*12)*(1+fi*.04));
+  const fi=RUN.fi,id=pick(["warden","zero","chief","host","kraken","judge","loopkeeper","origin"]),size=aliveMembers().length,hp=Math.round((50+size*12)*(1+fi*.04));
   const where=`D${fi} · 守門者之間`;RUN.visited[fi]="守門者";
   setScene(where,"💀 守門者",L.concat([`深淵第 ${fi} 層的門後，站著一個熟悉的身影——<b style='color:var(--red)'>${MONSTERS[id].name}</b>。`,"但它的眼睛裡什麼都沒有，只有深淵。"]),[{label:"⚔️ 迎戰",cls:"pri",act(){
     startBattle({title:where,home:"run",items:RUN.items,intro:"深淵在低語。",

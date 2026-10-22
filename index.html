@@ -1644,7 +1644,7 @@ function trainFoes(s){
   const pool=TRAIN_MOBS.slice(0,Math.min(TRAIN_MOBS.length,2+Math.floor(s/5))),n=s<3?2:3;
   return Array.from({length:n},()=>({id:pick(pool),stars:1,scale:.55+s*.07}));
 }
-function trainReward(s){return {exp:6+s*3,gold:1+Math.floor(s/2)};}
+function trainReward(s){return {exp:6+s*3,gold:1+Math.floor(s/4)};}
 function viewTrain(){
   const best=trainBest(),top=Math.min(TRAIN_MAX,best+1);TRAIN_SEL=clamp(TRAIN_SEL,1,top);
   const r=trainReward(TRAIN_SEL),sample=trainFoes(TRAIN_SEL)[0],ss=cardStats(sample.id,1,sample.scale);
@@ -1691,6 +1691,9 @@ function mkUnit(o){
     cd:0,buffs:[],st:{},perm:{},flags:{},alive:true,ally:!!o.ally,ref:o.ref||null,gx:o.gx||{}};
   const mul=o.mult||1;
   if(mul!==1){u.maxHp=Math.round(u.maxHp*mul);u.atk=Math.round(u.atk*mul);u.def=Math.round(u.def*mul);u.spd=Math.round(u.spd*mul);}
+  // 章節強度：越後面的主線章節，敵人生命、攻擊、防禦越高（速度不變）
+  const pw=o.pow||1;
+  if(pw!==1){u.maxHp=Math.round(u.maxHp*pw);u.atk=Math.round(u.atk*pw);u.def=Math.round(u.def*pw);}
   u.hp=o.hp!=null?Math.min(Math.round(o.hp*mul),u.maxHp):u.maxHp;
   if(u.hp<=0)u.alive=false;
   return u;
@@ -2667,7 +2670,10 @@ const ABYSS=8;
 const ABYSS_ROOMS={ration:"配給站",pharmacy:"藥房",armory:"武器庫",blackmarket:"黑市",casino:"賭場",surgery:"手術室",cryo:"冷凍艙",
   lotto:"樂透房",control:"控制室",respec:"操作室",water:"水塔",chapel:"禮拜堂",laser:"激光室",vault:"金庫",warehouse:"大倉庫",
   granary:"糧倉",prisoncell:"牢房",wine:"酒窖"};
-const FIRST_CLEAR=[50,100,150,300,350,500,600,800];
+// 平衡：主線全破約需 40 次遠征（機器人模擬）。金條收入刻意壓低，抽卡要省著用
+const FIRST_CLEAR=[40,50,60,70,80,90,100,120];
+const CH_POW=[1,1.3,1.5,1.6,1.65,1.45,1.8,1.6]; // 第6、8章魔王會復活，倍數稍低以免變成高牆
+function chPow(){return RUN&&RUN.ch!==ABYSS?CH_POW[RUN.ch]:1;}
 const CHAPTERS=[
   {name:"禁閉室",sub:"B7 停屍間 → 2F 停機坪",icon:"⛓",floors:FLOORS,minion:"ghost",boss:"warden",bossScale:1,bossHp:n=>48+n*12,
     veh:"直升機",vehIcon:"🚁",bossLoc:"2F · 202 停機坪",bossRoom:"停機坪",prepLoc:"2F · 201 基因庫",
@@ -3162,7 +3168,7 @@ function shadeAmbush(ch,L,n){
 function runBattle(ch,group,ambush,intro,after){
   const where=loc(ch),fi=RUN.fi,members=aliveMembers();
   startBattle({title:`${where}`,home:"run",items:RUN.items,ambush,intro,
-    A:members.map(memberToUnit),B:group.map(g=>({...g,mult:dMul()})),
+    A:members.map(memberToUnit),B:group.map(g=>({...g,mult:dMul(),pow:chPow()})),
     resultNote:B=>B.over==="A"?"":"全隊覆沒……",
     onEnd(win,B){
       B.units.filter(u=>u.ref).forEach(u=>{u.ref.hp=Math.max(0,u.hp);u.ref.alive=u.alive&&u.side==="A";});
@@ -3170,7 +3176,7 @@ function runBattle(ch,group,ambush,intro,after){
       CUR_B=null;VIEW="run";
       const l=[];
       if(!win||runLost())return endRun(false,["你們倒在了"+where+"。"]);
-      const n=group.length,g=addGold((RUN.ch===ABYSS?4+Math.floor(fi/2):2+fi+RUN.ch*2)*n);l.push(`戰鬥勝利。從對手身上搜出 🪙${g}。`);
+      const n=group.length,g=addGold((RUN.ch===ABYSS?2+Math.floor(fi/4):1+Math.floor(fi/2)+RUN.ch)*n);l.push(`戰鬥勝利。從對手身上搜出 🪙${g}。`);
       if(!MONSTERS[group[0].id]){
         if(RUN.pendingLoot){l.push("槍架上的 "+gainItem(RUN.pendingLoot)+" 歸你們了。");RUN.pendingLoot=null;}
         else if(rnd()<.6)l.push("還撿到 "+gainItem(pick(LOOT_TABLE))+"。");
@@ -3190,7 +3196,7 @@ function helipad(L){
   const size=aliveMembers().length,hp=C.bossHp(size);
   setScene(C.bossLoc,C.bossTitle,L.concat(C.bossLines),[{label:"⚔️ 決戰",cls:"pri",act(){
     startBattle({title:C.bossLoc+" 決戰",home:"run",items:RUN.items,intro:C.bossIntro,
-      A:aliveMembers().map(memberToUnit),B:[{id:C.boss,stars:1,scale:C.bossScale,maxHp:hp,hp,mult:dMul()}],
+      A:aliveMembers().map(memberToUnit),B:[{id:C.boss,stars:1,scale:C.bossScale,maxHp:hp,hp,mult:dMul(),pow:chPow()}],
       onEnd(win,B){
         B.units.filter(u=>u.ref).forEach(u=>{u.ref.hp=Math.max(0,u.hp);u.ref.alive=u.alive&&u.side==="A";});
         RUN.party=RUN.party.filter(m=>!m.betrayed);
@@ -3271,7 +3277,7 @@ function endRun(escaped,lines=[]){
     if(abyss)bonus=r.fi*2;
     else{
       const dm=r.diff||1;
-      bonus=30*(r.ch+1)*dm;P.clears[r.ch]=(P.clears[r.ch]||0)+1;
+      bonus=(10+r.ch*5)*dm;P.clears[r.ch]=(P.clears[r.ch]||0)+1;
       P.dclears=P.dclears||{};P.dclears[r.ch]=P.dclears[r.ch]||{};P.dclears[r.ch][dm]=(P.dclears[r.ch][dm]||0)+1;
       if(dm>1)out.push(`<span style="color:var(--gold)">${DIFFS[dm].icon} ${DIFFS[dm].name}難度：金條、突破石、裝備 ×${dm}</span>`);
       const q=r.ch>=4?(rnd()<.06?"UR":rnd()<.35?"SSR":"SR"):r.ch>=2?(rnd()<.12?"SSR":"SR"):(rnd()<.3?"SR":"R");

@@ -435,6 +435,8 @@ footer.credit a{color:var(--gold)}
       出處 <a href="https://opengameart.org/content/medieval-kings-feast" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・故事頁（老國王）：<b>Fantasy Choir 2</b> — by cesisco（César da Rocha）・
       出處 <a href="https://opengameart.org/content/fantasy-choir-3-orchestral-pieces" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
+      ・練功房：<b>Megasong</b> — by Emma_MA・
+      出處 <a href="https://opengameart.org/content/megasong" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・成就：<b>Triumphant</b> — by Emma_MA・
       出處 <a href="https://opengameart.org/content/triumphant" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・商店：<b>Bossa Nova</b> — by Joth・
@@ -454,6 +456,7 @@ footer.credit a{color:var(--gold)}
     <audio id="bgm_town" src="music/kings_feast_loop.ogg" loop preload="none"></audio>
     <audio id="bgm_story" src="music/fantasy_choir_2.ogg" loop preload="none"></audio>
     <audio id="bgm_ach" src="music/triumphant_achievement.ogg" loop preload="none"></audio>
+    <audio id="bgm_train" src="music/megasong.ogg" loop preload="none"></audio>
     <audio id="bgm_shop" src="music/bossa_nova_shop.mp3" loop preload="none"></audio>
     <audio id="bgm_arena" src="music/arena_epic_boss_battle.ogg" loop preload="none"></audio>
     <audio id="bgm_duel" src="music/jrpg_battle_loop.mp3" loop preload="none"></audio>
@@ -489,9 +492,9 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 // 被動效果大多在戰鬥引擎（hit / handleDeath / turnStart / battleStart）裡依 id 判斷；
 // run 欄位是「遠征中」生效的被動標籤。
 const CARDS={
-  boss:{name:"黑社會老大",r:"SSR",hp:30,atk:6,def:2,spd:3,
-    skill:{name:"一呼百應",cd:4,t:"none",kind:"buff",desc:"其他隊友攻擊+3（2回合），自身防禦+2（2回合）。",
-      use(B,u){mates(B,u).forEach(m=>{if(m!==u)buff(B,m,"atk",3,2);});buff(B,u,"def",2,2);blog(B,`${nm(u)} 一聲令下，小弟們士氣大振！`);}},
+  boss:{name:"黑社會老大",r:"SSR",hp:33,atk:6,def:2,spd:3,
+    skill:{name:"一呼百應",cd:4,t:"none",kind:"buff",desc:"其他隊友攻擊+4（2回合），自身防禦+3（2回合）。",
+      use(B,u){mates(B,u).forEach(m=>{if(m!==u)buff(B,m,"atk",4,2);});buff(B,u,"def",3,2);blog(B,`${nm(u)} 一聲令下，小弟們士氣大振！`);}},
     passive:{name:"你們先上",desc:"被攻擊時35%機率由隨機隊友代為承受（傷害×0.6）。"}},
   exorcist:{name:"還魂師",r:"SSR",hp:28,atk:5,def:1,spd:4,
     skill:{name:"安魂儀式",cd:5,t:"none",kind:"heal",desc:"復活1名倒下的隊友（40%生命）；若無人倒下，改為全隊恢復4。",
@@ -507,9 +510,9 @@ const CARDS={
     skill:{name:"血宴",cd:4,t:"none",kind:"dmg",desc:"對全體敵人造成0.8倍傷害，恢復總傷害50%的生命。",
       use(B,u){let s=0;foes(B,u).forEach(t=>s+=hit(B,u,t,.8));if(s)heal(B,u,Math.ceil(s/2));}},
     passive:{name:"夜之血族",desc:"每個自己的回合開始時恢復2生命。"}},
-  berserker:{name:"狂戰士",r:"SSR",hp:34,atk:7,def:0,spd:4,
-    skill:{name:"狂暴旋風",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成1.1倍傷害，自身失去3生命（不會致死）。",
-      use(B,u){foes(B,u).forEach(t=>hit(B,u,t,1.1));u.hp=Math.max(1,u.hp-3);}},
+  berserker:{name:"狂戰士",r:"SSR",hp:37,atk:7,def:0,spd:4,
+    skill:{name:"狂暴旋風",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成1.38倍傷害，自身失去2生命（不會致死）。",
+      use(B,u){foes(B,u).forEach(t=>hit(B,u,t,1.38));u.hp=Math.max(1,u.hp-2);}},
     passive:{name:"嗜殺",desc:"生命低於一半時，攻擊+4。"}},
 
   merc:{name:"雇傭兵",r:"SR",hp:28,atk:6,def:2,spd:3,
@@ -1024,7 +1027,7 @@ function toggleMute(){SAVE.muted=!SAVE.muted;save();renderHeader();}
 const BGM_ID="2uGf8-vfFLI";
 let BGM=null,BGM_READY=false,BGM_STARTED=false,BGM_CUR=null;
 function loadBgm(){
-  ["main","town","shop","ach","run","abyss","story","arena","duel"].forEach(k=>{const a=$("#bgm_"+k);if(a)a.volume=.4;});
+  ["main","town","shop","ach","train","run","abyss","story","arena","duel"].forEach(k=>{const a=$("#bgm_"+k);if(a)a.volume=.4;});
   window.onYouTubeIframeAPIReady=()=>{
     BGM=new YT.Player("bgmPlayer",{videoId:BGM_ID,
       playerVars:{loop:1,playlist:BGM_ID,controls:1,playsinline:1,rel:0,modestbranding:1},
@@ -1037,11 +1040,13 @@ function bgmWant(){
   if(VIEW==="battle"){ // 競技場、雙人對決（含網路對戰）的戰鬥用各自的專屬曲，其他戰鬥用 YouTube 那首
     if(CUR_B&&(CUR_B.online||CUR_B.guest||BATTLE_HOME==="duel"))return "duel";
     if(BATTLE_HOME==="arena")return "arena";
+    if(BATTLE_HOME==="train")return "train"; // 練功房的戰鬥也用練功房專屬曲
     return "battle";
   }
   if(VIEW==="run"&&RUN&&!RUN.active&&RUN.escaped)return "battle";
   if(VIEW==="shop")return "shop"; // 商店：輕鬆的爵士
   if(VIEW==="ach")return "ach"; // 成就：凱旋的號角與弦樂
+  if(VIEW==="train")return "train"; // 練功房：熱血的重金屬搖滾
   if(VIEW==="arena")return "arena";
   if(VIEW==="duel")return "duel";
   if(VIEW==="run"&&RUN&&RUN.active)return RUN.ch===ABYSS?"abyss":"run";
@@ -1051,7 +1056,7 @@ function bgmWant(){
 }
 function syncBgm(){
   const w=bgmWant();if(w===BGM_CUR)return;BGM_CUR=w;
-  ["main","town","shop","ach","run","abyss","story","arena","duel"].forEach(k=>{const a=$("#bgm_"+k);if(!a||!a.play)return;
+  ["main","town","shop","ach","train","run","abyss","story","arena","duel"].forEach(k=>{const a=$("#bgm_"+k);if(!a||!a.play)return;
     if(w===k){a.currentTime=0;a.play().catch(()=>{});}else a.pause();});
   if(BGM_READY){if(w==="battle"){BGM.seekTo(0,true);BGM.playVideo();}else BGM.pauseVideo();}
 }
@@ -1114,7 +1119,7 @@ function closeModal(){$("#modal").classList.remove("show");}
 // 超簡單導引：第一次進來自動打開，之後按右上角 ❓ 重看
 const GUIDE=[
   {ic:"⛓",t:"這是什麼遊戲？",b:["你和同伴被關在禁閉室，要一路往上爬、搶上只有 <b>三個座位</b> 的直升機。","玩法只有三件事：<b>抽角色 → 組隊 → 出發遠征</b>。"]},
-  {ic:"🎴",t:"① 抽角色",b:["到「招募」花金條抽卡。<b>第一次十連必出 SSR</b>，開局的金條剛好夠。","抽到重複的角色會升星（最多 5★），每 1 星能力 +10%。","5★ 後可以用 💎突破石「突破」：星星回到 1★ 再升，能力保留並再 +1.5%。成功率從 30% 起越來越低，失敗不會降星。"]},
+  {ic:"🎴",t:"① 抽角色",b:["到「招募」花金條抽卡。<b>第一次十連必出 SSR</b>，開局的金條剛好夠。","抽到重複的角色會升星（最多 5★），每 1 星能力 +10%。","5★ 後可以用 💎突破石「突破」（隊伍頁點角色 →「✨突破」，最多 10 次）：星星回到 1★ 再升，能力保留並再 +1.5%，突破後每升 1 星 +2.5%。","第 n 次突破要 💎×2n，成功率 30% 起每次 ×0.85（30→26→22→…→7%）。失敗突破石消失，但不會降星。","突破石來源：商店、5★ 後抽到重複卡、主線魔王、深淵守門者、練功房、成就。已突破的角色不會被一鍵合成當材料。"]},
   {ic:"👥",t:"② 組隊",b:["到「隊伍」點角色 →「加入隊伍」，最多 3 人。","每個角色有 <b>職業</b>（🛡坦克／⚔戰士／🗡刺客／🎯射手／✚輔助／🔮術士），各有不同加成。","不要的角色可以「遣散」換金條、「合成」成更高稀有度，或「🔥熔煉」：2 名同稀有度 → 1 名同稀有度的其他角色（等級取較低的）。"]},
   {ic:"🛒",t:"③ 裝備與商店",b:["「商店」可以買裝備、強化符和遠征物資（下一次遠征自動帶上）。","在角色卡片點 <b>武器／防具／飾品</b> 欄位就能穿上。武器有職業限制。","「裝備」頁可以強化到 +10。<b>強化可能失敗</b>：+5 以上失敗會掉 1 級（裝備不會碎），用 🧿保護符 可以保住等級。"]},
   {ic:"🪜",t:"④ 出發遠征",b:["每一層選一扇門進去：可能是物資、敵人、或其他逃殺者。","注意 <b>🥫補給</b>（每層吃 1 份）和 <b>☣毒氣</b>（從底層往上淹）。","遇到人可以結盟、交易或開打。打倒最上層的魔王就逃出了！"]},

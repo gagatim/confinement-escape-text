@@ -22,7 +22,7 @@
 - **商店**：用金條買裝備（R／SR 直購、裝備箱抽 SSR）、強化符，以及遠征物資（放進行囊，下一次遠征自動帶上）。
 - **遣散／合成**：不要的角色可以遣散換金條（R 🪙3／SR 🪙10／SSR 🪙30，每星計算），或投入 6★ 份的 R 合成 1 名隨機 SR、6★ 份的 SR 合成 1 名隨機 SSR。合成視窗有「⚡ 一鍵合成」，自動挑等級低、星數少的角色當材料，能合幾次就合幾次（不會動到隊伍中、遠征中、已突破的角色）。
 - **存檔**：自動存在瀏覽器；主頁可「匯出／匯入存檔」，用代碼把進度搬到別的裝置。
-- **突破**：角色 5★ 後可以消耗 💎突破石 突破，成功率從 30% 起每次 ×0.85 遞減（30→26→22→…→7%）。成功：星星回到 1★ 重新累積，原本的能力全部保留，另外全能力 +1.5%，突破後每升 1 星 +2.5%；失敗：突破石消失、不會降星。第 n 次突破需要 2n 顆突破石，最多 10 次。突破石來源：商店（🪙15）、5★ 後抽到重複卡、主線魔王、深淵守門者、練功房。
+- **突破**：角色 5★ 後可以消耗 💎突破石 突破，成功率從 30% 起每次 ×0.85 遞減（30→26→22→…→7%）。成功：星星回到 1★ 重新累積，原本的能力全部保留，另外全能力 +1.5%，突破後每升 1 星 +2.5%；失敗：突破石消失、不會降星。第 n 次突破需要 2n 顆突破石，最多 10 次。突破石來源：商店（🪙15）、5★ 後抽到重複卡、主線魔王、深淵守門者、練功房、成就。操作：隊伍頁點角色 →「✨ 突破」。已突破的角色不會被一鍵合成當材料。
 - **等級**：戰鬥勝利得經驗（遠征、魔王、深淵守門者、競技場、練功房），每級全能力 +2%，最高 Lv.50。倒下的角色經驗減半。
 - **練功房**：30 關可無限重打的怪物關，打贏解鎖下一關，主要給經驗，少量金條、10% 掉裝備。
 - **鍵盤操作**：戰鬥中輪到你時，會預先選好一隻目標（金框＋🎯），←→（或 A D）在攻擊／技能／防禦／道具之間切換，Enter／空白鍵直接出手，不用再點敵人；想換目標按 ↑（W）移到目標列再用 ←→ 換，↓（S）回到行動列，或直接按 Tab 換目標；進到選道具或選目標時 ←→ 選擇、Enter 確認、Esc／Backspace 返回。
@@ -36,6 +36,7 @@
 - 遠征探索：Determined Pursuit (epic orchestra loop) — by Emma_MA，取自 OpenGameArt（https://opengameart.org/content/determined-pursuit-epic-orchestra-loop ），授權 CC0。
 - 招募／隊伍／裝備：Medieval: King's Feast — by RandomMind，取自 OpenGameArt（https://opengameart.org/content/medieval-kings-feast ），授權 CC0。
 - 故事頁（老國王）：Fantasy Choir 2 — by cesisco（César da Rocha），取自 OpenGameArt（https://opengameart.org/content/fantasy-choir-3-orchestral-pieces ），授權 CC0。
+- 練功房（含練功房戰鬥）：Megasong — by Emma_MA，取自 OpenGameArt（https://opengameart.org/content/megasong ），授權 CC0。
 - 成就：Triumphant — by Emma_MA，取自 OpenGameArt（https://opengameart.org/content/triumphant ），授權 CC0。
 - 商店：Bossa Nova — by Joth，取自 OpenGameArt（https://opengameart.org/content/bossa-nova ），授權 CC0。
 - 競技場（含競技場戰鬥）：Epic Boss Battle [Seamlessly Looping] — by Juhani Junkala（上傳者 SubspaceAudio），取自 OpenGameArt（https://opengameart.org/content/boss-battle-music ），授權 CC0。

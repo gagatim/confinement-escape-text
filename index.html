@@ -1582,8 +1582,8 @@ function doEnhance(uid){
 // 用金條買裝備、強化符和遠征物資；遠征物資放進「行囊」，下一次出發時自動帶上
 const GEAR_PRICE={N:10,R:25,SR:70};
 const BOXES={
-  box:{name:"裝備補給箱",icon:"📦",price:30,desc:"隨機裝備：N 20%／R 52%／SR 25%／SSR 3%",roll:()=>{const r=rnd();return r<.03?"SSR":r<.28?"SR":r<.8?"R":"N";}},
-  goldbox:{name:"黃金裝備箱",icon:"🎁",price:100,desc:"隨機裝備：SR 78%／SSR 20%／UR 2%",roll:()=>{const r=rnd();return r<.02?"UR":r<.22?"SSR":"SR";}}
+  box:{name:"裝備補給箱",icon:"📦",price:30,desc:"隨機裝備：N 20%／R 53%／SR 26%／SSR 1%",roll:()=>{const r=rnd();return r<.01?"SSR":r<.27?"SR":r<.8?"R":"N";}},
+  goldbox:{name:"黃金裝備箱",icon:"🎁",price:100,desc:"隨機裝備：SR 90%／SSR 8%／UR 2%",roll:()=>{const r=rnd();return r<.02?"UR":r<.10?"SSR":"SR";}}
 };
 const GEAR_HELP=`<div class="sk small"><b>📖 裝備說明</b><ul style="padding-left:18px;margin:4px 0">
   <li><b>稀有度</b>：N 普通 ＜ R 稀有 ＜ SR 精良 ＜ SSR 史詩 ＜ UR 傳說。</li>

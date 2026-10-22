@@ -669,7 +669,7 @@ const MONSTERS={
 };
 const DEF=id=>CARDS[id]||MONSTERS[id];
 // 有插圖的主線小怪與魔王（images/monsters/{代號}.webp）；沒有圖的小怪、或圖片載入失敗時，退回用表情符號
-["ghost","guard","drone","mutant","doppel","echo","deepone","mirror","cameraman","fanatic","rookie","guardian","warden","zero","chief","host"].forEach(k=>{if(MONSTERS[k])MONSTERS[k].pic=true;});
+["ghost","guard","drone","mutant","doppel","echo","deepone","mirror","cameraman","fanatic","rookie","guardian","warden","zero","chief","host","kraken","judge","loopkeeper","origin"].forEach(k=>{if(MONSTERS[k])MONSTERS[k].pic=true;});
 const POOL={SSR:[],SR:[],R:[]};
 Object.keys(CARDS).forEach(id=>POOL[CARDS[id].r].push(id));
 const R_ORDER={SSR:0,SR:1,R:2};

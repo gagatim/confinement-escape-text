@@ -12,11 +12,13 @@
 - **防作弊**：存檔與匯出代碼都有簽章；簽章不符（存檔在遊戲外被改過）或出現遊戲規則不可能的數值（星數、等級、突破、強化、詞條、金條等），存檔會被清空。純網頁遊戲無法 100% 防作弊，這是擋掉直接改存檔的做法。
 - **卡住了／回報問題**：遊戲會自動記錄錯誤與重要事件（最近 300 筆）。畫面右下角永遠有一顆「🆘」按鈕（頁尾、遠征側欄、戰鬥上方也有 🐞），可以重置這一層（回到選房間前）、強制結束戰鬥、強制回到主頁（遠征進度保留）、離開網路對戰房間、重新整理，或複製紀錄回報給開發者。手機連點兩下不會重複觸發，畫面出錯時也會顯示自救按鈕。
 - **魔王討伐（支線）**：通關第 1 章後開放，8 位強度偏高、可以不打的魔王（滅世獵手、虛空主宰、命運裁決者、死神代行者、深淵君王、永夜帝王、天命霸主、終焉行者），依序解鎖，各有個人故事。打倒第一條命後會爆氣進入第二階段（換圖、回血、變強）。打贏有機會掉落魔王專屬 EX 裝備（首次討伐必掉、之後 2%）。
+- **轉移**：隊伍頁「🔁 轉移」可以把一名角色的等級（連同經驗值）轉給另一名「等級比較低」的角色：目標變成來源原本的等級，來源回到 Lv.1。費用 🪙 = 轉移的等級 × 3。星數、突破、裝備不會轉移；來源降級後，身上等級要求不足的裝備會暫時失效。遠征中的角色不能轉移。
 - **職業**：每個角色屬於一種職業——🛡坦克（生命+15%、防禦+1）、⚔戰士（攻擊+15%）、🗡刺客（速度+1、暴擊+6%）、🎯射手（暴擊+12%）、✚輔助（治療+30%）、🔮術士（技能傷害+20%、中毒+1）。隊伍頁可以依職業篩選。
 - **裝備稀有度與詞條**：N 普通／R 稀有／SR 精良／SSR 史詩／UR 傳說。精良要角色 Lv.5、史詩 Lv.10、傳說 Lv.15 才能穿。每件裝備的數值有品質浮動，並依稀有度帶 0～3 條隨機詞條（攻擊、生命、防禦、速度、暴擊、吸血、閃避）。同稀有度的武器／防具／飾品穿 2、3 件有套裝效果。
 - **裝備／強化**：角色有武器、防具、飾品三個欄位（武器有職業限制）。裝備可強化到 +10，每級基礎數值 +8%；+1～+4 失敗無損失，+5～+10 失敗掉 1 級，裝備不會碎。🧿保護符防掉級、🍀幸運符成功率 +10%。不要的裝備可以分解換金條。
 - **角色裝備調整區**：「裝備」頁上方切換到「🧍 角色裝備調整」，選角色、選裝備欄，倉庫裡的裝備會列出來，點一件就能預覽穿上之後的生命、攻擊、防禦、速度、暴擊、吸血、閃避（含套裝加成，綠色變強、紅色變弱），確認再穿上。
 - **裝備圖鑑**：「裝備」頁切換到「📖 裝備圖鑑」，35 件裝備全部展示（沒拿過的顯示成暗色），可依稀有度篩選；點開看基礎與強化後數值、品質浮動範圍、可能的隨機詞條、套裝效果和取得方式，並列出各稀有度的套裝加成。
+- **裝備排序**：倉庫和角色裝備調整區可以依「強度／稀有度／強化等級／最新獲得」排序，再按一次同一個按鈕切換由高到低或由低到高；每件裝備都顯示強度分數（攻擊、防禦×3，速度×2.5，暴擊、閃避×1.5，生命×0.5，吸血×1），選擇會記在這台裝置上。
 - **商店**：用金條買裝備（R／SR 直購、裝備箱抽 SSR）、強化符，以及遠征物資（放進行囊，下一次遠征自動帶上）。
 - **遣散／合成**：不要的角色可以遣散換金條（R 🪙3／SR 🪙10／SSR 🪙30，每星計算），或投入 6★ 份的 R 合成 1 名隨機 SR、6★ 份的 SR 合成 1 名隨機 SSR。合成視窗有「⚡ 一鍵合成」，自動挑等級低、星數少的角色當材料，能合幾次就合幾次（不會動到隊伍中、遠征中、已突破的角色）。
 - **存檔**：自動存在瀏覽器；主頁可「匯出／匯入存檔」，用代碼把進度搬到別的裝置。
@@ -30,8 +32,10 @@
 頭像 `images/avatars/*.webp` 取自本體專案。
 
 背景音樂：
-- 選單（主頁、招募、隊伍等）：Ambient Horror Track 01 — Music by Cleyton Kauffman（https://soundcloud.com/cleytonkauffman ），取自 OpenGameArt（https://opengameart.org/content/ambient-horror-track-01 ），授權 CC0，檔案在 `music/`。
+- 選單（主頁、商店等）：Ambient Horror Track 01 — Music by Cleyton Kauffman（https://soundcloud.com/cleytonkauffman ），取自 OpenGameArt（https://opengameart.org/content/ambient-horror-track-01 ），授權 CC0，檔案在 `music/`。
 - 遠征探索：Abandoned passages (horror ambience loop) — by congusbongus，取自 OpenGameArt（https://opengameart.org/content/abandoned-passages-horror-ambience-loop ），授權 CC0。
+- 招募／隊伍／裝備：Medieval: King's Feast — by RandomMind，取自 OpenGameArt（https://opengameart.org/content/medieval-kings-feast ），授權 CC0。
+- 故事頁（老國王）：Fantasy Choir 2 — by cesisco（César da Rocha），取自 OpenGameArt（https://opengameart.org/content/fantasy-choir-3-orchestral-pieces ），授權 CC0。
 - 無盡深淵：Dark Cavern Ambient — by Paul Wortmann，取自 OpenGameArt（https://opengameart.org/content/dark-cavern-ambient ），授權 CC0。
 - 戰鬥／逃出成功：DEgITx - Machine Paradigm（https://www.youtube.com/watch?v=2uGf8-vfFLI ，作者頻道 @DEgITx），透過 YouTube 嵌入播放器播放，版權屬於原作者。存檔存在瀏覽器 localStorage。
 

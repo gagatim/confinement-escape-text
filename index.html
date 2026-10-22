@@ -349,6 +349,8 @@ footer.credit a{color:var(--gold)}
 .gslot.fitsel{outline:2px solid var(--gold);outline-offset:1px}
 .fitgear.sel .gcard{outline:3px solid var(--gold);outline-offset:2px}
 .fitgear.cant{opacity:.45}
+.gpow{color:#ffd97a;font-weight:700}
+.sortbar{margin:0 0 8px}
 .gcard.dexlock{opacity:.5;filter:grayscale(.55)}
 .gcard.dexlock:hover{opacity:.85}
 
@@ -424,10 +426,14 @@ footer.credit a{color:var(--gold)}
   <footer class="credit">
     <div id="bgmBox"><div id="bgmPlayer"></div></div>
     <div>🎵 背景音樂<br>
-      ・主頁／招募／隊伍等選單：<b>Ambient Horror Track 01</b> — Music by Cleyton Kauffman（<a href="https://soundcloud.com/cleytonkauffman" target="_blank" rel="noopener">soundcloud.com/cleytonkauffman</a>）・
+      ・主頁、商店等選單：<b>Ambient Horror Track 01</b> — Music by Cleyton Kauffman（<a href="https://soundcloud.com/cleytonkauffman" target="_blank" rel="noopener">soundcloud.com/cleytonkauffman</a>）・
       出處 <a href="https://opengameart.org/content/ambient-horror-track-01" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・遠征探索：<b>Abandoned passages (horror ambience loop)</b> — by congusbongus・
       出處 <a href="https://opengameart.org/content/abandoned-passages-horror-ambience-loop" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
+      ・招募／隊伍／裝備：<b>Medieval: King's Feast</b> — by RandomMind（<a href="http://www.patreon.com/randommind" target="_blank" rel="noopener">Patreon</a>）・
+      出處 <a href="https://opengameart.org/content/medieval-kings-feast" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
+      ・故事頁（老國王）：<b>Fantasy Choir 2</b> — by cesisco（César da Rocha）・
+      出處 <a href="https://opengameart.org/content/fantasy-choir-3-orchestral-pieces" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・無盡深淵：<b>Dark Cavern Ambient</b> — by Paul Wortmann・
       出處 <a href="https://opengameart.org/content/dark-cavern-ambient" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・戰鬥／破關：<b>DEgITx - Machine Paradigm</b>・出處 <a href="https://www.youtube.com/watch?v=2uGf8-vfFLI" target="_blank" rel="noopener">YouTube</a>
@@ -437,6 +443,8 @@ footer.credit a{color:var(--gold)}
     <audio id="bgm_main" src="music/ambient_horror_track01.ogg" loop preload="auto"></audio>
     <audio id="bgm_run" src="music/abandoned_passages.ogg" loop preload="none"></audio>
     <audio id="bgm_abyss" src="music/dark_cavern_ambient_002.ogg" loop preload="none"></audio>
+    <audio id="bgm_town" src="music/kings_feast_loop.ogg" loop preload="none"></audio>
+    <audio id="bgm_story" src="music/fantasy_choir_2.ogg" loop preload="none"></audio>
   </footer>
 </div>
 <div id="modal" onclick="if(event.target===this)closeModal()"><div class="mbox" id="mbox"></div></div>
@@ -1004,7 +1012,7 @@ function toggleMute(){SAVE.muted=!SAVE.muted;save();renderHeader();}
 const BGM_ID="2uGf8-vfFLI";
 let BGM=null,BGM_READY=false,BGM_STARTED=false,BGM_CUR=null;
 function loadBgm(){
-  ["main","run","abyss"].forEach(k=>{const a=$("#bgm_"+k);if(a)a.volume=.4;});
+  ["main","town","run","abyss","story"].forEach(k=>{const a=$("#bgm_"+k);if(a)a.volume=.4;});
   window.onYouTubeIframeAPIReady=()=>{
     BGM=new YT.Player("bgmPlayer",{videoId:BGM_ID,
       playerVars:{loop:1,playlist:BGM_ID,controls:1,playsinline:1,rel:0,modestbranding:1},
@@ -1016,11 +1024,13 @@ function bgmWant(){
   if(!BGM_STARTED||SAVE.bgm===false)return null;
   if(VIEW==="battle"||(VIEW==="run"&&RUN&&!RUN.active&&RUN.escaped))return "battle";
   if(VIEW==="run"&&RUN&&RUN.active)return RUN.ch===ABYSS?"abyss":"run";
+  if(VIEW==="story")return "story"; // 老國王的故事頁：莊嚴的合唱曲
+  if(VIEW==="gacha"||VIEW==="team"||VIEW==="gear")return "town"; // 招募、隊伍、裝備：中世紀風
   return "main";
 }
 function syncBgm(){
   const w=bgmWant();if(w===BGM_CUR)return;BGM_CUR=w;
-  ["main","run","abyss"].forEach(k=>{const a=$("#bgm_"+k);if(!a||!a.play)return;
+  ["main","town","run","abyss","story"].forEach(k=>{const a=$("#bgm_"+k);if(!a||!a.play)return;
     if(w===k){a.currentTime=0;a.play().catch(()=>{});}else a.pause();});
   if(BGM_READY){if(w==="battle"){BGM.seekTo(0,true);BGM.playVideo();}else BGM.pauseVideo();}
 }
@@ -1283,6 +1293,7 @@ function viewTeam(){
   <div class="row"><h3 style="margin-right:auto">收藏（${Object.keys(SAVE.owned).length}/${Object.keys(CARDS).length}）</h3>
   <button class="mini gold" onclick="openSynth()">🔮 合成</button>
   <button class="mini gold" onclick="openSmelt()">🔥 熔煉</button>
+  <button class="mini gold" onclick="openXfer('reset')">🔁 轉移</button>
   <button class="mini" onclick="sellAllR()">💰 一鍵遣散 R 卡</button>
   <label class="small"><input type="checkbox" ${SHOW_LOCKED?"checked":""} onchange="SHOW_LOCKED=this.checked;render()"> 顯示未獲得</label></div>
   ${clsFilter(TEAM_CLS,"setTeamCls")}
@@ -1528,6 +1539,79 @@ function doSmelt(){
     <div>${clsTag(nid)} <b>Lv.${lvOf(nid)}</b></div><div class="small" style="color:var(--gold)">${note}</div></div></div>
     <div class="row" style="margin-top:12px"><button class="pri" onclick="openSmelt()">繼續熔煉</button><button onclick="showCard('${nid}')">查看角色</button><button onclick="closeModal()">關閉</button></div>`);
 }
+
+/* ===== 轉移：把一名角色的等級（連同經驗值）轉給另一名等級較低的角色 ===== */
+// 來源回到 Lv.1、經驗歸零；目標變成來源原本的等級。要花金條：轉移的等級 ×3。星數、突破、裝備都不會動
+let XFER={src:"",dst:""};
+const XFER_COST=3;
+function xferCost(lv){return lv*XFER_COST;}
+function xferBlock(id){
+  if(SAVE.run&&SAVE.run.party.some(m=>!m.ally&&m.id===id))return "遠征中";
+  if(RUN&&RUN.active&&RUN.party.some(m=>!m.ally&&m.id===id))return "遠征中";
+  return "";
+}
+function xferStat(id,lv){const o=SAVE.owned[id],s=cardStats(id,o.stars,1+.02*(lv-1),brOf(id));return `❤${s.maxHp} ⚔${s.atk}`;}
+function openXfer(step){
+  if(step==="reset")XFER={src:"",dst:""};
+  const ids=sortedIds().filter(id=>SAVE.owned[id]),src=XFER.src&&SAVE.owned[XFER.src]?XFER.src:"",dst=XFER.dst&&SAVE.owned[XFER.dst]?XFER.dst:"";
+  if(!src)XFER.dst="";
+  const sl=src?lvOf(src):0,cost=xferCost(sl),ok=!!(src&&dst&&sl>lvOf(dst)&&SAVE.gold>=cost);
+  const tile=(id,mode)=>{
+    const o=SAVE.owned[id],b=xferBlock(id);let why=b;
+    if(mode==="src"&&!why&&lvOf(id)<=1)why="已經是 Lv.1";
+    if(mode==="dst"&&!why){if(id===src)why="就是來源角色";else if(lvOf(id)>=sl)why="等級不低於來源";}
+    const on=(mode==="src"&&id===src)||(mode==="dst"&&id===dst);
+    return `<div class="ccard ${CARDS[id].r} ${why?"locked":""}" style="${on?"outline:3px solid var(--gold);outline-offset:2px":""}" ${why?"":`onclick="xferPick('${mode}','${id}')"`}>
+      <div class="av">${avatar(id)}</div><div class="nm">${CARDS[id].name}</div><div class="stars">${starStr(o.stars,o.br)}</div>
+      <div class="small"><b>Lv.${lvOf(id)}</b> ${clsTag(id)}</div><div class="small" style="color:var(--red)">${why||"&nbsp;"}</div></div>`;};
+  let body;
+  if(!src){
+    body=`<h4 style="margin:6px 0">① 選擇「來源」：要把等級轉出去的角色</h4><div class="cardgrid">${ids.filter(id=>lvOf(id)>1||xferBlock(id)).map(id=>tile(id,"src")).join("")||`<span class="dim">沒有等級高於 Lv.1 的角色。</span>`}</div>`;
+  }else{
+    const warn=Object.values(SAVE.owned[src].eq||{}).map(gearById).filter(g=>g&&GEAR_REQ[GEAR[g.base].q]>1).map(g=>GEAR[g.base].name);
+    body=`<div class="panel small" style="margin-bottom:8px">來源：<b>${CARDS[src].name}</b>　Lv.${sl}（${xferStat(src,sl)}）→ <b>Lv.1</b>（${xferStat(src,1)}）</div>
+      <h4 style="margin:6px 0">② 選擇「目標」：接收等級的角色（必須比來源等級低）</h4>
+      <div class="cardgrid">${ids.filter(id=>id!==src).map(id=>tile(id,"dst")).join("")}</div>
+      ${dst?`<div class="panel" style="margin-top:10px">
+        <b>轉移預覽</b>
+        <div class="small" style="margin-top:4px">📤 ${CARDS[src].name}：Lv.${sl} → <b>Lv.1</b>，${xferStat(src,sl)} → ${xferStat(src,1)}</div>
+        <div class="small">📥 ${CARDS[dst].name}：Lv.${lvOf(dst)} → <b style="color:var(--green)">Lv.${sl}</b>，${xferStat(dst,lvOf(dst))} → <b style="color:var(--green)">${xferStat(dst,sl)}</b></div>
+        <div class="small" style="margin-top:4px">費用：<b style="color:${SAVE.gold>=cost?"var(--gold)":"var(--red)"}">🪙${cost}</b>（等級 ${sl} × ${XFER_COST}）${SAVE.gold>=cost?"":"　金條不足"}</div>
+        ${warn.length?`<div class="small" style="color:var(--gold);margin-top:4px">⚠ ${CARDS[src].name} 降到 Lv.1 後，身上的 ${warn.join("、")} 會因為等級不足而失效（裝備不會被拿掉，等級回來就恢復）。</div>`:""}
+      </div>`:`<p class="dim small">選好目標後會顯示預覽。</p>`}`;
+  }
+  openModal(`<h3>🔁 轉移等級</h3>
+    <div class="sk small"><b>📖 轉移說明</b><ul style="padding-left:18px;margin:4px 0">
+      <li>把 <b>來源</b> 角色的等級轉給 <b>等級較低的目標</b>：目標變成來源原本的等級，經驗值一起轉過去，來源回到 <b>Lv.1</b>。</li>
+      <li>費用 <b>🪙 = 轉移的等級 × ${XFER_COST}</b>（例如 Lv.30 要 🪙${xferCost(30)}）。</li>
+      <li>星數、突破、裝備都 <b>不會</b> 轉移，也不會消失。</li>
+      <li>遠征中的角色不能轉移。想把等級練在新抽到的強力角色身上時用。</li></ul></div>
+    ${body}
+    <div class="row" style="margin-top:12px">
+      <button class="pri" onclick="doXfer()" ${ok?"":"disabled"}>🔁 轉移${ok?`（🪙${cost}）`:""}</button>
+      ${src?`<button onclick="openXfer('reset')">重選</button>`:""}<button style="margin-left:auto" onclick="closeModal()">關閉</button></div>`);
+}
+function xferPick(mode,id){
+  if(mode==="src"){XFER.src=id;XFER.dst="";}else XFER.dst=id;
+  SFX.click();openXfer();
+}
+function doXfer(){
+  const s=SAVE.owned[XFER.src],d=SAVE.owned[XFER.dst];if(!s||!d)return;
+  const sl=lvOf(XFER.src),cost=xferCost(sl);
+  if(xferBlock(XFER.src)||xferBlock(XFER.dst)){toast("遠征中的角色不能轉移");return;}
+  if(sl<=lvOf(XFER.dst)){toast("目標的等級必須比來源低");return;}
+  if(SAVE.gold<cost){toast("金條不足");return;}
+  SAVE.gold-=cost;
+  d.lv=sl;d.exp=s.exp||0;
+  s.lv=1;s.exp=0;
+  glog("🔁XFER",`${XFER.src} Lv.${sl} → ${XFER.dst}（🪙${cost}）`);
+  const a=CARDS[XFER.src].name,b=CARDS[XFER.dst].name;
+  XFER={src:"",dst:""};save();SFX.sr();render();
+  openModal(`<h3>🔁 轉移完成</h3><div class="enhres ok">${b} 升到 <b>Lv.${sl}</b>！</div>
+    <p class="small dim">${a} 回到 Lv.1；花費 🪙${cost}。</p>
+    <div class="row" style="margin-top:12px"><button class="pri" onclick="openXfer('reset')">再轉移一次</button><button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
+}
+
 function toggleTeam(id){
   if(SAVE.team.includes(id))SAVE.team=SAVE.team.filter(x=>x!==id);
   else if(SAVE.team.length<3)SAVE.team.push(id);
@@ -1589,12 +1673,34 @@ function openSlot(id,sl){
     <p class="dim small">穿戴等級：普通／稀有 不限、精良 Lv.5、史詩 Lv.10、傳說 Lv.15。同稀有度穿 2、3 件有套裝效果。</p>
     <div class="row" style="margin-top:12px"><button onclick="showCard('${id}')">← 返回角色</button></div>`);
 }
-function gearSort(a,b){return GQ.indexOf(GEAR[b.base].q)-GQ.indexOf(GEAR[a.base].q)||b.lv-a.lv||a.uid-b.uid;}
+// 裝備強度（戰力）：把數值（含品質浮動、強化、隨機詞條）加權成一個分數，方便排序比較。
+// 權重：攻擊 3、防禦 3、速度 2.5、生命 0.5、暴擊 1.5、閃避 1.5、吸血 1（每 1% 算 1 點）
+const POWER_W={atk:3,def:3,spd:2.5,hp:.5,crit:1.5,dodge:1.5,steal:1};
+function gearPower(g){const t=gearStats(g);let p=0;for(const k in t)p+=(POWER_W[k]||0)*t[k];return Math.round(p);}
+// 排序：強度／稀有度／強化等級／最新獲得；GEAR_ASC 為 true 時由低到高。選擇會記在這台裝置上
+const GEAR_SORTS={power:"強度",rarity:"稀有度",lv:"強化等級",new:"最新獲得"};
+let GEAR_SORT="power",GEAR_ASC=false;
+try{const v=localStorage.getItem("jbts_gsort");if(v){const o=JSON.parse(v);if(GEAR_SORTS[o.k])GEAR_SORT=o.k;GEAR_ASC=!!o.asc;}}catch(e){}
+function setGearSort(k){if(k===GEAR_SORT)GEAR_ASC=!GEAR_ASC;else{GEAR_SORT=k;GEAR_ASC=false;}
+  try{localStorage.setItem("jbts_gsort",JSON.stringify({k:GEAR_SORT,asc:GEAR_ASC}));}catch(e){}SFX.click();render();}
+function gearSort(a,b){
+  const qa=GQ.indexOf(GEAR[a.base].q),qb=GQ.indexOf(GEAR[b.base].q);
+  let d;
+  if(GEAR_SORT==="power")d=gearPower(b)-gearPower(a)||qb-qa||b.lv-a.lv;
+  else if(GEAR_SORT==="lv")d=b.lv-a.lv||qb-qa||gearPower(b)-gearPower(a);
+  else if(GEAR_SORT==="new")d=b.uid-a.uid;
+  else d=qb-qa||b.lv-a.lv||gearPower(b)-gearPower(a);
+  d=d||a.uid-b.uid;
+  return GEAR_ASC?-d:d;
+}
+function sortBar(){
+  return `<div class="filters sortbar"><span class="small dim" style="align-self:center">排序：</span>${Object.entries(GEAR_SORTS).map(([k,l])=>`<button class="${GEAR_SORT===k?"on":""}" onclick="setGearSort('${k}')">${l}${GEAR_SORT===k?(GEAR_ASC?" ↑":" ↓"):""}</button>`).join("")}</div>`;
+}
 function gearCard(g,onclick){
   const G=GEAR[g.base],w=gearOwner(g.uid);
   return `<div class="gcard ${G.q}" onclick="${onclick}">${g.lv?`<span class="lv ${g.lv>=ENH_MAX?"max":g.lv>=7?"hi":""}">+${g.lv}</span>`:""}<div class="gi">${gearImg(g.base)}</div>
     <div class="gn r${G.q}">${qTag(G.q)}${G.name}</div><div class="small">${statStr(gearStats(g))}</div>${g.fx&&g.fx.length?`<div class="gfx">${fxStr(g)}</div>`:""}
-    <div class="small dim">${GQ_NAME[G.q]}・${SLOTS[G.slot]}・${gearCls(g.base)} ${reqTag(null,g.base)}</div>${w?`<div class="who">👤 ${CARDS[w].name}</div>`:""}</div>`;
+    <div class="small dim">${GQ_NAME[G.q]}・${SLOTS[G.slot]}・${gearCls(g.base)} ${reqTag(null,g.base)}</div><div class="small gpow">⚡ 強度 ${gearPower(g)}</div>${w?`<div class="who">👤 ${CARDS[w].name}</div>`:""}</div>`;
 }
 
 /* ===== 角色裝備調整區：看倉庫與角色，預覽穿上之後的素質 ===== */
@@ -1701,7 +1807,7 @@ function viewFit(){
       <div class="gi">${g?gearImg(g.base):"＋"}</div>${g?`<b class="r${GEAR[g.base].q}">${qTag(GEAR[g.base].q)}${GEAR[g.base].name}${g.lv?" +"+g.lv:""}</b>${lvOk(id,g.base)?"":`<div class="req bad">需 Lv.${GEAR_REQ[GEAR[g.base].q]}</div>`}`:`<span class="dim small">空</span>`}</div>`;}).join("")}</div>
   ${setHtml(id)}
   ${eq[FIT_SLOT]?`<div class="row" style="margin-top:6px"><button class="mini" onclick="fitTakeOff('${FIT_SLOT}')">卸下目前的${SLOTS[FIT_SLOT]}</button></div>`:""}
-  <h3 style="margin-top:14px">📦 倉庫・${SLOTS[FIT_SLOT]}（${list.length} 件）</h3>
+  <h3 style="margin-top:14px">📦 倉庫・${SLOTS[FIT_SLOT]}（${list.length} 件）</h3>${sortBar()}
   <div class="ggrid">${list.map(g=>{
     const G=GEAR[g.base],can=canWear(id,g.base),lok=lvOk(id,g.base),worn=gearOwner(g.uid),isCur=eq[FIT_SLOT]===g.uid;
     const note=isCur?`<div class="small" style="color:var(--green)">✔ ${CARDS[id].name} 穿著中</div>`:worn?`<div class="small" style="color:var(--gold)">👤 ${CARDS[worn].name} 穿著</div>`:"";
@@ -1717,6 +1823,7 @@ function viewBag(){
   強化：+1～+4 失敗沒有損失；+5～+10 失敗會掉 1 級（裝備不會碎）。🧿保護符可以防止掉級。</p>
   <div class="row small"><span>💎 突破石 ×${SAVE.charms.stone}</span><span>🧿 保護符 ×${SAVE.charms.protect}</span><span>🍀 幸運符 ×${SAVE.charms.luck}</span><button class="mini gold" style="margin-left:auto" onclick="go('shop')">🛒 去商店</button></div>
   <div class="filters"><button class="${GEAR_TAB?"":"on"}" onclick="GEAR_TAB='';render()">全部（${SAVE.gear.length}）</button>${Object.keys(SLOTS).map(k=>`<button class="${GEAR_TAB===k?"on":""}" onclick="GEAR_TAB='${k}';render()">${SLOTS[k]}</button>`).join("")}</div>
+  ${sortBar()}
   <div class="ggrid">${list.map(g=>gearCard(g,`openGear(${g.uid})`)).join("")||`<span class="dim">還沒有裝備。去「商店」買一件，或在遠征、競技場打倒敵人掉落。</span>`}</div>`;
 }
 function openGear(uid){

@@ -492,28 +492,28 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 // 被動效果大多在戰鬥引擎（hit / handleDeath / turnStart / battleStart）裡依 id 判斷；
 // run 欄位是「遠征中」生效的被動標籤。
 const CARDS={
-  boss:{name:"黑社會老大",r:"SSR",hp:33,atk:6,def:2,spd:3,
-    skill:{name:"一呼百應",cd:4,t:"none",kind:"buff",desc:"其他隊友攻擊+4（2回合），自身防禦+3（2回合）。",
-      use(B,u){mates(B,u).forEach(m=>{if(m!==u)buff(B,m,"atk",4,2);});buff(B,u,"def",3,2);blog(B,`${nm(u)} 一聲令下，小弟們士氣大振！`);}},
-    passive:{name:"你們先上",desc:"被攻擊時35%機率由隨機隊友代為承受（傷害×0.6）。"}},
+  boss:{name:"黑社會老大",r:"SSR",hp:36,atk:6,def:2,spd:3,
+    skill:{name:"一呼百應",cd:4,t:"none",kind:"buff",desc:"冷卻4回合。除自己以外的每名活著的隊友，攻擊提高6%（依各自當下的攻擊計算，至少+1），持續3回合；自己防禦+4，持續3回合。效果結束後恢復原狀。",
+      use(B,u){mates(B,u).forEach(m=>{if(m!==u)buff(B,m,"atk",Math.max(1,Math.round(stat(m,"atk")*.06)),3);});buff(B,u,"def",4,3);blog(B,`${nm(u)} 一聲令下，小弟們士氣大振！`);}},
+    passive:{name:"你們先上",desc:"自己被攻擊時，有35%機率改由一名隨機的活著的隊友代為承受，代受的傷害只算原本的60%。沒有其他隊友可代時不會觸發。"}},
   exorcist:{name:"還魂師",r:"SSR",hp:28,atk:5,def:1,spd:4,
-    skill:{name:"安魂儀式",cd:5,t:"none",kind:"heal",desc:"復活1名倒下的隊友（40%生命）；若無人倒下，改為全隊恢復4。",
-      use(B,u){const d=deadMates(B,u);if(d.length){const t=d.sort((a,b)=>b.maxHp-a.maxHp)[0];revive(B,t,.4);blog(B,`${nm(u)} 吟唱安魂曲，${nm(t)} 從暗影中歸來！`,"big");}else mates(B,u).forEach(m=>heal(B,m,4));}},
-    passive:{name:"臨終祝禱",desc:"每場戰鬥第一次倒下時，以30%生命復活，速度+1。"}},
+    skill:{name:"安魂儀式",cd:5,t:"none",kind:"heal",desc:"冷卻5回合。有隊友倒下時：復活其中最大生命最高的一名，復活後恢復40%最大生命。沒人倒下時：改為全隊活著的成員各恢復8%最大生命（至少4）。",
+      use(B,u){const d=deadMates(B,u);if(d.length){const t=d.sort((a,b)=>b.maxHp-a.maxHp)[0];revive(B,t,.4);blog(B,`${nm(u)} 吟唱安魂曲，${nm(t)} 從暗影中歸來！`,"big");}else mates(B,u).forEach(m=>heal(B,m,Math.max(4,Math.round(m.maxHp*.08))));}},
+    passive:{name:"臨終祝禱",desc:"每場戰鬥中，自己第一次倒下時會立刻復活，恢復30%最大生命，並永久速度+1（本場）。每場只會觸發一次。"}},
   butcher:{name:"屠夫",r:"SSR",hp:32,atk:7,def:1,spd:3,
-    skill:{name:"屠宰",cd:3,t:"enemy",kind:"dmg",desc:"對單體造成2.2倍傷害。",use(B,u,t){hit(B,u,t,2.2);}},
-    passive:{name:"鮮血盛宴",desc:"造成傷害時，恢復該傷害30%的生命（至少1）。"}},
+    skill:{name:"屠宰",cd:3,t:"enemy",kind:"dmg",desc:"冷卻3回合。選擇一名敵人，造成2.2倍攻擊傷害（會受對方防禦影響）。",use(B,u,t){hit(B,u,t,2.2);}},
+    passive:{name:"鮮血盛宴",desc:"每次造成傷害，都會恢復該傷害30%的生命（至少1），普通攻擊和技能都算。"}},
   shade:{name:"暗影使者",r:"SSR",hp:26,atk:7,def:0,spd:6,
-    skill:{name:"暗影突襲",cd:3,t:"enemy",kind:"dmg",desc:"無視防禦與格擋造成1.6倍傷害，並獲得1次閃避。",use(B,u,t){hit(B,u,t,1.6,{pierce:true});u.st.evade=(u.st.evade||0)+1;}},
-    passive:{name:"暗影共鳴",desc:"任何其他角色倒下時，恢復5生命並永久攻擊+1（本場）。"}},
+    skill:{name:"暗影突襲",cd:3,t:"enemy",kind:"dmg",desc:"冷卻3回合。選擇一名敵人，造成1.6倍攻擊傷害，無視對方的防禦與格擋；施放後自己獲得1次閃避，可以完全躲掉下一次受到的攻擊。",use(B,u,t){hit(B,u,t,1.6,{pierce:true});u.st.evade=(u.st.evade||0)+1;}},
+    passive:{name:"暗影共鳴",desc:"場上任何其他角色（敵我皆算）倒下時，自己恢復5%最大生命（至少1），並永久攻擊提高3%（至少+1，本場）。"}},
   vampire:{name:"吸血鬼",r:"SSR",hp:30,atk:6,def:1,spd:4,
-    skill:{name:"血宴",cd:4,t:"none",kind:"dmg",desc:"對全體敵人造成0.8倍傷害，恢復總傷害50%的生命。",
+    skill:{name:"血宴",cd:4,t:"none",kind:"dmg",desc:"冷卻4回合。對全體敵人各造成0.8倍攻擊傷害，並把造成的總傷害的50%轉成自己的生命。",
       use(B,u){let s=0;foes(B,u).forEach(t=>s+=hit(B,u,t,.8));if(s)heal(B,u,Math.ceil(s/2));}},
-    passive:{name:"夜之血族",desc:"每個自己的回合開始時恢復2生命。"}},
+    passive:{name:"夜之血族",desc:"每個自己的回合開始時，恢復2%最大生命（至少1）。"}},
   berserker:{name:"狂戰士",r:"SSR",hp:37,atk:7,def:0,spd:4,
-    skill:{name:"狂暴旋風",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成1.38倍傷害，自身失去2生命（不會致死）。",
-      use(B,u){foes(B,u).forEach(t=>hit(B,u,t,1.38));u.hp=Math.max(1,u.hp-2);}},
-    passive:{name:"嗜殺",desc:"生命低於一半時，攻擊+4。"}},
+    skill:{name:"狂暴旋風",cd:3,t:"none",kind:"dmg",desc:"冷卻3回合。對全體敵人各造成1.38倍攻擊傷害；施放後自己失去0.5%最大生命（至少1點），生命最低會留在1，不會因此倒下。",
+      use(B,u){foes(B,u).forEach(t=>hit(B,u,t,1.38));u.hp=Math.max(1,u.hp-Math.max(1,Math.round(u.maxHp*.005)));}},
+    passive:{name:"嗜殺",desc:"自己的生命低於最大生命一半時，攻擊提高4%（依基礎攻擊計算）。生命回到一半以上就恢復原狀。"}},
 
   merc:{name:"雇傭兵",r:"SR",hp:28,atk:6,def:2,spd:3,
     skill:{name:"霰彈掃射",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.75倍傷害。",use(B,u){foes(B,u).forEach(t=>hit(B,u,t,.75));}},
@@ -2135,7 +2135,7 @@ const deadMates=(B,u)=>B.units.filter(x=>x.side===u.side&&!x.alive);
 function stat(u,k){
   let v=u[k]+(u.perm[k]||0);
   u.buffs.forEach(b=>{if(b.k===k)v+=b.v;});
-  if(k==="atk"&&u.id==="berserker"&&u.hp<u.maxHp/2)v+=4;
+  if(k==="atk"&&u.id==="berserker"&&u.hp<u.maxHp/2)v+=Math.round(u.atk*.04);
   if(k==="atk"&&u.id==="warden"&&u.hp<u.maxHp/2)v+=3;
   if(k==="def"&&u.id==="chief"&&u.hp<u.maxHp/2)v+=2;
   return Math.max(k==="atk"?1:0,v);
@@ -2196,6 +2196,7 @@ function hit(B,a,t,mult,o={}){
   if(t.id==="fatty")d-=2;
   if(["ghost","warden","zero","guard","chief","host"].includes(t.id))d-=1;
   if(DEF(t.id).dr)d-=DEF(t.id).dr;
+  if(DEF(t.id).drp)d*=1-DEF(t.id).drp;
   if(t.id==="veteran"&&t.hp<=t.maxHp*.35)d-=4;
   d=Math.max(1,Math.round(d));
   if(t.id==="bomb"&&!o.counter&&rnd()<.25){
@@ -2230,7 +2231,7 @@ function handleDeath(B,t,killer){
   blog(B,`✝ ${nm(t)} 倒下了。`,"bad");SFX.death();
   B.units.forEach(x=>{
     if(!x.alive||x===t)return;
-    if(x.id==="shade"){heal(B,x,5);x.perm.atk=(x.perm.atk||0)+1;}
+    if(x.id==="shade"){heal(B,x,Math.max(1,Math.round(x.maxHp*.05)));x.perm.atk=(x.perm.atk||0)+Math.max(1,Math.round(x.atk*.03));}
     if(x.id==="mediocre"&&x.side===t.side){x.perm.atk=(x.perm.atk||0)+2;fx(B,x,"+2攻","sk");}
     if(x.id==="janitor"&&x.side!==t.side)heal(B,x,3);
   });
@@ -2360,11 +2361,12 @@ async function takeTurn(B,u){
     if(--p.t<=0)delete u.st.poison;
     if(u.hp<=0){handleDeath(B,u,null);if(!u.alive){render();return;}}
   }
-  if(u.id==="vampire")heal(B,u,2);
+  if(u.id==="vampire")heal(B,u,Math.max(1,Math.round(u.maxHp*.02)));
   if(u.id==="runner")heal(B,u,1);
   if(u.id==="mutant")heal(B,u,2);
   if(u.id==="zero")heal(B,u,4);
   if(DEF(u.id).regen)heal(B,u,DEF(u.id).regen);
+  if(DEF(u.id).regenp)heal(B,u,Math.round(u.maxHp*DEF(u.id).regenp));
   if(u.id==="medic"){const h=mates(B,u).filter(m=>m.hp<m.maxHp).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0];if(h)heal(B,h,2);}
   if(u.id==="witch"&&rnd()<.3){const f=foes(B,u);if(f.length){const t=pick(f);poison(B,t,2,2);blog(B,`🧪 女巫的大釜冒泡，${nm(t)} 中毒了。`);}}
   render();
@@ -2988,44 +2990,44 @@ Object.assign(MONSTERS,{
     passive:{name:"獵殺本能",desc:"暴擊率+25%。"}},
   voidlord:{name:"虛空主宰",img:true,r:"SSR",hp:667,atk:63,def:18,spd:21,boss2:{hp:.7,atk:.35,spd:2},gx:{dodge:15},
     quote:"我掌控的不只是數據，而是整個禁閉區的規則。",
-    skill:{name:"系統覆寫",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.8倍傷害，每人40%機率暈眩1回合。爆氣後再清除敵人所有增益並攻擊-2。",
+    skill:{name:"系統覆寫",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.8倍傷害，每人40%機率暈眩1回合。爆氣後再清除敵人所有增益，並使其攻擊降低25%（2回合）。",
       use(B,u){blog(B,"💠 所有螢幕同時跳出同一行字：「權限已轉移」。","bad");foes(B,u).forEach(t=>{hit(B,u,t,.8);if(t.alive&&rnd()<.4)stun(B,t,1);
-        if(u.flags.p2&&t.alive){t.buffs=t.buffs.filter(b=>b.v<0);buff(B,t,"atk",-2,2);}});}},
+        if(u.flags.p2&&t.alive){t.buffs=t.buffs.filter(b=>b.v<0);buff(B,t,"atk",-Math.max(1,Math.round(stat(t,"atk")*.25)),2);}});}},
     passive:{name:"虛體",desc:"閃避率+15%。"}},
-  fatejudge:{name:"命運裁決者",img:true,r:"SSR",hp:1666,atk:138,def:42,spd:36,dr:3,boss2:{hp:.7,atk:.35,spd:2},
+  fatejudge:{name:"命運裁決者",img:true,r:"SSR",hp:1666,atk:138,def:42,spd:36,drp:.15,boss2:{hp:.7,atk:.35,spd:2},
     quote:"你的命運，由我來決定。",
     skill:{name:"命運之輪",cd:3,t:"none",kind:"dmg",desc:"轉動命運之輪，隨機：全體1倍傷害／自身恢復8%生命／單體2.5倍傷害。爆氣後一次轉兩格。",
       use(B,u){for(let n=0;n<(u.flags.p2?2:1);n++){const k=ri(1,3),f=foes(B,u);if(!f.length)break;
         if(k===1){blog(B,"☸ 命運之輪停在「審判」。","bad");f.forEach(t=>hit(B,u,t,1));}
         else if(k===2){blog(B,"☸ 命運之輪停在「延命」。","bad");heal(B,u,Math.round(u.maxHp*.08));}
         else{blog(B,"☸ 命運之輪停在「處刑」。","bad");hit(B,u,pick(f),2.5);}}}},
-    passive:{name:"定數",desc:"受到的傷害-3。"}},
+    passive:{name:"定數",desc:"受到的傷害降低15%。"}},
   reaper:{name:"死神代行者",img:true,r:"SSR",hp:2000,atk:156,def:42,spd:42,boss2:{hp:.7,atk:.35,spd:2},gx:{steal:20},
     quote:"死亡不是終點，而是我的任務。",
-    skill:{name:"收割",cd:3,t:"none",kind:"dmg",desc:"對生命最低的敵人揮下鐮刀（1.8倍）。爆氣後全體敵人再中毒（4點×3回合）。",
+    skill:{name:"收割",cd:3,t:"none",kind:"dmg",desc:"對生命最低的敵人揮下鐮刀（1.8倍）。爆氣後全體敵人再中毒（每回合受到自身攻擊20%的傷害，3回合）。",
       use(B,u){const f=foes(B,u).sort((a,b)=>a.hp-b.hp);if(!f.length)return;blog(B,"⚰ 鎖鏈嘩啦作響，鐮刀落下。","bad");hit(B,u,f[0],1.8);
-        if(u.flags.p2)foes(B,u).forEach(t=>poison(B,t,4,3));}},
+        if(u.flags.p2)foes(B,u).forEach(t=>poison(B,t,Math.max(1,Math.round(stat(u,"atk")*.2)),3));}},
     passive:{name:"魂之收割",desc:"造成傷害時恢復傷害20%的生命。"}},
-  abyssking:{name:"深淵君王",img:true,r:"SSR",hp:2400,atk:168,def:54,spd:30,dr:4,regen:15,boss2:{hp:.7,atk:.35,spd:2},
+  abyssking:{name:"深淵君王",img:true,r:"SSR",hp:2400,atk:168,def:54,spd:30,drp:.2,regenp:.03,boss2:{hp:.7,atk:.35,spd:2},
     quote:"這片禁閉區，現在由我來支配。",
-    skill:{name:"王權壓制",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.9倍傷害，攻擊-3（2回合）。爆氣後傷害提高到1.2倍。",
-      use(B,u){blog(B,"👑 「跪下。」整個房間的空氣沉了下來。","bad");foes(B,u).forEach(t=>{hit(B,u,t,u.flags.p2?1.2:.9);if(t.alive)buff(B,t,"atk",-3,2);});}},
-    passive:{name:"王之軀",desc:"受到的傷害-4；每回合恢復15生命。"}},
-  nightemperor:{name:"永夜帝王",img:true,r:"SSR",hp:4299,atk:270,def:81,spd:54,regen:20,boss2:{hp:.7,atk:.35,spd:2},gx:{dodge:10},
+    skill:{name:"王權壓制",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.9倍傷害，並使其攻擊降低25%（2回合）。爆氣後傷害提高到1.2倍。",
+      use(B,u){blog(B,"👑 「跪下。」整個房間的空氣沉了下來。","bad");foes(B,u).forEach(t=>{hit(B,u,t,u.flags.p2?1.2:.9);if(t.alive)buff(B,t,"atk",-Math.max(1,Math.round(stat(t,"atk")*.25)),2);});}},
+    passive:{name:"王之軀",desc:"受到的傷害降低20%；每回合恢復3%最大生命。"}},
+  nightemperor:{name:"永夜帝王",img:true,r:"SSR",hp:4299,atk:270,def:81,spd:54,regenp:.04,boss2:{hp:.7,atk:.35,spd:2},gx:{dodge:10},
     quote:"黑夜，是我的王座。",
-    skill:{name:"永夜降臨",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.7倍傷害並中毒（3點×3回合），自身恢復5%生命。爆氣後中毒加重為5點。",
-      use(B,u){blog(B,"🌑 燈全滅了。黑暗裡只剩下那雙紫色的眼睛。","bad");foes(B,u).forEach(t=>{hit(B,u,t,.7);if(t.alive)poison(B,t,u.flags.p2?5:3,3);});heal(B,u,Math.round(u.maxHp*.05));}},
-    passive:{name:"夜之主",desc:"每回合恢復20生命；閃避率+10%。"}},
-  overlord:{name:"天命霸主",img:true,r:"SSR",hp:17000,atk:990,def:300,spd:180,dr:5,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:15},
+    skill:{name:"永夜降臨",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.7倍傷害並中毒（每回合受到自身攻擊20%的傷害，3回合），自身恢復5%生命。爆氣後中毒加重為30%。",
+      use(B,u){blog(B,"🌑 燈全滅了。黑暗裡只剩下那雙紫色的眼睛。","bad");foes(B,u).forEach(t=>{hit(B,u,t,.7);if(t.alive)poison(B,t,Math.max(1,Math.round(stat(u,"atk")*(u.flags.p2?.3:.2))),3);});heal(B,u,Math.round(u.maxHp*.05));}},
+    passive:{name:"夜之主",desc:"每回合恢復4%最大生命；閃避率+10%。"}},
+  overlord:{name:"天命霸主",img:true,r:"SSR",hp:17000,atk:990,def:300,spd:180,drp:.25,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:15},
     quote:"命運？由我來定義！",
-    skill:{name:"天命審判",cd:3,t:"none",kind:"dmg",desc:"對單一敵人造成2倍傷害、其他敵人0.8倍，自身攻擊+3（3回合）。",
-      use(B,u){const f=foes(B,u);if(!f.length)return;const t=pick(f);blog(B,"🌟 金色的光球從天而降。","bad");hit(B,u,t,2);foes(B,u).filter(x=>x!==t).forEach(x=>hit(B,u,x,.8));buff(B,u,"atk",3,3);}},
-    passive:{name:"霸者之威",desc:"受到的傷害-5；暴擊率+15%。"}},
-  endwalker:{name:"終焉行者",img:true,r:"SSR",hp:20000,atk:1080,def:330,spd:240,dr:5,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:15,steal:15},
+    skill:{name:"天命審判",cd:3,t:"none",kind:"dmg",desc:"對單一敵人造成2倍傷害、其他敵人0.8倍，自身攻擊提高20%（3回合）。",
+      use(B,u){const f=foes(B,u);if(!f.length)return;const t=pick(f);blog(B,"🌟 金色的光球從天而降。","bad");hit(B,u,t,2);foes(B,u).filter(x=>x!==t).forEach(x=>hit(B,u,x,.8));buff(B,u,"atk",Math.max(1,Math.round(stat(u,"atk")*.2)),3);}},
+    passive:{name:"霸者之威",desc:"受到的傷害降低25%；暴擊率+15%。"}},
+  endwalker:{name:"終焉行者",img:true,r:"SSR",hp:20000,atk:1080,def:330,spd:240,drp:.25,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:15,steal:15},
     quote:"最後一個站著的，才是真正的勝者。",
     skill:{name:"終焉",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成1.2倍傷害。爆氣後改為1.6倍，每人30%機率暈眩。",
       use(B,u){blog(B,"⛓ 「遊戲結束。」","bad");foes(B,u).forEach(t=>{hit(B,u,t,u.flags.p2?1.6:1.2);if(u.flags.p2&&t.alive&&rnd()<.3)stun(B,t,1);});}},
-    passive:{name:"最後的勝者",desc:"受到的傷害-5；暴擊率+15%、吸血15%。"}}
+    passive:{name:"最後的勝者",desc:"受到的傷害降低25%；暴擊率+15%、吸血15%。"}}
 });
 // 魔王的個人故事
 const BOSS_STORY={

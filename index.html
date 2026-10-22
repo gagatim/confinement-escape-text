@@ -600,7 +600,22 @@ const MONSTERS={
     skill:{name:"重寫世界",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成1倍傷害，並隨機施加：攻擊-3／防禦-3／中毒（4點×2回合）。",
       use(B,u){blog(B,"👁 「這個世界，是我寫的。」","bad");foes(B,u).forEach(t=>{hit(B,u,t,1);if(!t.alive)return;const k=ri(1,3);
         if(k===1)buff(B,t,"atk",-3,2);else if(k===2)buff(B,t,"def",-3,2);else poison(B,t,4,2);});}},
-    passive:{name:"作者權限",desc:"受到的傷害-2；第一次倒下時以50%生命重新站起。"}}
+    passive:{name:"作者權限",desc:"受到的傷害-2；第一次倒下時以50%生命重新站起。"}},
+  // 第9、10章（偏難）
+  cameraman:{name:"攝影無人機",emoji:"🎥",r:"R",hp:26,atk:9,def:3,spd:6,evade:.1,
+    skill:{name:"特寫鏡頭",cd:2,t:"enemy",kind:"dmg",desc:"鎖定目標造成1.5倍傷害，並標記2回合（受到的傷害+50%）。",use(B,u,t){hit(B,u,t,1.5);if(t.alive){t.st.mark=2;fx(B,t,"特寫","sk");}}},
+    passive:{name:"空拍",desc:"被攻擊時10%機率閃避。"}},
+  producer:{name:"製作人",emoji:"🎬",r:"SSR",hp:170,atk:12,def:5,spd:5,dr:3,regen:6,
+    skill:{name:"收視率爆發",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成1.1倍傷害，自身攻擊+3（3回合）。",
+      use(B,u){blog(B,"🎬 「收視率還不夠！再來一次！」","bad");foes(B,u).forEach(t=>hit(B,u,t,1.1));buff(B,u,"atk",3,3);}},
+    passive:{name:"剪輯權",desc:"受到的傷害-3；每回合恢復6生命。"}},
+  fanatic:{name:"狂熱粉絲",emoji:"🤳",r:"R",hp:28,atk:10,def:2,spd:6,regen:3,
+    skill:{name:"瘋狂應援",cd:2,t:"enemy",kind:"dmg",desc:"撲上來造成1.6倍傷害，30%機率暈眩目標1回合。",use(B,u,t){hit(B,u,t,1.6);if(t.alive&&rnd()<.3)stun(B,t,1);}},
+    passive:{name:"愛到瘋狂",desc:"每回合開始恢復3生命。"}},
+  audience:{name:"千萬觀眾",emoji:"🌐",r:"SSR",hp:200,atk:13,def:5,spd:6,dr:3,regen:8,revive:.4,
+    skill:{name:"投票處刑",cd:3,t:"none",kind:"dmg",desc:"全網投票：對生命最低的敵人造成2.5倍傷害，再對全體敵人造成0.7倍傷害。",
+      use(B,u){const f=foes(B,u).sort((a,b)=>a.hp-b.hp);if(!f.length)return;blog(B,"🌐 螢幕上的票數瘋狂跳動：「淘汰他！」","bad");hit(B,u,f[0],2.5);foes(B,u).forEach(t=>hit(B,u,t,.7));}},
+    passive:{name:"輿論",desc:"受到的傷害-3；每回合恢復8生命；第一次倒下時以40%生命重新站起。"}}
 };
 const DEF=id=>CARDS[id]||MONSTERS[id];
 const POOL={SSR:[],SR:[],R:[]};
@@ -811,6 +826,8 @@ function migrate(s){
   if(!s.chv){if(s.run&&s.run.ch===4)s.run.ch=6;s.chv=2;}
   // 第7、8章插在無盡深淵前面：深淵 ch 從 6 改成 8
   if(s.chv<3){if(s.run&&s.run.ch===6)s.run.ch=8;s.chv=3;}
+  // 第9、10章插在無盡深淵前面：深淵 ch 從 8 改成 10
+  if(s.chv<4){if(s.run&&s.run.ch===8)s.run.ch=10;s.chv=4;}
   if(!s.gear){s.gear=[];s.gearUid=0;}
   if(!s.stash)s.stash={items:[],food:0};
   if(!s.charms)s.charms={protect:0,luck:0};
@@ -971,7 +988,7 @@ const GUIDE=[
   {ic:"🛒",t:"③ 裝備與商店",b:["「商店」可以買裝備、強化符和遠征物資（下一次遠征自動帶上）。","在角色卡片點 <b>武器／防具／飾品</b> 欄位就能穿上。武器有職業限制。","「裝備」頁可以強化到 +10。<b>強化可能失敗</b>：+5 以上失敗會掉 1 級（裝備不會碎），用 🧿保護符 可以保住等級。"]},
   {ic:"🪜",t:"④ 出發遠征",b:["每一層選一扇門進去：可能是物資、敵人、或其他逃殺者。","注意 <b>🥫補給</b>（每層吃 1 份）和 <b>☣毒氣</b>（從底層往上淹）。","遇到人可以結盟、交易或開打。打倒最上層的魔王就逃出了！"]},
   {ic:"⚔️",t:"⑤ 戰鬥",b:["輪到你的角色時，按「普通攻擊」或「技能」，再點目標。","懶得操作就按「自動」，讓 AI 幫你打。"]},
-  {ic:"🏆",t:"⑥ 然後呢？",b:["主線共 8 章，逃出一章解鎖下一章；逃出第 1 章後解鎖 <b>🕳 無盡深淵</b>。","「練功房」重複打怪練等級（每級全能力 +2%）；「競技場」打 AI 賺金條；「雙人對決」可以和朋友網路對戰。","進度會自動存檔，換裝置用主頁的「匯出／匯入存檔」。"]}
+  {ic:"🏆",t:"⑥ 然後呢？",b:["主線共 10 章，逃出一章解鎖下一章；逃出第 1 章後解鎖 <b>🕳 無盡深淵</b>。","「練功房」重複打怪練等級（每級全能力 +2%）；「競技場」打 AI 賺金條；「雙人對決」可以和朋友網路對戰。","進度會自動存檔，換裝置用主頁的「匯出／匯入存檔」。"]}
 ];
 function openGuide(i){
   const g=GUIDE[i],last=i===GUIDE.length-1;
@@ -2665,14 +2682,26 @@ Object.assign(ROOM_NAME,{
 });
 Object.assign(ROOM_EV,{倒轉走廊:"shade",時計室:"control",殘響之間:"shade",鐘塔:"gene",時之門:"helipad",
   第一會場:"morgue",後台:"warehouse",放映室:"control",道具倉庫:"warehouse",評審席:"vault","另一個你的房間":"shade",作者的書房:"gene",真正的出口:"helipad"});
-const ABYSS=8;
+const FLOORS_STUDIO=mkFloors("V",[1,4,5,5,6,5,6,5,6,5,4,2]);
+const FLOORS_FINALE=mkFloors("Z",[1,4,5,6,5,6,5,6,5,6,5,4,2]);
+Object.assign(ROOM_NAME,{
+  V101:"攝影棚",V201:"道具間",V203:"配給站",V301:"藥房",V303:"綠幕走廊",V401:"武器庫",V404:"樂透房",V501:"剪輯室",V503:"冷凍艙",V505:"黑市",
+  V601:"手術室",V603:"觀眾留言牆",V701:"賭場",V703:"控制室",V801:"禮拜堂",V803:"金庫",V901:"強化艙",V903:"雷射走廊",V1001:"配給站",V1003:"水塔",
+  V1101:"黑市",V1201:"化妝間",V1202:"主控室",
+  Z101:"斷訊大廳",Z201:"倒塌的看板",Z203:"配給站",Z301:"藥房",Z303:"粉絲聚集區",Z401:"武器庫",Z403:"黑市",Z501:"樂透房",Z503:"冷凍艙",
+  Z601:"手術室",Z603:"閃光燈走廊",Z701:"賭場",Z703:"控制室",Z801:"禮拜堂",Z803:"金庫",Z901:"強化艙",Z903:"雷射走廊",Z1001:"配給站",Z1003:"水塔",
+  Z1101:"粉絲聚集區",Z1201:"黑市",Z1203:"手術室",Z1301:"後台通道",Z1302:"最後的舞台"
+});
+Object.assign(ROOM_EV,{攝影棚:"morgue",道具間:"warehouse",綠幕走廊:"shade",剪輯室:"control",觀眾留言牆:"shade",化妝間:"gene",主控室:"helipad",
+  斷訊大廳:"morgue",倒塌的看板:"warehouse",粉絲聚集區:"shade",閃光燈走廊:"shade",後台通道:"gene",最後的舞台:"helipad"});
+const ABYSS=10;
 // 深淵的特殊房間（不放傳送、基因庫這類依賴固定樓層的事件）
 const ABYSS_ROOMS={ration:"配給站",pharmacy:"藥房",armory:"武器庫",blackmarket:"黑市",casino:"賭場",surgery:"手術室",cryo:"冷凍艙",
   lotto:"樂透房",control:"控制室",respec:"操作室",water:"水塔",chapel:"禮拜堂",laser:"激光室",vault:"金庫",warehouse:"大倉庫",
   granary:"糧倉",prisoncell:"牢房",wine:"酒窖"};
 // 平衡：主線全破約需 40 次遠征（機器人模擬）。金條收入刻意壓低，抽卡要省著用
-const FIRST_CLEAR=[40,50,60,70,80,90,100,120];
-const CH_POW=[1,1.3,1.5,1.6,1.65,1.45,1.8,1.6]; // 第6、8章魔王會復活，倍數稍低以免變成高牆
+const FIRST_CLEAR=[40,50,60,70,80,90,100,120,150,200];
+const CH_POW=[1,1.3,1.5,1.6,1.65,1.45,1.8,1.6,1.95,1.75]; // 第6、8章魔王會復活，倍數稍低以免變成高牆；第9、10章刻意偏難
 function chPow(){return RUN&&RUN.ch!==ABYSS?CH_POW[RUN.ch]:1;}
 const CHAPTERS=[
   {name:"禁閉室",sub:"B7 停屍間 → 2F 停機坪",icon:"⛓",floors:FLOORS,minion:"ghost",boss:"warden",bossScale:1,bossHp:n=>48+n*12,
@@ -2760,7 +2789,36 @@ const CHAPTERS=[
     prep:"作者的書房。桌上攤著一份手稿，標題是「禁閉逃殺：完結篇」。最後一頁還沒寫——你可以替自己寫一行。",
     bossTitle:"🌅 真正的出口",bossLines:["屋頂上沒有直升機，只有一扇普通的木門，門縫透出晨光。","門前站著一個沒有臉的人，手裡握著一支筆——<b style='color:var(--red)'>創始者</b>。「每一關、每一個房間、每一句廣播，都是我寫的。包括你。」"],
     bossIntro:"創始者翻開手稿：「最後一章，由我來寫。」",lose:"創始者寫下：「全員，回到第一頁。」",
-    fall:"創始者的筆斷了，手稿散落一地。",escape:"創始者的筆斷了，手稿散落一地。你推開木門——外面是真正的早晨，沒有號碼牌、沒有廣播、沒有座位限制。<b>這一次，是你自己寫的結局。</b>"},
+    fall:"創始者的筆斷了，手稿散落一地。",escape:"創始者的筆斷了，手稿散落一地。你推開木門——外面是真正的早晨，沒有號碼牌、沒有廣播、沒有座位限制。<b>這一次，是你自己寫的結局。</b>……門外的路燈上，一顆紅色的錄影燈眨了一下。"},
+  {name:"觀眾席",sub:"V1 攝影棚 → V12 主控室",icon:"📺",floors:FLOORS_STUDIO,minion:"cameraman",boss:"producer",bossScale:1.6,bossHp:n=>120+n*28,
+    veh:"直播訊號線",vehIcon:"📡",bossLoc:"V12 · V1202 主控室",bossRoom:"主控室",prepLoc:"V12 · V1201 化妝間",
+    startLoc:"V101 · 攝影棚",startTitle:"🎥 開拍",
+    intro:it=>["木門外不是早晨，是一座攝影棚。天花板上掛滿燈光，四周的牆是一整片綠幕。",
+      "上千台螢幕同時亮起，每一台都在播你們剛剛推開門的畫面——下方的跑馬燈寫著：<b>「禁閉逃殺・最終季　即時收看人數：12,847,301」</b>",
+      `道具桌上擺著 ${it}，貼著一張便條：「給主角」。`,"你們從來沒有逃出去過。你們只是換了一個布景。往上爬，找到關掉直播的人。"],
+    shade:["一台攝影無人機從頭頂俯衝下來，紅燈亮著。","「卡！再來一次！」——四面八方的喇叭同時大喊。","鏡頭對準了你們。觀眾的留言像雨一樣刷過牆面。"],
+    prep:"化妝間。鏡子上貼滿了你們每一場戰鬥的劇照。抽屜裡有幾支「特效藥劑」——只能挑一支。",
+    bossTitle:"📡 主控室",bossLines:["幾百個監視螢幕圍成一圈，正中央是一張導播台。","一個戴著耳機、拿著劇本的男人轉過椅子——<b style='color:var(--red)'>製作人</b>。「你們是我做過最好的節目。可惜，好節目都要有個高潮。」"],
+    story:["他原本是一個收視率墊底的小製作人，做什麼節目都在第一季就被腰斬。",
+      "直到有一天他想出一個點子：把一群陌生人關起來，讓他們為了三個座位互相廝殺——全程直播。第一集就打破了紀錄。",
+      "禁閉室、研究所、孤島、黑塔……每一個布景都是他畫的設計圖。看守魔王、典獄長、主辦人、審判者，甚至「創始者」，全都是他寫進劇本的角色。",
+      "他不在乎誰活下來，他只在乎下一集的收視率。現在你們站在他面前——他笑著說，這是他做過最精彩的一集。"],
+    bossIntro:"製作人按下導播台：「現場直播，三、二、一——」",lose:"製作人喊了一聲「卡」。燈光暗下，你們被拖回了第一個布景。",
+    fall:"製作人的劇本被撕成碎片。",escape:"製作人的劇本被撕成碎片。你拔掉主控室的訊號線——上千台螢幕同時變黑。但在最後一格畫面裡，你看見觀眾的留言還在跳：「<b>還沒完。</b>」"},
+  {name:"終局",sub:"Z1 斷訊大廳 → Z13 最後的舞台",icon:"🔚",floors:FLOORS_FINALE,minion:"fanatic",boss:"audience",bossScale:1.7,bossHp:n=>135+n*30,
+    veh:"謝幕",vehIcon:"🎭",bossLoc:"Z13 · Z1302 最後的舞台",bossRoom:"最後的舞台",prepLoc:"Z13 · Z1301 後台通道",
+    startLoc:"Z101 · 斷訊大廳",startTitle:"📴 斷訊",
+    intro:it=>["直播斷了，但觀眾沒有離開。斷訊大廳的玻璃門外，擠滿了舉著手機的人。","他們不想讓節目結束。他們衝了進來。",
+      `你們在倒塌的看板底下找到 ${it}。`,"這棟大樓的頂端是最後的舞台。只要謝幕，這場遊戲就再也不會重播。往上爬吧——這是真正的最後一關。"],
+    shade:["一群舉著手機的人堵住了走廊：「主角在這裡！」","閃光燈亮成一片，什麼都看不見。","有人在喊你的名字，聲音一個接一個疊起來，變成上千人的合唱。"],
+    prep:"後台通道。牆上掛著一套謝幕用的戲服，口袋裡還有幾樣東西。只能帶走一樣。",
+    bossTitle:"🎭 最後的舞台",bossLines:["聚光燈打在空蕩蕩的舞台中央。台下沒有座位——只有一片由螢幕組成的海。","海浪般的留言匯聚成一個巨大的身影——<b style='color:var(--red)'>千萬觀眾</b>。「我們還想看。再演一次。」"],
+    story:["他們不是一個人，而是每一個曾經按下「收看」的人。",
+      "一開始，他們只是好奇。後來他們開始下注、開始投票、開始決定誰該被淘汰。每有一個人倒下，留言就多一倍。",
+      "製作人倒了，直播斷了，可是他們不想結束。他們湧進大樓，把手機、螢幕和目光，全部匯聚成一個巨大的身影。",
+      "他們說：「我們只是在看而已。」——但每一場禁閉逃殺，都是為了他們才開始的。只有讓他們親眼看見謝幕，這一切才會真的結束。"],
+    bossIntro:"千萬觀眾：「投票開始。」",lose:"票數過半。「重播。」——你們在停屍間的鐵櫃裡醒來。",
+    fall:"螢幕一塊接一塊熄滅。",escape:"螢幕一塊接一塊熄滅。最後一盞聚光燈下，你們三個人並肩鞠躬。沒有掌聲，也沒有重播——<b>這場遊戲，終於真正謝幕了。</b>"},
   {name:"無盡深淵",sub:"沒有出口。每 5 層一個守門者，打倒後可以選擇撤離",icon:"🕳",abyss:true,
     startLoc:"D0 · 深淵入口",startTitle:"🕳 深淵",
     intro:it=>["禁閉室的停屍間底下還有一道暗門。門後的樓梯一直往下，看不到盡頭。",
@@ -3157,7 +3215,7 @@ function allyBetrays(al,lines,ch){
   }
 }
 function shadeAmbush(ch,L,n){
-  const fi=RUN.fi,c=RUN.ch,id=c===ABYSS?pick(["ghost","mutant","guard","drone","deepone","mirror","echo","doppel"]):CH().minion,M=MONSTERS[id];
+  const fi=RUN.fi,c=RUN.ch,id=c===ABYSS?pick(["ghost","mutant","guard","drone","deepone","mirror","echo","doppel","cameraman","fanatic"]):CH().minion,M=MONSTERS[id];
   const scale=c===0?.8+fi*.07:c===ABYSS?1+fi*.04:.8+fi*.05+c*.08;
   const g=Array.from({length:n},()=>({id,stars:1,scale}));
   setScene(loc(ch),`${M.emoji} ${M.name}`,L,[
@@ -3194,7 +3252,7 @@ function runBattle(ch,group,ambush,intro,after){
 function helipad(L){
   const C=CH();RUN.fi=LAST();RUN.visited[RUN.fi]=C.bossRoom;
   const size=aliveMembers().length,hp=C.bossHp(size);
-  setScene(C.bossLoc,C.bossTitle,L.concat(C.bossLines),[{label:"⚔️ 決戰",cls:"pri",act(){
+  const fight={label:"⚔️ 決戰",cls:"pri",act(){
     startBattle({title:C.bossLoc+" 決戰",home:"run",items:RUN.items,intro:C.bossIntro,
       A:aliveMembers().map(memberToUnit),B:[{id:C.boss,stars:1,scale:C.bossScale,maxHp:hp,hp,mult:dMul(),pow:chPow()}],
       onEnd(win,B){
@@ -3205,11 +3263,14 @@ function helipad(L){
         RUN.xpNote=runExp(25+RUN.ch*12);
         seats();
       }});
-  }}]);render();
+  }};
+  // 有魔王故事的章節，可以先聽故事再開打
+  const opts=C.story?[fight,{label:`📜 聽聽${MONSTERS[C.boss].name}的故事`,act(){setScene(C.bossLoc,`📜 ${MONSTERS[C.boss].name}的故事`,C.story,[fight]);render();}}]:[fight];
+  setScene(C.bossLoc,C.bossTitle,L.concat(C.bossLines),opts);render();
 }
 /* ---- 深淵守門者 ---- */
 function abyssBoss(L){
-  const fi=RUN.fi,id=pick(["warden","zero","chief","host","kraken","judge","loopkeeper","origin"]),size=aliveMembers().length,hp=Math.round((50+size*12)*(1+fi*.04));
+  const fi=RUN.fi,id=pick(["warden","zero","chief","host","kraken","judge","loopkeeper","origin","producer","audience"]),size=aliveMembers().length,hp=Math.round((50+size*12)*(1+fi*.04));
   const where=`D${fi} · 守門者之間`;RUN.visited[fi]="守門者";
   setScene(where,"💀 守門者",L.concat([`深淵第 ${fi} 層的門後，站著一個熟悉的身影——<b style='color:var(--red)'>${MONSTERS[id].name}</b>。`,"但它的眼睛裡什麼都沒有，只有深淵。"]),[{label:"⚔️ 迎戰",cls:"pri",act(){
     startBattle({title:where,home:"run",items:RUN.items,intro:"深淵在低語。",

@@ -1609,7 +1609,7 @@ function xferBlock(id){
   if(RUN&&RUN.active&&RUN.party.some(m=>!m.ally&&m.id===id))return "遠征中";
   return "";
 }
-function xferStat(id,lv){const o=SAVE.owned[id],s=cardStats(id,o.stars,1+.02*(lv-1),brOf(id));return `❤${s.maxHp} ⚔${s.atk}`;}
+function xferStat(id,lv){const o=SAVE.owned[id],s=cardStats(id,o.stars,lvMul(lv),brOf(id));return `❤${s.maxHp} ⚔${s.atk}`;}
 function openXfer(step){
   if(step==="reset")XFER={src:"",dst:""};
   const ids=sortedIds().filter(id=>SAVE.owned[id]),src=XFER.src&&SAVE.owned[XFER.src]?XFER.src:"",dst=XFER.dst&&SAVE.owned[XFER.dst]?XFER.dst:"";
@@ -2027,11 +2027,12 @@ function teamUnit(id){
 }
 
 /* ===================== LEVEL ===================== */
-// 角色等級：戰鬥勝利得經驗，每級全能力 +2%（用 cardStats 的 scale 疊上去），上限 Lv.50
-const LV_MAX=50;
+// 角色等級：戰鬥勝利得經驗，每級全能力 +2%（用 cardStats 的 scale 疊上去），Lv.50 之後經驗 ×5、每級只 +0.8%，上限 Lv.100
+const LV_MAX=100,LV_SOFT=50; // 50 級後：所需經驗 ×5、每級加成降為 0.8%（Lv.100 比 Lv.50 多約 20%）
 function lvOf(id){const o=SAVE.owned[id];return o&&o.lv||1;}
-function lvScale(id){return 1+.02*(lvOf(id)-1);}
-function lvNeed(lv){return 8+lv*6;}
+function lvMul(lv){return 1+.02*(Math.min(lv,LV_SOFT)-1)+(lv>LV_SOFT?.008*(lv-LV_SOFT):0);}
+function lvScale(id){return lvMul(lvOf(id));}
+function lvNeed(lv){return (8+lv*6)*(lv>=LV_SOFT?5:1);}
 // 給經驗：ids 是參戰的自己角色，dead 裡的只拿一半；回傳升級訊息
 function gainExp(ids,n,dead=[]){
   const ups=[];
@@ -2051,7 +2052,7 @@ function lvBar(id){
   const o=SAVE.owned[id],lv=lvOf(id);if(!o)return "";
   if(lv>=LV_MAX)return `<div class="small"><b>Lv.${LV_MAX}</b> <span class="dim">（已滿級）</span></div>`;
   const e=o.exp||0,need=lvNeed(lv);
-  return `<div class="small"><b>Lv.${lv}</b> <span class="dim">經驗 ${e}/${need}・每級全能力+2%</span></div><div class="ratebar" style="height:6px"><i style="width:${e/need*100}%"></i></div>`;
+  return `<div class="small"><b>Lv.${lv}</b> <span class="dim">經驗 ${e}/${need}・每級全能力+${lv>=LV_SOFT?"0.8":"2"}%</span></div><div class="ratebar" style="height:6px"><i style="width:${e/need*100}%"></i></div>`;
 }
 
 /* ===================== TRAINING ===================== */

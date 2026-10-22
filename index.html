@@ -351,6 +351,23 @@ footer.credit a{color:var(--gold)}
 .gcard.dexlock{opacity:.5;filter:grayscale(.55)}
 .gcard.dexlock:hover{opacity:.85}
 
+
+/* 老國王對話框／故事頁 */
+.npcbox{display:flex;gap:12px;margin-top:16px;padding:12px;border:1px solid #8a6d2b;border-radius:14px;background:linear-gradient(135deg,#2c2010,#17130c);box-shadow:0 0 18px rgba(245,196,81,.15);animation:fadein .6s both}
+.npcav{width:72px;height:72px;flex-shrink:0;border-radius:50%;overflow:hidden;border:2px solid var(--gold);box-shadow:0 0 14px rgba(245,196,81,.55);background:#000;display:flex;align-items:center;justify-content:center}
+.npcav.big{width:96px;height:96px}
+.npcav .avimg{width:100%;height:100%;object-fit:cover}
+.npcsay{flex:1;min-width:0}
+.npcname{font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:4px}
+.npcsay p{margin:0 0 7px;color:#f1e6c8;font-size:14.5px;line-height:1.65;animation:fadein .6s both}
+.npcsay p b{color:#ffd97a}
+.lorech{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin-top:8px}
+.lorech summary{cursor:pointer;padding:4px 0;list-style-position:inside}
+.lorech[open]{border-color:#8a6d2b}
+.kingrow{margin-top:8px;padding:8px 10px;border-left:3px solid #8a6d2b;background:rgba(245,196,81,.05);border-radius:0 8px 8px 0}
+.kingrow p{margin:4px 0;font-size:14px;line-height:1.65}
+.kingrow.bossst{border-left-color:var(--red);background:rgba(229,72,77,.06)}
+
 /* duel */
 .draftside{display:flex;gap:6px;min-height:70px;flex-wrap:wrap}
 .draftside .av{width:60px;height:60px;border-radius:8px;overflow:hidden;border:2px solid var(--line)}
@@ -900,6 +917,7 @@ function migrate(s){
   if(!s.train)s.train={best:0};
   if(!s.bosses)s.bosses={};
   if(!s.ach)s.ach={};
+  if(!s.lore)s.lore={};
   s.team=(s.team||[]).filter(id=>s.owned[id]);
   if(s.charms.stone==null)s.charms.stone=0;
   return s;
@@ -1003,7 +1021,7 @@ function toggleBgm(){
 
 /* ===================== VIEW ROUTER ===================== */
 let VIEW="home";
-const NAV=[["home","主頁"],["gacha","招募"],["team","隊伍"],["gear","裝備"],["shop","商店"],["run","遠征"],["train","練功房"],["arena","競技場"],["duel","雙人對決"],["ach","成就"]];
+const NAV=[["home","主頁"],["gacha","招募"],["team","隊伍"],["gear","裝備"],["shop","商店"],["run","遠征"],["train","練功房"],["arena","競技場"],["duel","雙人對決"],["ach","成就"],["story","故事"]];
 function locked(){return (RUN&&RUN.active)||(CUR_B&&!CUR_B.done)||(DUEL&&DUEL.phase==="battle")||!!NET;}
 function go(v){
   if(locked()&&v!==VIEW){toast("進行中無法離開（遠征中可按「放棄遠征」）");return;}
@@ -1035,7 +1053,7 @@ function render(){
 }
 function renderInner(){
   renderHeader();
-  const f={home:viewHome,gacha:viewGacha,team:viewTeam,gear:viewGear,shop:viewShop,run:viewRun,train:viewTrain,arena:viewArena,ach:viewAch,duel:viewDuel,battle:viewBattle}[VIEW]||viewHome;
+  const f={home:viewHome,gacha:viewGacha,team:viewTeam,gear:viewGear,shop:viewShop,run:viewRun,train:viewTrain,arena:viewArena,ach:viewAch,story:viewStory,duel:viewDuel,battle:viewBattle}[VIEW]||viewHome;
   $("#view").innerHTML=f();
   if(VIEW==="battle"){const l=$("#blog");if(l)l.scrollTop=l.scrollHeight;}
   if(CUR_B&&CUR_B.online&&!CUR_B.guest)pushSnap(CUR_B);
@@ -1096,6 +1114,7 @@ function viewHome(){
     <div class="mode" onclick="go('shop')"><div class="ic">🛒</div><b>商店・裝備</b><p>買裝備、強化到 +10（可能失敗！），還能買遠征物資帶上路</p></div>
     <div class="mode" onclick="go('run')"><div class="ic">🪜</div><b>逃殺遠征</b><p>文字冒險主線 ${CHAPTERS.length-1} 章＋無盡深淵：選房間、搜物資、躲毒氣、結盟或背叛。目前進度：${progText()}</p></div>
     <div class="mode" onclick="go('train')"><div class="ic">🏋</div><b>練功房</b><p>重複打怪物練等級（每級全能力+2%），已解鎖到第 ${Math.min(TRAIN_MAX,trainBest()+1)} 關</p></div>
+    <div class="mode" onclick="go('story')"><div class="ic">👑</div><b>故事</b><p>老國王說過的話與魔王的背景，12 章是一條連續的故事</p></div>
     <div class="mode" onclick="go('ach')"><div class="ic">🏆</div><b>成就</b><p>已達成 ${ACH.filter(a=>SAVE.ach&&SAVE.ach[a.id]).length}／${ACH.length}，達成自動領金條和突破石</p></div>
     <div class="mode" onclick="go('arena')"><div class="ic">⚔️</div><b>競技場</b><p>對戰 AI 小隊爬塔，第 ${SAVE.arenaTier} 層。贏了拿金條</p></div>
     <div class="mode" onclick="go('duel')"><div class="ic">🆚</div><b>雙人對決</b><p>同機輪流操作，或建立房間和朋友網路連線互毆</p></div>
@@ -2789,6 +2808,7 @@ const ACH=[
   {g:"遠征",id:"ch12",n:"衛冕冠軍",d:"通關第 12 章（主線全破）",v:s=>s.prog.cleared,t:12,r:{stone:15}},
   {g:"遠征",id:"hard1",n:"自找麻煩",d:"以困難難度逃出任一章",v:s=>Object.values(s.prog.dclears||{}).some(d=>d[3])?1:0,t:1,r:{stone:5}},
   {g:"遠征",id:"abyss10",n:"深淵行者",d:"無盡深淵到達 D10",v:s=>s.prog.abyssBest||0,t:10,r:{gold:80}},
+  {g:"遠征",id:"lore",n:"傾聽者",d:"聽完老國王在 12 章說的全部 36 段話",v:s=>Object.keys(s.lore||{}).filter(k=>/^[ibe]\d+$/.test(k)).length,t:36,r:{stone:10}},
   {g:"遠征",id:"abyss30",n:"深淵之底",d:"無盡深淵到達 D30",v:s=>s.prog.abyssBest||0,t:30,r:{stone:10}},
   {g:"戰鬥",id:"arena10",n:"競技場常客",d:"競技場到達第 10 層",v:s=>s.arenaTier,t:10,r:{gold:50}},
   {g:"戰鬥",id:"train30",n:"苦練成材",d:"練功房通過第 30 關",v:s=>(s.train&&s.train.best)||0,t:30,r:{stone:5}},
@@ -3241,6 +3261,109 @@ const CHAPTERS=[
       `你們在門邊撿到了 ${it}。`,"往下走吧。"],
     shade:["黑暗裡有東西在呼吸。","你們走過的地方，影子沒有跟上來。","深淵在低語。"]}
 ];
+
+/* ===================== 劇情：老國王與魔王背景 ===================== */
+// 老國王是貫穿 12 章的旁白角色：進章節、到魔王房前、通關後各說一段話（講真相，也提醒魔王的特性）。
+// 真相：三個座位原本是王座旁的三個位子（一張王座、兩張椅凳），是國王選繼承人的「三席試煉」。
+// 史官寫下規則、司儀把試煉賣給製作人、觀眾不肯散場……最後一條規則要三個人「一個都不丟下」才能結束。
+const KING_TALK={
+  intro:[
+    ["……聽得到嗎？別出聲，也別怕。","我是替這座牢籠守夜的老人，你們叫我 <b>老國王</b> 就好。我沒有軍隊，也沒有王國，只剩一張椅子和一點點聲音。","往上爬，補給要省著用，毒氣會追上來。還有——那架直升機只有三個座位，這句話……不是我當初的意思。"],
+    ["別怪那架直升機，它從來沒打算帶你們去自由。","這裡的人把人當成材料，你們手腕上的號碼牌，就是他們替材料編的號。","小心培養槽裡的東西。有些……以前也是人。"],
+    ["這座島，以前是我流放罪人的地方。後來他們學會了：只要規則夠長，誰都能被關進來。","獄警只是照規矩做事。可是規矩是誰寫的呢？你們很快就會知道。"],
+    ["黑塔……我從沒蓋過這麼高的塔。有人把我的王城，一磚一瓦搬進了城市裡。","往上走，你會遇到「司儀」。他本來只負責在慶典上報幕，後來，他學會了賣票。"],
+    ["你們沉進了方舟。這是我當年準備讓百姓逃難的船隊，只是……沒趕上起航。","海裡那些長著鱗的人，別當成怪物。他們，是被藏起來的百姓。"],
+    ["這座審判所，我很熟。我就是在這裡，被判決的。","判決書只有一行：「見證試煉，直到試煉結束。」所以我不能離開，也不能死。"],
+    ["這裡的鐵櫃，你們熟悉嗎？你們已經來過 <b>三十七次</b>。","每一次，你們都忘了。只有我記得：每一次的名字、每一次倒在哪一層。這一次，別相信時之門。"],
+    ["這裡是第一座試煉場，是我當年親手搭起來的。","規則是我的史官寫下的。小心鏡子裡走出來的人——他們一直都是你們。"],
+    ["你們以為逃出去了？門外不是早晨，是攝影棚。","我的試煉被拿去賣票了，連我的朝臣，也被寫成了劇本裡的角色。別對鏡頭笑——製作人就是靠這個賺錢的。"],
+    ["觀眾衝進來了。手下留情——他們不是敵人，只是還沒看夠。","往上爬。只有謝了幕，他們才會回家。"],
+    ["第二季。這次他們要的不是新人，是你們——前季冠軍。","選角導演會替每個人決定角色。別接受導演給你們的劇本。"],
+    ["決賽的對手，是「上一季的你」。他是試煉用你們的資料，做出來的完美繼承者。","他沒有同伴，所以不相信有人會留下來。證明給他看。"]
+  ],
+  boss:[
+    ["上面是看守魔王。他曾是我王國的守門人，一輩子只守一件事：不讓人離開。","他血量低於一半就會狂暴，毒氣也噴得更凶。帶上藥片，別讓前排同時倒下。"],
+    ["實驗體零號，是第一個被送進試煉的孩子。他有編號，是因為這裡沒有人再叫過他的名字。","他每回合都會自己回血，傷害不夠就等於白打。集中火力，一口氣壓下去。"],
+    ["典獄長最痛恨違規。全面鎮壓會讓人暈眩，一次可能廢掉你們兩個角色。","趁血量還沒掉到一半，多打一點——過了一半，防禦會變高。"],
+    ["主辦人會輪流用三種手段：全體打擊、自己回血、全體中毒。而且倒下一次，還會再站起來。","所以別把最強的招，用在他的第一條命上。"],
+    ["深海巨獸會用觸手纏住全隊，每回合還會自己回血。火力不夠，打起來像打水。","它不是在攻擊你們，它是在守住身後的人。"],
+    ["審判者的最終審判會打全隊，再追著血量最低的人補一刀。保護好你們最脆弱的那個。","他倒下一次，還會站起來。"],
+    ["輪迴看守會讓時間停止，全隊都有機會被暈眩，再靠回血慢慢耗你們。","他不是想殺你們。他只是怕輪迴結束，你們就真的不見了。"],
+    ["創始者會用筆「重寫」你們：降低攻擊、降低防禦，或是中毒。他倒下一次，還會站起來。","贏他之前，先記住他寫下的最後一條規則。"],
+    ["製作人的收視率爆發，會讓他自己越打越強。拖得越久越危險，要速戰速決。","他減傷很高，不要跟他比耐力。"],
+    ["千萬觀眾會投票處刑：先重擊血量最低的人，再打全體。保持全隊血量，別讓任何一個人落單。","他倒下一次，還會再站起來。"],
+    ["試鏡淘汰會打全隊，還會讓血量最低的人暈眩。血最低的人，要優先補血。","導演每回合都會回血，硬拚不如集中火力。"],
+    ["「上一季的你」會閃避，每次出手還會回血，倒下一次還會站起來。","無視防禦的穿透招式和固定傷害不會被閃避，派上它們。"]
+  ],
+  end:[
+    ["你們出來了。我已經很久沒看見有人活著走出那扇門。","但這只是第一道門。三個座位的故事，還沒有說完——往下一層走吧，孩子們。"],
+    ["零號倒下前，是不是看了你們一眼？","那孩子，曾是我的長子。我讓他第一個走進去，只是想證明這場試煉公平。……我錯了。"],
+    ["典獄長從前是我最信任的獄官，鑰匙就是我交出去的。","我沒想過，有一天，鑰匙會變成信仰。"],
+    ["他說你們是第一組走到這裡的。……他對每一組，都這麼說。","三個座位，是我王座旁的位子：一張王座，兩張椅凳，三個人一起守這個國家。他們把它改成了「只有三個人能活」。","下一站是海底——有人在等你們。"],
+    ["謝謝你們沒有趕盡殺絕。它守了這片海很久很久。","它一直在等，等有人把它從水裡放出去。"],
+    ["他不是壞人，只是太相信法條了。判我的時候……他也哭過。","接下來，你們會回到起點。別慌——那不是倒退。"],
+    ["輪迴，斷了。","三十七次的你們，都在謝謝現在的你們。"],
+    ["「試煉在出現三名同行的繼承者之前，不得結束。」這就是最後一條規則。","三個座位，從來不是要你們選誰留下。是要你們三個人，<b>一個都不丟下</b>。"],
+    ["他把我的試煉剪成了節目。但節目一旦開始，觀眾就不肯散。","接下來，你們要面對的不是敵人，是「看」的人。"],
+    ["謝幕了。可是我聽見有人在說：「第二季什麼時候開始？」","……唉。他們還是想看。"],
+    ["導演說了「錄取」。你們知道嗎？那是導演第一次，把名字從淘汰名單上劃掉。","決賽在前面。……做好準備，對手你們認識。"],
+    ["三個座位……終於，坐滿了三個人。","試煉結束了。你們聽見了嗎？門外，天亮了。","孩子們，謝謝你們。我可以走了。","如果你們還想往下看——深淵，是被這場試煉丟下的人。他們也在等人去接他們。"]
+  ],
+  abyss:[
+    ["這裡是我的地牢。底下，是被試煉丟下的人。","你們要往下走，我不攔。只是別忘了：越深越危險，也越孤單。","還沒有人，從最底下走回來過。"]
+  ]
+};
+// 第 1～8 章魔王的背景故事（第 9～12 章的在 CHAPTERS 裡）。魔王們原本都是老國王的朝臣
+const BOSS_STORY_MAIN=[
+  ["他曾是王城的守門將，四十年來只守一道門。","圍城那年，敵軍放出毒氣。他戴上防毒面具站在門前，對湧上來的百姓大喊：「不准出去，外面有毒！」——他救了很多人。","後來毒氣散了，沒有人告訴他，命令也沒有人撤回。於是「不准出去」，成了他唯一的名字。","每一個想離開的人，他都擋下來。他以為自己，還在保護他們。"],
+  ["他有名字，可是沒有人再叫過了。現在，只剩編號：0。","試煉開始時，國王的長子第一個走進去。御醫們說：「要先確定每一關都撐得過去。」於是他被一次次改造、一次次修補。","他早就忘了自己是誰，只記得一句話：「第一個進去的人，要替後面的人探路。」","所以每當有人來到這裡，他都會撲上去——他想確認，你們撐不撐得過後面的關卡。"],
+  ["典獄長曾是王國最看重規矩的人。有一次，放走了一名囚犯——當夜，一座村莊就燒了起來。","從那天起，典獄長發誓：「我一個都不放。」鎖鏈、鑰匙、塔樓，全是為了這句誓言。","試煉的規則裡，只有一條對典獄長是好消息：越獄者必須被抓回。這終於給了誓言一個永遠不會錯的理由。","不是不能放你們走。是怕這一次，又放錯了人。"],
+  ["他曾是王宮裡的司儀，專門在慶典上宣布大事。他的聲音，全城都愛聽。","王國覆滅以後，再沒有什麼值得宣布。他站在空蕩蕩的大廳裡，一個人練習報幕，練了很多年。","直到有個收視率墊底的製作人找上門：「把人關起來互相廝殺，全程直播。」司儀笑著答應了——因為終於又有人，要聽他說話。","面具是後來才戴上的。他不想讓人看見，笑著的時候，他的眼睛是空的。"],
+  ["沒有人知道它從哪裡來。港口的老人說，它是守護這片海的神獸。","方舟沉沒那天，它把整艘船托進了深海，躲過了追兵。船上的百姓活了下來，慢慢長出鱗與鰓，成了後來的深海人。","它守了一代又一代，看著他們從不敢浮上水面，到忘記水面之上還有什麼。","對它來說，每一個闖進來的人都是威脅——它不能再讓任何人，從這個家裡帶走一個孩子。"],
+  ["他是王國最公正的法官，一輩子沒有判錯過一個案子。","試煉的規則殺了人。依法條，立下規則的人，要見證試煉到最後。於是他親手判了自己的國王：「見證試煉，直到試煉結束。」","宣讀判決的那天，他哭了。可他還是念完了。他說：「法律不能因為我難過，就改變。」","從此，他在審判庭裡等著每一個闖進來的人，等一個他不必判「有罪」的人。"],
+  ["他是王宮的司時官，管著全城的水鐘與沙漏。他一輩子最愛的事，是準時。","試煉開始以後，他看著一個又一個年輕人倒下。他受不了，偷偷把沙漏翻了過去——時間倒流，所有人回到起點。","於是輪迴開始了。三十七次、三十八次……每一次，他都記得所有人的名字。","他不想殺你們。他只是怕：輪迴一結束，你們就真的，不會再回來了。"],
+  ["他是王國的史官，一支筆寫過王國所有的大事。國王請他寫下試煉的規則：要公平，要有出口。","他寫了九十九條。圍城最黑暗的那一夜，他寫下了第一百條：「試煉在出現三名同行的繼承者之前，不得結束。」他想保護國王的孩子，讓他們有機會一起活下去。","可是那支筆，自己動了起來。此後的每一個房間、每一句廣播，都是它寫的。他停不下來，也想不起自己的名字。","他一直在等：等一個能把最後一條規則，真正做到的人。"]
+];
+BOSS_STORY_MAIN.forEach((t,i)=>{CHAPTERS[i].story=t;});
+
+// 讓老國王在目前的場景裡說話；說過的會記進「故事」頁
+const LORE_KEY={intro:"i",boss:"b",end:"e",abyss:"a"};
+function kingSay(kind,ch){
+  const t=KING_TALK[kind]&&KING_TALK[kind][ch];if(!t||!RUN||!RUN.scene)return;
+  RUN.scene.npc={id:"king",name:"老國王",lines:t};
+  SAVE.lore=SAVE.lore||{};const k=LORE_KEY[kind]+ch;
+  if(!SAVE.lore[k]){SAVE.lore[k]=1;save();}
+  glog("👑KING",`${kind} ${ch}`);
+}
+function npcBox(n){
+  return `<div class="npcbox"><div class="npcav"><img class="avimg" src="images/npc/${n.id}.webp" alt="" draggable="false" onerror="this.outerHTML='<span class=emo>👑</span>'"></div>
+    <div class="npcsay"><div class="npcname">👑 ${n.name}</div>${n.lines.map((p,i)=>`<p style="animation-delay:${.4+i*.25}s">${p}</p>`).join("")}</div></div>`;
+}
+
+/* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
+function viewStory(){
+  const cl=SAVE.prog.cleared,seen=SAVE.lore||{};
+  const has=(k,i)=>!!seen[LORE_KEY[k]+i]||cl>i;
+  const kinds=[["intro","🚪 進入這一章"],["boss","⚔️ 魔王之前"],["end","🏁 通關之後"]];
+  let heard=0;for(let i=0;i<12;i++)kinds.forEach(([k])=>{if(has(k,i))heard++;});
+  const chs=Array.from({length:12},(_,i)=>{
+    const C=CHAPTERS[i],open=i===Math.min(cl,11),n=kinds.filter(([k])=>has(k,i)).length;
+    return `<details class="lorech" ${open?"open":""}><summary><b>第 ${i+1} 章　${C.icon} ${C.name}</b> <span class="small dim">${n}/3${cl>i?"・📜":""}</span></summary>
+      ${kinds.map(([k,l])=>has(k,i)?`<div class="kingrow"><div class="small dim">${l}</div>${KING_TALK[k][i].map(p=>`<p>${p}</p>`).join("")}</div>`:`<div class="kingrow dim small">🔒 ${l}：還沒有聽見</div>`).join("")}
+      ${cl>i&&C.story?`<div class="kingrow bossst"><div class="small dim">📜 ${MONSTERS[C.boss].name}的故事</div>${C.story.map(p=>`<p>${p}</p>`).join("")}</div>`:`<div class="kingrow dim small">🔒 📜 ${MONSTERS[C.boss].name}的故事：通關這一章後解鎖</div>`}
+    </details>`;}).join("");
+  return `<h2>👑 故事</h2>
+  <div class="panel row" style="gap:14px;align-items:center">
+    <div class="npcav big"><img class="avimg" src="images/npc/king.webp" alt="" onerror="this.outerHTML='<span class=emo>👑</span>'"></div>
+    <div style="flex:1;min-width:0"><b style="font-size:18px">老國王</b><div class="small dim">替這座牢籠守夜的老人</div>
+      <div class="small" style="margin-top:6px">在每一章，他會悄悄告訴你真相，也提醒魔王的特性。已聽見 <b style="color:var(--gold)">${heard}／36</b> 段。</div>
+      <div class="ratebar"><i style="width:${heard/36*100}%"></i></div></div></div>
+  <p class="dim small">12 章是一條連續的故事。每一章的內容，通關後或聽過就會記在這裡；也可以回頭重看魔王的背景。</p>
+  ${chs}
+  <details class="lorech"><summary><b>🕳 無盡深淵</b> <span class="small dim">${seen.a0?"1/1":"0/1"}</span></summary>
+    ${seen.a0?`<div class="kingrow">${KING_TALK.abyss[0].map(p=>`<p>${p}</p>`).join("")}</div>`:`<div class="kingrow dim small">🔒 進入無盡深淵後解鎖</div>`}</details>`;
+}
+
 const CH=()=>CHAPTERS[RUN.ch];
 const FL=()=>RUN.floors;
 const LAST=()=>RUN.ch===ABYSS?Infinity:RUN.floors.length-1;
@@ -3319,6 +3442,7 @@ function startRun(c=0,diff=1){
   const it=pick(["pill","knife","wine"]);gainItem(it);
   RUN.visited[0]=C.startLoc.split(" · ")[1];
   setScene(C.startLoc,C.startTitle,C.intro(`${ITEMS[it].icon}${ITEMS[it].name}`).concat(intro),[{label:C.abyss?"⬇ 往下走":"⬆ 往上爬",cls:"pri",act:toChoose}]);
+  if(C.abyss)kingSay("abyss",0);else kingSay("intro",c);
   VIEW="run";render();
 }
 // 遠征存檔：選房間畫面存完整進度；進房間後存「事件中」，重開時跳過該事件（守門者／魔王會重打）
@@ -3681,7 +3805,7 @@ function helipad(L){
   }};
   // 有魔王故事的章節，可以先聽故事再開打
   const opts=C.story?[fight,{label:`📜 聽聽${MONSTERS[C.boss].name}的故事`,act(){setScene(C.bossLoc,`📜 ${MONSTERS[C.boss].name}的故事`,C.story,[fight]);render();}}]:[fight];
-  setScene(C.bossLoc,C.bossTitle,L.concat(C.bossLines),opts);render();
+  setScene(C.bossLoc,C.bossTitle,L.concat(C.bossLines),opts);kingSay("boss",RUN.ch);render();
 }
 /* ---- 深淵守門者 ---- */
 function abyssBoss(L){
@@ -3782,7 +3906,7 @@ function endRun(escaped,lines=[]){
   SAVE.gold+=gain;if(r.ch===0)SAVE.stats.best=Math.max(SAVE.stats.best,reached);save();
   r.scene={loc:escaped?"夜空":"黑暗",title:escaped?(abyss?"🪜 撤離深淵":`${C.vehIcon} 逃出生天`):"✝ 遠征失敗",lines:out,opts:[{label:"回到主頁",cls:"pri",act(){RUN=null;go("home");}},{label:"再來一次",act(){RUN=null;startRun(r.ch,r.diff);}},
     ...(escaped&&!abyss&&CHAPTERS[r.ch+1]&&r.ch+1<ABYSS?[{label:`➡ 前往第 ${r.ch+2} 章`,act(){RUN=null;startRun(r.ch+1,r.diff);}}]:[])]};
-  r.choices=null;VIEW="run";render();
+  r.choices=null;if(escaped&&!abyss)kingSay("end",r.ch);VIEW="run";render();
 }
 
 /* ---- 遠征介面 ---- */
@@ -3844,7 +3968,7 @@ function viewRun(){
   }else{
     const s=r.scene;
     main=`<div class="scene"><div class="loc">${s.loc}</div><h2>${s.title}</h2>
-      <div class="txt">${s.lines.filter(Boolean).map((t,i)=>`<p style="animation-delay:${i*.18}s">${t}</p>`).join("")}</div>
+      <div class="txt">${s.lines.filter(Boolean).map((t,i)=>`<p style="animation-delay:${i*.18}s">${t}</p>`).join("")}</div>${s.npc?npcBox(s.npc):""}
       <div class="opts">${s.opts.map((o,i)=>`<button class="${o.cls||""}" onclick="sceneOpt(${i})">${o.label}</button>`).join("")}</div></div>`;
   }
   const al=allyMember();

@@ -32,6 +32,18 @@
 - 無盡深淵：Dark Cavern Ambient — by Paul Wortmann，取自 OpenGameArt（https://opengameart.org/content/dark-cavern-ambient ），授權 CC0。
 - 戰鬥／逃出成功：DEgITx - Machine Paradigm（https://www.youtube.com/watch?v=2uGf8-vfFLI ，作者頻道 @DEgITx），透過 YouTube 嵌入播放器播放，版權屬於原作者。存檔存在瀏覽器 localStorage。
 
+## 帳號／雲端存檔
+
+右上角 👤 可以註冊「自訂帳號＋密碼」，登入後存檔自動上傳 Firebase（`users/{uid}`），換裝置登入同一個帳號就能接著玩；不登入也能照常玩。帳號會轉成「帳號@jbts.game」當登入信箱（不寄信，忘記密碼無法重設）。只能在網路版使用。
+
+啟用步驟（只要做一次）：
+1. Firebase 主控台 → Authentication → Sign-in method → 開啟「電子郵件／密碼」。
+2. 部署資料庫規則：`firebase deploy --only database`（規則在 `database.rules.json`，已加上 `users/$uid` 只能本人讀寫）。
+
+## 成就
+
+「成就」頁共 27 個成就（招募、養成、遠征、戰鬥、裝備），達成時自動發金條或突破石。
+
 ## 網路對戰
 
 雙人對決的「網路對戰」使用 Firebase Realtime Database（專案 `confinement-escape-text`）。房主的瀏覽器負責計算戰鬥，挑戰者只送出操作並接收戰況快照。資料庫規則在 `database.rules.json`，修改後用 `firebase deploy --only database` 部署。

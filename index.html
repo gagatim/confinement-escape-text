@@ -317,6 +317,12 @@ footer.credit a{color:var(--gold)}
   .ccard,.ccard::before,.stars.max,.av.fx-SSR,.pull .f,.pull .f::after,.gcard,.gcard::before,.gcard .gi,.gcard .lv,.gslot,.bigicon,.bosscard{animation:none!important}
 }
 
+/* 成就 */
+.achgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.achcard{display:flex;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;opacity:.75}
+.achcard.done{opacity:1;border-color:var(--gold);background:linear-gradient(90deg,rgba(245,196,81,.12),var(--panel))}
+.achcard .ai{font-size:28px}
+
 /* duel */
 .draftside{display:flex;gap:6px;min-height:70px;flex-wrap:wrap}
 .draftside .av{width:60px;height:60px;border-radius:8px;overflow:hidden;border:2px solid var(--line)}
@@ -355,6 +361,7 @@ footer.credit a{color:var(--gold)}
     <button class="menuBtn" id="menuBtn" onclick="toggleNav()">☰ 選單</button>
     <nav id="nav"></nav>
     <div class="wallet" id="wallet"></div>
+    <button class="muteBtn" id="acctBtn" onclick="openAccount()" title="帳號／雲端存檔">👤</button>
     <button class="muteBtn" onclick="openGuide(0)" title="玩法導引">❓</button>
     <button class="muteBtn" id="bgmBtn" onclick="toggleBgm()" title="背景音樂"></button>
     <button class="muteBtn" id="muteBtn" onclick="toggleMute()" title="音效"></button>
@@ -850,6 +857,7 @@ function migrate(s){
   if(!s.charms)s.charms={protect:0,luck:0};
   if(!s.train)s.train={best:0};
   if(!s.bosses)s.bosses={};
+  if(!s.ach)s.ach={};
   s.team=(s.team||[]).filter(id=>s.owned[id]);
   if(s.charms.stone==null)s.charms.stone=0;
   return s;
@@ -881,7 +889,10 @@ function doImport(){
 }
 function save(){
   if(SAVE_READY&&!checkIntegrity())return;
+  if(SAVE_READY)checkAch();
+  SAVE.updatedAt=Date.now();
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(packSave(SAVE)));}catch(e){}
+  if(SAVE_READY)scheduleUpload();
 }
 let SAVE_READY=false;
 let SAVE=loadSave();
@@ -950,7 +961,7 @@ function toggleBgm(){
 
 /* ===================== VIEW ROUTER ===================== */
 let VIEW="home";
-const NAV=[["home","主頁"],["gacha","招募"],["team","隊伍"],["gear","裝備"],["shop","商店"],["run","遠征"],["train","練功房"],["arena","競技場"],["duel","雙人對決"]];
+const NAV=[["home","主頁"],["gacha","招募"],["team","隊伍"],["gear","裝備"],["shop","商店"],["run","遠征"],["train","練功房"],["arena","競技場"],["duel","雙人對決"],["ach","成就"]];
 function locked(){return (RUN&&RUN.active)||(CUR_B&&!CUR_B.done)||(DUEL&&DUEL.phase==="battle")||!!NET;}
 function go(v){
   if(locked()&&v!==VIEW){toast("進行中無法離開（遠征中可按「放棄遠征」）");return;}
@@ -965,6 +976,7 @@ function renderHeader(){
   $("#menuBtn").textContent=(NAV_OPEN?"✕ ":"☰ ")+(cur?cur[1]:"選單");
   $("#wallet").textContent="🪙 "+SAVE.gold;
   $("#muteBtn").textContent=SAVE.muted?"🔇":"🔊";
+  $("#acctBtn").textContent=ACCT?"👤 "+ACCT.name:"👤";
   $("#bgmBtn").textContent=SAVE.bgm===false?"🎵✕":"🎵";
 }
 let BATTLE_HOME="arena";
@@ -981,7 +993,7 @@ function render(){
 }
 function renderInner(){
   renderHeader();
-  const f={home:viewHome,gacha:viewGacha,team:viewTeam,gear:viewGear,shop:viewShop,run:viewRun,train:viewTrain,arena:viewArena,duel:viewDuel,battle:viewBattle}[VIEW]||viewHome;
+  const f={home:viewHome,gacha:viewGacha,team:viewTeam,gear:viewGear,shop:viewShop,run:viewRun,train:viewTrain,arena:viewArena,ach:viewAch,duel:viewDuel,battle:viewBattle}[VIEW]||viewHome;
   $("#view").innerHTML=f();
   if(VIEW==="battle"){const l=$("#blog");if(l)l.scrollTop=l.scrollHeight;}
   if(CUR_B&&CUR_B.online&&!CUR_B.guest)pushSnap(CUR_B);
@@ -1042,6 +1054,7 @@ function viewHome(){
     <div class="mode" onclick="go('shop')"><div class="ic">🛒</div><b>商店・裝備</b><p>買裝備、強化到 +10（可能失敗！），還能買遠征物資帶上路</p></div>
     <div class="mode" onclick="go('run')"><div class="ic">🪜</div><b>逃殺遠征</b><p>文字冒險主線 ${CHAPTERS.length-1} 章＋無盡深淵：選房間、搜物資、躲毒氣、結盟或背叛。目前進度：${progText()}</p></div>
     <div class="mode" onclick="go('train')"><div class="ic">🏋</div><b>練功房</b><p>重複打怪物練等級（每級全能力+2%），已解鎖到第 ${Math.min(TRAIN_MAX,trainBest()+1)} 關</p></div>
+    <div class="mode" onclick="go('ach')"><div class="ic">🏆</div><b>成就</b><p>已達成 ${ACH.filter(a=>SAVE.ach&&SAVE.ach[a.id]).length}／${ACH.length}，達成自動領金條和突破石</p></div>
     <div class="mode" onclick="go('arena')"><div class="ic">⚔️</div><b>競技場</b><p>對戰 AI 小隊爬塔，第 ${SAVE.arenaTier} 層。贏了拿金條</p></div>
     <div class="mode" onclick="go('duel')"><div class="ic">🆚</div><b>雙人對決</b><p>同機輪流操作，或建立房間和朋友網路連線互毆</p></div>
   </div>
@@ -2575,6 +2588,172 @@ function abortBattle(){
   const home=BATTLE_HOME;CUR_B=null;VIEW=home;closeModal();render();
 }
 
+
+/* ===================== 成就 ===================== */
+// 每次存檔時檢查；達成就自動發獎（金條／突破石）。舊存檔第一次載入會一次補發已達成的成就
+const maxOf=a=>a.length?Math.max(...a):0;
+const ownedVals=(s,f)=>Object.keys(s.owned).map(id=>f(s.owned[id],id));
+const ACH=[
+  {g:"招募",id:"pull1",n:"第一次招募",d:"抽卡 1 次",v:s=>s.pulls,t:1,r:{gold:20}},
+  {g:"招募",id:"pull100",n:"百抽",d:"累計抽卡 100 次",v:s=>s.pulls,t:100,r:{stone:3}},
+  {g:"招募",id:"pull500",n:"抽卡狂人",d:"累計抽卡 500 次",v:s=>s.pulls,t:500,r:{stone:10}},
+  {g:"招募",id:"ssr1",n:"金光閃閃",d:"擁有 1 名 SSR 角色",v:s=>Object.keys(s.owned).filter(id=>CARDS[id].r==="SSR").length,t:1,r:{gold:30}},
+  {g:"招募",id:"col20",n:"收藏家",d:"收集 20 名角色",v:s=>Object.keys(s.owned).length,t:20,r:{gold:50}},
+  {g:"招募",id:"colall",n:"全員到齊",d:"收集全部角色",v:s=>Object.keys(s.owned).length,t:Object.keys(CARDS).length,r:{stone:15}},
+  {g:"養成",id:"star5",n:"滿星",d:"任一角色升到 5★",v:s=>maxOf(ownedVals(s,o=>o.stars)),t:5,r:{stone:2}},
+  {g:"養成",id:"br1",n:"突破極限",d:"任一角色突破 1 次",v:s=>maxOf(ownedVals(s,o=>o.br||0)),t:1,r:{stone:3}},
+  {g:"養成",id:"br5",n:"超越自我",d:"任一角色突破 5 次",v:s=>maxOf(ownedVals(s,o=>o.br||0)),t:5,r:{stone:10}},
+  {g:"養成",id:"lv20",n:"老手",d:"任一角色升到 Lv.20",v:s=>maxOf(ownedVals(s,o=>o.lv||1)),t:20,r:{gold:60}},
+  {g:"養成",id:"lv50",n:"巔峰",d:"任一角色升到 Lv.50",v:s=>maxOf(ownedVals(s,o=>o.lv||1)),t:50,r:{stone:10}},
+  {g:"遠征",id:"run1",n:"踏出第一步",d:"出發遠征 1 次",v:s=>s.stats.runs,t:1,r:{gold:10}},
+  {g:"遠征",id:"esc1",n:"逃出生天",d:"第一次成功逃出",v:s=>s.stats.escapes,t:1,r:{gold:30}},
+  {g:"遠征",id:"ch4",n:"黑塔崩塌",d:"通關第 4 章",v:s=>s.prog.cleared,t:4,r:{stone:3}},
+  {g:"遠征",id:"ch8",n:"回到原點",d:"通關第 8 章",v:s=>s.prog.cleared,t:8,r:{stone:6}},
+  {g:"遠征",id:"ch12",n:"衛冕冠軍",d:"通關第 12 章（主線全破）",v:s=>s.prog.cleared,t:12,r:{stone:15}},
+  {g:"遠征",id:"hard1",n:"自找麻煩",d:"以困難難度逃出任一章",v:s=>Object.values(s.prog.dclears||{}).some(d=>d[3])?1:0,t:1,r:{stone:5}},
+  {g:"遠征",id:"abyss10",n:"深淵行者",d:"無盡深淵到達 D10",v:s=>s.prog.abyssBest||0,t:10,r:{gold:80}},
+  {g:"遠征",id:"abyss30",n:"深淵之底",d:"無盡深淵到達 D30",v:s=>s.prog.abyssBest||0,t:30,r:{stone:10}},
+  {g:"戰鬥",id:"arena10",n:"競技場常客",d:"競技場到達第 10 層",v:s=>s.arenaTier,t:10,r:{gold:50}},
+  {g:"戰鬥",id:"train30",n:"苦練成材",d:"練功房通過第 30 關",v:s=>(s.train&&s.train.best)||0,t:30,r:{stone:5}},
+  {g:"戰鬥",id:"boss1",n:"魔王討伐",d:"打倒 1 位支線魔王",v:s=>Object.keys(s.bosses||{}).length,t:1,r:{stone:5}},
+  {g:"戰鬥",id:"boss3",n:"不可能的任務",d:"打倒第 3 位支線魔王「命運裁決者」",v:s=>(s.bosses||{}).fatejudge?1:0,t:1,r:{stone:30}},
+  {g:"裝備",id:"gear10",n:"強化大師",d:"任一裝備強化到 +10",v:s=>maxOf((s.gear||[]).map(g=>g.lv)),t:10,r:{stone:5}},
+  {g:"裝備",id:"gearUR",n:"傳說入手",d:"獲得 1 件 UR 傳說裝備",v:s=>(s.gear||[]).some(g=>GEAR[g.base].q==="UR")?1:0,t:1,r:{gold:50}},
+  {g:"裝備",id:"gearEX",n:"魔王的遺物",d:"獲得 1 件 EX 魔王專屬裝備",v:s=>(s.gear||[]).some(g=>GEAR[g.base].q==="EX")?1:0,t:1,r:{stone:5}},
+  {g:"裝備",id:"set3",n:"全套",d:"任一角色穿滿 3 件同稀有度裝備（套裝）",v:s=>maxOf(Object.keys(s.owned).map(id=>maxOf(Object.values(setCounts(id))))),t:3,r:{gold:40}}
+];
+function rewardStr(r){return [r.gold?`🪙${r.gold}`:"",r.stone?`💎×${r.stone}`:""].filter(Boolean).join(" ");}
+// 檢查並發獎；回傳這次新達成的成就
+function checkAch(){
+  SAVE.ach=SAVE.ach||{};const got=[];
+  for(const a of ACH){
+    if(SAVE.ach[a.id])continue;
+    let v=0;try{v=a.v(SAVE);}catch(e){continue;}
+    if(v>=a.t){SAVE.ach[a.id]=1;if(a.r.gold)SAVE.gold+=a.r.gold;if(a.r.stone)SAVE.charms.stone+=a.r.stone;got.push(a);}
+  }
+  if(got.length){
+    glog("🏆ACH",got.map(a=>a.n).join("、"));
+    setTimeout(()=>{toast(got.length===1?`🏆 成就達成：${got[0].n}（${rewardStr(got[0].r)}）`:`🏆 一次達成 ${got.length} 個成就！到「成就」頁看看`);SFX.sr();renderHeader();},0);
+  }
+  return got;
+}
+let ACH_TAB="";
+function viewAch(){
+  const done=ACH.filter(a=>SAVE.ach&&SAVE.ach[a.id]).length,groups=[...new Set(ACH.map(a=>a.g))];
+  SAVE.ach=SAVE.ach||{};
+  const list=ACH.filter(a=>!ACH_TAB||a.g===ACH_TAB).sort((a,b)=>(SAVE.ach[a.id]?1:0)-(SAVE.ach[b.id]?1:0)); // 未達成的排前面
+  return `<h2>🏆 成就</h2>
+  <div class="panel"><b>已達成 ${done}／${ACH.length}</b><div class="ratebar"><i style="width:${done/ACH.length*100}%"></i></div>
+    <span class="dim small">達成時自動發獎勵（金條或突破石）。</span></div>
+  <div class="filters"><button class="${ACH_TAB?"":"on"}" onclick="ACH_TAB='';render()">全部</button>${groups.map(g=>`<button class="${ACH_TAB===g?"on":""}" onclick="ACH_TAB='${g}';render()">${g}</button>`).join("")}</div>
+  <div class="achgrid">${list.map(a=>{const ok=SAVE.ach[a.id];let v=0;try{v=a.v(SAVE);}catch(e){}
+    return `<div class="achcard ${ok?"done":""}"><div class="ai">${ok?"🏆":"🔒"}</div><div style="flex:1;min-width:0">
+      <b>${a.n}</b> <span class="small dim">${a.g}</span><div class="small">${a.d}</div>
+      ${ok?`<div class="small" style="color:var(--green)">✓ 已達成・已領取 ${rewardStr(a.r)}</div>`:`<div class="ratebar" style="height:6px"><i style="width:${Math.min(1,v/a.t)*100}%"></i></div><div class="small dim">${Math.min(v,a.t)}／${a.t}・獎勵 ${rewardStr(a.r)}</div>`}
+    </div></div>`;}).join("")}</div>`;
+}
+
+/* ===================== 帳號／雲端存檔 ===================== */
+// 用 Firebase 登入（自訂帳號＋密碼：帳號轉成「帳號@jbts.game」當作登入信箱，不會寄信）。
+// 登入後存檔自動上傳到 users/{uid}；換裝置登入同一個帳號就能接著玩。不登入也能照常玩，只存在本機。
+const ACCT_KEY="jbts_acct";
+let AUTH=null,ACCT=null,SYNC_T=null,SYNC_MSG="",AUTH_P=null;
+const acctEmail=n=>n.toLowerCase()+"@jbts.game";
+const validName=n=>/^[A-Za-z0-9_]{3,16}$/.test(n);
+function fbAuth(){
+  if(AUTH)return Promise.resolve(AUTH);
+  if(location.protocol==="file:")return Promise.reject({code:"file"});
+  return AUTH_P=AUTH_P||(async()=>{await fbDb();if(!firebase.auth)await loadScript(FB_SDK+"firebase-auth-compat.js");AUTH=firebase.auth();return AUTH;})();
+}
+function authErr(e){
+  const c=e&&e.code||"";
+  if(c==="file")return "帳號功能只能在網路版使用（直接打開檔案時沒辦法登入）";
+  if(/email-already-in-use/.test(c))return "這個帳號已經有人用了，換一個吧";
+  if(/wrong-password|user-not-found|invalid-credential|invalid-login/.test(c))return "帳號或密碼錯誤";
+  if(/weak-password/.test(c))return "密碼至少要 6 個字";
+  if(/too-many-requests/.test(c))return "嘗試太多次了，請稍後再試";
+  if(/operation-not-allowed/.test(c))return "伺服器還沒開放帳號功能（開發者需要在 Firebase 開啟帳號密碼登入）";
+  if(/network/.test(c))return "連線失敗，請檢查網路";
+  if(/permission/i.test(c+(e&&e.message)))return "雲端存檔權限錯誤（開發者需要更新資料庫規則）";
+  return "發生錯誤："+(c||e&&e.message||e);
+}
+function setAcct(u){ACCT={uid:u.uid,name:u.displayName||u.email.split("@")[0]};try{localStorage.setItem(ACCT_KEY,ACCT.name);}catch(e){}renderHeader();}
+function saveSummary(s){return `🪙${s.gold}・抽 ${s.pulls} 次・角色 ${Object.keys(s.owned).length} 名・${s.prog.cleared>=ABYSS?"主線全破":`主線第 ${s.prog.cleared+1} 章`}${s.updatedAt?`<br><span class="dim">最後存檔 ${new Date(s.updatedAt).toLocaleString()}</span>`:""}`;}
+function openAccount(){
+  if(ACCT)return openModal(`<h3>👤 ${ACCT.name}</h3>
+    <p class="small">已登入。存檔會自動上傳雲端，換手機或電腦登入同一個帳號就能接著玩。</p>
+    <p class="small dim">${SYNC_MSG||"尚未同步"}</p>
+    <div class="opts"><button class="pri" onclick="uploadSave(true)">☁ 立即上傳存檔</button>
+      <button onclick="pullCloud(true)">⬇ 從雲端下載存檔</button>
+      <button onclick="doLogout()">登出</button></div>
+    <div class="row" style="margin-top:10px"><button onclick="closeModal()">關閉</button></div>`);
+  openModal(`<h3>👤 帳號（雲端存檔）</h3>
+    <p class="small dim">註冊帳號後，存檔會存在雲端，換裝置登入就能接著玩。不註冊也可以照常玩，存檔只會在這台裝置上。</p>
+    <label class="small">帳號（3～16 個英文、數字或底線）</label>
+    <input id="acName" autocomplete="username" style="width:100%;padding:8px;margin:4px 0 8px;font:inherit;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px">
+    <label class="small">密碼（至少 6 個字）</label>
+    <input id="acPw" type="password" autocomplete="current-password" style="width:100%;padding:8px;margin:4px 0 8px;font:inherit;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px">
+    <p class="small" style="color:var(--red)">⚠ 沒有綁定信箱，<b>忘記密碼就找不回來</b>，請記好。</p>
+    <div class="row"><button class="pri" onclick="doLogin()">登入</button><button class="gold" onclick="doRegister()">註冊新帳號</button><button style="margin-left:auto" onclick="closeModal()">取消</button></div>`);
+}
+function acctInput(){const n=($("#acName").value||"").trim(),p=$("#acPw").value||"";
+  if(!validName(n)){toast("帳號要 3～16 個英文、數字或底線");return null;}
+  if(p.length<6){toast("密碼至少要 6 個字");return null;}return {n,p};}
+async function doRegister(){
+  const v=acctInput();if(!v)return;toast("註冊中……");
+  try{const a=await fbAuth();const c=await a.createUserWithEmailAndPassword(acctEmail(v.n),v.p);
+    await c.user.updateProfile({displayName:v.n});setAcct(c.user);await uploadSave();
+    glog("👤ACCT","註冊 "+v.n);closeModal();toast("註冊成功！存檔已上傳雲端");}
+  catch(e){glog("❌ACCT",e&&e.code||e);toast(authErr(e));}
+}
+async function doLogin(){
+  const v=acctInput();if(!v)return;toast("登入中……");
+  try{const a=await fbAuth();const c=await a.signInWithEmailAndPassword(acctEmail(v.n),v.p);setAcct(c.user);glog("👤ACCT","登入 "+v.n);await pullCloud(true);}
+  catch(e){glog("❌ACCT",e&&e.code||e);toast(authErr(e));}
+}
+async function doLogout(){try{await (await fbAuth()).signOut();}catch(e){}ACCT=null;SYNC_MSG="";try{localStorage.removeItem(ACCT_KEY);}catch(e){}closeModal();renderHeader();toast("已登出（存檔仍保留在這台裝置）");}
+// 讀雲端存檔；ask=true 時兩邊不同會讓玩家選，false（開遊戲自動同步）時用比較新的那份
+async function pullCloud(ask){
+  if(!ACCT)return;
+  try{
+    const snap=await (await fbDb()).ref("users/"+ACCT.uid+"/save").get();
+    if(!snap.exists()){await uploadSave();if(ask){closeModal();toast("雲端還沒有存檔，已上傳這台裝置的存檔");}return;}
+    const {s,bad}=unpackSave(snap.val());
+    if(bad||!s||s.v!==1){toast("雲端存檔異常，沒有載入");glog("❌CLOUD","雲端存檔簽章不符");return;}
+    const why=validSave(migrate(s));if(why){toast("雲端存檔數值異常（"+why+"），沒有載入");glog("❌CLOUD",why);return;}
+    CLOUD_PENDING=s;
+    const ct=s.updatedAt||0,lt=SAVE.updatedAt||0;
+    if(ct===lt){SYNC_MSG="已同步";if(ask){closeModal();toast("登入成功，存檔已是最新");}return;}
+    if(!ask){if(RUN&&RUN.active||CUR_B)return;ct>lt?useCloud():uploadSave();return;}
+    openModal(`<h3>☁ 選擇要用哪一份存檔</h3>
+      <div class="sk"><b>☁ 雲端存檔</b>${ct>lt?' <span style="color:var(--green)">（比較新）</span>':""}<br>${saveSummary(s)}</div>
+      <div class="sk"><b>📱 這台裝置的存檔</b>${lt>ct?' <span style="color:var(--green)">（比較新）</span>':""}<br>${saveSummary(SAVE)}</div>
+      <p class="small dim">選了之後，另一份會被覆蓋。</p>
+      <div class="opts"><button class="pri" onclick="useCloud()">☁ 使用雲端存檔</button><button onclick="closeModal();uploadSave(true)">📱 使用這台裝置的存檔（上傳覆蓋雲端）</button></div>`);
+  }catch(e){glog("❌CLOUD",e&&e.code||e);toast(authErr(e));}
+}
+let CLOUD_PENDING=null;
+function useCloud(){
+  if(!CLOUD_PENDING)return;
+  if(CUR_B){CUR_B.aborted=true;CUR_B.done=true;CUR_B=null;}
+  SAVE=migrate(CLOUD_PENDING);RUN=null;CLOUD_PENDING=null;VIEW="home";
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify(packSave(SAVE)));}catch(e){}
+  SYNC_MSG="已載入雲端存檔 "+new Date().toLocaleTimeString();closeModal();render();toast("已載入雲端存檔");glog("☁CLOUD","載入雲端存檔");
+}
+function scheduleUpload(){if(!ACCT)return;clearTimeout(SYNC_T);SYNC_T=setTimeout(()=>uploadSave(),3000);}
+async function uploadSave(manual){
+  if(!ACCT)return;
+  try{await (await fbDb()).ref("users/"+ACCT.uid).set({name:ACCT.name,save:packSave(SAVE),t:Date.now()});
+    SYNC_MSG="已同步 "+new Date().toLocaleTimeString();if(manual){toast("☁ 存檔已上傳");closeModal();}}
+  catch(e){SYNC_MSG="上傳失敗："+authErr(e);glog("❌CLOUD",e&&e.code||e);if(manual)toast(authErr(e));}
+}
+// 開遊戲時：之前登入過就自動恢復登入並同步
+function bootAcct(){
+  let had=null;try{had=localStorage.getItem(ACCT_KEY);}catch(e){}
+  if(!had||location.protocol==="file:")return;
+  fbAuth().then(a=>a.onAuthStateChanged(u=>{if(u){setAcct(u);pullCloud(false);}else{ACCT=null;renderHeader();}})).catch(e=>glog("❌ACCT",e&&e.code||e));
+}
+
 /* ===================== RUN: DATA ===================== */
 // 樓層與房間取自本體地圖（B7 停屍間 → 2F 停機坪）
 const FLOORS=[
@@ -3539,6 +3718,7 @@ setInterval(()=>{
   if(Date.now()-B.wdT>20000&&!B.wdWarned){B.wdWarned=true;glog("⏰STUCK",`戰鬥 20 秒沒有進展：${B.title} 第${B.round}回合`);toast("戰鬥好像卡住了，可以按右下角 🆘 自救");}
 },5000);
 render();
+bootAcct();
 loadBgm();
 document.addEventListener("pointerdown",startBgm,{once:true});
 if(JOIN_CODE)joinRoom(JOIN_CODE);

@@ -1200,9 +1200,7 @@ function viewGacha(){
       <span class="dim small">距離保底 SSR：${60-SAVE.pity} 抽</span>
     </div>
   </div>
-  <div class="panel small" style="margin-top:10px"><b>🧩 碎片</b>：${["R","SR","SSR"].map(r=>`<span class="r${r}">${r} ×${SAVE.shards[r]}</span>`).join("　")}
-    <button class="mini gold" style="margin-left:8px" onclick="openShards('SSR')">兌換角色</button>
-    <div class="dim small">5★ 後重複抽到、遣散 SR／SSR 角色會得到碎片，可以指定換角色或補星。</div></div>
+  <div class="panel small dim" style="margin-top:10px">🧩 5★ 後重複抽到的角色會變成碎片，到「隊伍」頁按「🧩 碎片兌換」可以指定換角色或補星。</div>
   <h3>機率</h3>
   <div class="panel small">
     <span class="rSSR">SSR 3%</span>（${POOL.SSR.map(i=>CARDS[i].name).join("、")}）<br>
@@ -1212,6 +1210,14 @@ function viewGacha(){
   </div>
   <h3>賺金條</h3>
   <div class="panel small dim">逃殺遠征（逃出時全額帶走、陣亡帶走一半）・競技場勝利</div>`;
+}
+function shardPanel(){
+  return `<div class="panel small" style="margin:10px 0"><b>🧩 碎片</b>：${["R","SR","SSR"].map(r=>`<span class="r${r}">${r} ×${SAVE.shards[r]}</span>`).join("　")}
+    <button class="mini gold" style="margin-left:8px" onclick="openShards('SSR')">兌換角色</button>
+    <div class="dim small" style="margin-top:6px;line-height:1.7">
+      <b>怎麼取得</b>：① 角色已經 5★ 後又重複抽到：R +1／SR +3／SSR +10。② 遣散 SR／SSR 角色：每星 SR +1／SSR +3（R 角色不給）。其他地方不會掉。<br>
+      <b>怎麼用</b>：碎片分稀有度，R 碎片只能換 R 角色，SR、SSR 同理。沒有的角色：R 25／SR 80／SSR 200 換 1★。已擁有但未滿 5★ 的角色：R 8／SR 25／SSR 70 補 1★。<br>
+      <b>提醒</b>：價格故意訂得很高，指定換 SSR 約要 20 張 5★ 的重複 SSR，抽卡仍是主要的取得方式。</div></div>`;
 }
 let SHARD_TAB="SSR";
 function openShards(t){
@@ -1345,9 +1351,11 @@ function viewTeam(){
   return `<div class="row"><h2 style="margin-right:auto">出戰隊伍</h2><button class="gold" onclick="openXfer('reset')" title="把角色的等級轉給另一名角色">🔁 轉移等級</button></div>
   <div class="teamslots">${[0,1,2].map(i=>{const id=SAVE.team[i];return id?cardTile(id,`showCard('${id}')`):`<div class="slot">空位</div>`;}).join("")}</div>
   <p class="dim small">點卡片查看技能、加入或移出隊伍。遠征與競技場都使用這支隊伍。不要的角色可以在卡片裡「遣散」換金條（R 🪙3／SR 🪙10／SSR 🪙30，每星計算），或用「合成」把 6★ 份的 R 換成 1 名 SR、6★ 份的 SR 換成 1 名 SSR，或用「熔煉」把 2 名同稀有度角色熔成 1 名同稀有度的其他角色（等級、星數、突破取較低的）。</p>
+  ${shardPanel()}
   <div class="row"><h3 style="margin-right:auto">收藏（${Object.keys(SAVE.owned).length}/${Object.keys(CARDS).length}）</h3>
   <button class="mini gold" onclick="openSynth()">🔮 合成</button>
   <button class="mini gold" onclick="openSmelt()">🔥 熔煉</button>
+  <button class="mini gold" onclick="openShards()">🧩 碎片兌換</button>
   <button class="mini" onclick="sellAllR()">💰 一鍵遣散 R 卡</button>
   <label class="small"><input type="checkbox" ${SHOW_LOCKED?"checked":""} onchange="SHOW_LOCKED=this.checked;render()"> 顯示未獲得</label></div>
   ${clsFilter(TEAM_CLS,"setTeamCls")}
@@ -1390,6 +1398,7 @@ function showCard(id){
     ${skillHtml(c)}
     <div class="row" style="margin-top:12px">
       ${o?(inT?`<button onclick="toggleTeam('${id}')">移出隊伍</button>`:`<button class="pri" onclick="toggleTeam('${id}')" ${SAVE.team.length>=3?"disabled":""}>加入隊伍${SAVE.team.length>=3?"（已滿）":""}</button>`):`<span class="dim">尚未獲得</span>`}
+      ${o&&o.stars<5?`<button class="gold" onclick="openShards('${CARDS[id].r}')">🧩 碎片補星（${SHARD_STAR[CARDS[id].r]}）</button>`:""}
       ${canBreak(id)?`<button class="gold" onclick="BR_RES=null;confirmBreak('${id}')">✨ 突破（${brOf(id)}→${brOf(id)+1}）</button>`:""}
       <button onclick="closeModal()" style="margin-left:auto">關閉</button></div>
     ${o&&o.stars>=5&&!canBreak(id)?`<div class="dim small" style="margin-top:6px">已突破到上限（${BR_MAX}）。</div>`:o&&!brOf(id)&&o.stars<5?`<div class="dim small" style="margin-top:6px">升到 5★ 後可以「突破」，讓角色變得更強。</div>`:""}

@@ -32,10 +32,11 @@
 頭像 `images/avatars/*.webp` 取自本體專案。
 
 背景音樂：
-- 選單（主頁、商店等）：Ambient Horror Track 01 — Music by Cleyton Kauffman（https://soundcloud.com/cleytonkauffman ），取自 OpenGameArt（https://opengameart.org/content/ambient-horror-track-01 ），授權 CC0，檔案在 `music/`。
+- 選單（主頁等）：Ambient Horror Track 01 — Music by Cleyton Kauffman（https://soundcloud.com/cleytonkauffman ），取自 OpenGameArt（https://opengameart.org/content/ambient-horror-track-01 ），授權 CC0，檔案在 `music/`。
 - 遠征探索：Abandoned passages (horror ambience loop) — by congusbongus，取自 OpenGameArt（https://opengameart.org/content/abandoned-passages-horror-ambience-loop ），授權 CC0。
 - 招募／隊伍／裝備：Medieval: King's Feast — by RandomMind，取自 OpenGameArt（https://opengameart.org/content/medieval-kings-feast ），授權 CC0。
 - 故事頁（老國王）：Fantasy Choir 2 — by cesisco（César da Rocha），取自 OpenGameArt（https://opengameart.org/content/fantasy-choir-3-orchestral-pieces ），授權 CC0。
+- 商店：Bossa Nova — by Joth，取自 OpenGameArt（https://opengameart.org/content/bossa-nova ），授權 CC0。
 - 競技場（含競技場戰鬥）：Epic Boss Battle [Seamlessly Looping] — by Juhani Junkala（上傳者 SubspaceAudio），取自 OpenGameArt（https://opengameart.org/content/boss-battle-music ），授權 CC0。
 - 雙人對決（含同機與網路對戰）：JRPG Epic Rock Battle Theme #1 — by HydroGene，取自 OpenGameArt（https://opengameart.org/content/jrpg-epic-rock-battle-theme-1 ），授權 CC0。
 - 無盡深淵：Dark Cavern Ambient — by Paul Wortmann，取自 OpenGameArt（https://opengameart.org/content/dark-cavern-ambient ），授權 CC0。

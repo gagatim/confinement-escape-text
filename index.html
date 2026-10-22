@@ -427,7 +427,7 @@ footer.credit a{color:var(--gold)}
   <footer class="credit">
     <div id="bgmBox"><div id="bgmPlayer"></div></div>
     <div>🎵 背景音樂<br>
-      ・主頁、商店等選單：<b>Ambient Horror Track 01</b> — Music by Cleyton Kauffman（<a href="https://soundcloud.com/cleytonkauffman" target="_blank" rel="noopener">soundcloud.com/cleytonkauffman</a>）・
+      ・主頁等選單：<b>Ambient Horror Track 01</b> — Music by Cleyton Kauffman（<a href="https://soundcloud.com/cleytonkauffman" target="_blank" rel="noopener">soundcloud.com/cleytonkauffman</a>）・
       出處 <a href="https://opengameart.org/content/ambient-horror-track-01" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・遠征探索：<b>Abandoned passages (horror ambience loop)</b> — by congusbongus・
       出處 <a href="https://opengameart.org/content/abandoned-passages-horror-ambience-loop" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
@@ -435,6 +435,8 @@ footer.credit a{color:var(--gold)}
       出處 <a href="https://opengameart.org/content/medieval-kings-feast" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・故事頁（老國王）：<b>Fantasy Choir 2</b> — by cesisco（César da Rocha）・
       出處 <a href="https://opengameart.org/content/fantasy-choir-3-orchestral-pieces" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
+      ・商店：<b>Bossa Nova</b> — by Joth・
+      出處 <a href="https://opengameart.org/content/bossa-nova" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・競技場：<b>Epic Boss Battle [Seamlessly Looping]</b> — by Juhani Junkala（<a href="https://opengameart.org/content/boss-battle-music" target="_blank" rel="noopener">OpenGameArt</a>，上傳者 SubspaceAudio）・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・雙人對決：<b>JRPG Epic Rock Battle Theme #1</b> — by HydroGene・
       出處 <a href="https://opengameart.org/content/jrpg-epic-rock-battle-theme-1" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
@@ -449,6 +451,7 @@ footer.credit a{color:var(--gold)}
     <audio id="bgm_abyss" src="music/dark_cavern_ambient_002.ogg" loop preload="none"></audio>
     <audio id="bgm_town" src="music/kings_feast_loop.ogg" loop preload="none"></audio>
     <audio id="bgm_story" src="music/fantasy_choir_2.ogg" loop preload="none"></audio>
+    <audio id="bgm_shop" src="music/bossa_nova_shop.mp3" loop preload="none"></audio>
     <audio id="bgm_arena" src="music/arena_epic_boss_battle.ogg" loop preload="none"></audio>
     <audio id="bgm_duel" src="music/jrpg_battle_loop.mp3" loop preload="none"></audio>
   </footer>
@@ -1018,7 +1021,7 @@ function toggleMute(){SAVE.muted=!SAVE.muted;save();renderHeader();}
 const BGM_ID="2uGf8-vfFLI";
 let BGM=null,BGM_READY=false,BGM_STARTED=false,BGM_CUR=null;
 function loadBgm(){
-  ["main","town","run","abyss","story","arena","duel"].forEach(k=>{const a=$("#bgm_"+k);if(a)a.volume=.4;});
+  ["main","town","shop","run","abyss","story","arena","duel"].forEach(k=>{const a=$("#bgm_"+k);if(a)a.volume=.4;});
   window.onYouTubeIframeAPIReady=()=>{
     BGM=new YT.Player("bgmPlayer",{videoId:BGM_ID,
       playerVars:{loop:1,playlist:BGM_ID,controls:1,playsinline:1,rel:0,modestbranding:1},
@@ -1034,6 +1037,7 @@ function bgmWant(){
     return "battle";
   }
   if(VIEW==="run"&&RUN&&!RUN.active&&RUN.escaped)return "battle";
+  if(VIEW==="shop")return "shop"; // 商店：輕鬆的爵士
   if(VIEW==="arena")return "arena";
   if(VIEW==="duel")return "duel";
   if(VIEW==="run"&&RUN&&RUN.active)return RUN.ch===ABYSS?"abyss":"run";
@@ -1043,7 +1047,7 @@ function bgmWant(){
 }
 function syncBgm(){
   const w=bgmWant();if(w===BGM_CUR)return;BGM_CUR=w;
-  ["main","town","run","abyss","story","arena","duel"].forEach(k=>{const a=$("#bgm_"+k);if(!a||!a.play)return;
+  ["main","town","shop","run","abyss","story","arena","duel"].forEach(k=>{const a=$("#bgm_"+k);if(!a||!a.play)return;
     if(w===k){a.currentTime=0;a.play().catch(()=>{});}else a.pause();});
   if(BGM_READY){if(w==="battle"){BGM.seekTo(0,true);BGM.playVideo();}else BGM.pauseVideo();}
 }
@@ -1300,13 +1304,12 @@ function clsFilter(cur,fn){
 function setTeamCls(k){TEAM_CLS=k;render();}
 function viewTeam(){
   const ids=sortedIds().filter(id=>(SHOW_LOCKED||SAVE.owned[id])&&(!TEAM_CLS||CARDS[id].cls===TEAM_CLS));
-  return `<h2>出戰隊伍</h2>
+  return `<div class="row"><h2 style="margin-right:auto">出戰隊伍</h2><button class="gold" onclick="openXfer('reset')" title="把角色的等級轉給另一名角色">🔁 轉移等級</button></div>
   <div class="teamslots">${[0,1,2].map(i=>{const id=SAVE.team[i];return id?cardTile(id,`showCard('${id}')`):`<div class="slot">空位</div>`;}).join("")}</div>
   <p class="dim small">點卡片查看技能、加入或移出隊伍。遠征與競技場都使用這支隊伍。不要的角色可以在卡片裡「遣散」換金條（R 🪙3／SR 🪙10／SSR 🪙30，每星計算），或用「合成」把 6★ 份的 R 換成 1 名 SR、6★ 份的 SR 換成 1 名 SSR，或用「熔煉」把 2 名同稀有度角色熔成 1 名同稀有度的其他角色（等級、星數、突破取較低的）。</p>
   <div class="row"><h3 style="margin-right:auto">收藏（${Object.keys(SAVE.owned).length}/${Object.keys(CARDS).length}）</h3>
   <button class="mini gold" onclick="openSynth()">🔮 合成</button>
   <button class="mini gold" onclick="openSmelt()">🔥 熔煉</button>
-  <button class="mini gold" onclick="openXfer('reset')">🔁 轉移</button>
   <button class="mini" onclick="sellAllR()">💰 一鍵遣散 R 卡</button>
   <label class="small"><input type="checkbox" ${SHOW_LOCKED?"checked":""} onchange="SHOW_LOCKED=this.checked;render()"> 顯示未獲得</label></div>
   ${clsFilter(TEAM_CLS,"setTeamCls")}

@@ -232,6 +232,12 @@ b.sA{color:var(--sideA)} b.sB{color:var(--sideB)}
 .ratebar{height:10px;background:#2a0f12;border-radius:5px;overflow:hidden;margin:4px 0}
 .ratebar i{display:block;height:100%;background:linear-gradient(90deg,var(--green),var(--gold))}
 
+/* footer / bgm */
+footer.credit{margin-top:30px;padding:14px 0 6px;border-top:1px solid var(--line);color:var(--dim);font-size:12px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+footer.credit a{color:var(--gold)}
+#bgmBox{width:200px;height:113px;border-radius:8px;overflow:hidden;background:#000;flex-shrink:0}
+#bgmBox iframe{width:100%;height:100%;border:0}
+
 /* duel */
 .draftside{display:flex;gap:6px;min-height:70px;flex-wrap:wrap}
 .draftside .av{width:60px;height:60px;border-radius:8px;overflow:hidden;border:2px solid var(--line)}
@@ -260,9 +266,17 @@ b.sA{color:var(--sideA)} b.sB{color:var(--sideB)}
     <nav id="nav"></nav>
     <div class="wallet" id="wallet"></div>
     <button class="muteBtn" onclick="openGuide(0)" title="玩法導引">❓</button>
-    <button class="muteBtn" id="muteBtn" onclick="toggleMute()"></button>
+    <button class="muteBtn" id="bgmBtn" onclick="toggleBgm()" title="背景音樂"></button>
+    <button class="muteBtn" id="muteBtn" onclick="toggleMute()" title="音效"></button>
   </header>
   <main id="view"></main>
+  <footer class="credit">
+    <div id="bgmBox"><div id="bgmPlayer"></div></div>
+    <div>🎵 背景音樂：<b>DEgITx - Machine Paradigm</b><br>
+      出處：<a href="https://www.youtube.com/watch?v=2uGf8-vfFLI" target="_blank" rel="noopener">YouTube・DEgITx - Machine Paradigm</a>
+      （作者頻道 <a href="https://www.youtube.com/@DEgITx" target="_blank" rel="noopener">@DEgITx</a>）<br>
+      音樂版權屬於原作者，本遊戲透過 YouTube 嵌入播放器播放。右上角 🎵 可以開關背景音樂。</div>
+  </footer>
 </div>
 <div id="modal" onclick="if(event.target===this)closeModal()"><div class="mbox" id="mbox"></div></div>
 <div id="gacha"></div>
@@ -627,6 +641,28 @@ const SFX={
 };
 function toggleMute(){SAVE.muted=!SAVE.muted;save();renderHeader();}
 
+/* ===================== BGM ===================== */
+// 背景音樂用 YouTube 嵌入播放器循環播放（不下載音檔）；瀏覽器規定要使用者點過頁面才能出聲，所以第一次點擊時才開始播
+const BGM_ID="2uGf8-vfFLI";
+let BGM=null,BGM_READY=false,BGM_STARTED=false;
+function loadBgm(){
+  window.onYouTubeIframeAPIReady=()=>{
+    BGM=new YT.Player("bgmPlayer",{videoId:BGM_ID,
+      playerVars:{loop:1,playlist:BGM_ID,controls:1,playsinline:1,rel:0,modestbranding:1},
+      events:{onReady(){BGM_READY=true;BGM.setVolume(35);if(BGM_STARTED&&SAVE.bgm!==false)BGM.playVideo();}}});
+  };
+  const s=document.createElement("script");s.src="https://www.youtube.com/iframe_api";document.head.appendChild(s);
+}
+function startBgm(){
+  if(BGM_STARTED)return;BGM_STARTED=true;
+  if(BGM_READY&&SAVE.bgm!==false)BGM.playVideo();
+}
+function toggleBgm(){
+  SAVE.bgm=SAVE.bgm===false;save();BGM_STARTED=true;
+  if(BGM_READY){SAVE.bgm?BGM.playVideo():BGM.pauseVideo();}
+  renderHeader();toast(SAVE.bgm?"🎵 背景音樂：開":"🎵 背景音樂：關");
+}
+
 /* ===================== VIEW ROUTER ===================== */
 let VIEW="home";
 const NAV=[["home","主頁"],["gacha","招募"],["team","隊伍"],["gear","裝備"],["shop","商店"],["run","遠征"],["train","練功房"],["arena","競技場"],["duel","雙人對決"]];
@@ -639,6 +675,7 @@ function renderHeader(){
   $("#nav").innerHTML=NAV.map(([k,l])=>`<button class="${VIEW===k||(VIEW==="battle"&&k===BATTLE_HOME)?"on":""}" onclick="go('${k}')">${l}</button>`).join("");
   $("#wallet").textContent="🪙 "+SAVE.gold;
   $("#muteBtn").textContent=SAVE.muted?"🔇":"🔊";
+  $("#bgmBtn").textContent=SAVE.bgm===false?"🎵✕":"🎵";
 }
 let BATTLE_HOME="arena";
 function render(){
@@ -2754,6 +2791,8 @@ function sceneOpt(i){const o=RUN.scene.opts[i];SFX.click();o.act();}
 (()=>{const q=new URLSearchParams(location.search).get("room");
   if(q&&/^[A-Za-z0-9]{5}$/.test(q)){JOIN_CODE=q.toUpperCase();DUEL_MODE="online";VIEW="duel";history.replaceState(null,"",location.pathname);}})();
 render();
+loadBgm();
+document.addEventListener("pointerdown",startBgm,{once:true});
 if(JOIN_CODE)joinRoom(JOIN_CODE);
 else if(SAVE.run)resumeRun();
 else if(!SAVE.guided)openGuide(0);

@@ -19,7 +19,9 @@
 - **競技場**：對戰 AI 小隊爬塔賺金條，勝利有機率掉裝備。
 - **雙人對決**：同機兩人蛇形選角後輪流操作互毆。
 
-頭像 `images/avatars/*.webp` 取自本體專案。存檔存在瀏覽器 localStorage。
+頭像 `images/avatars/*.webp` 取自本體專案。
+
+背景音樂：DEgITx - Machine Paradigm（https://www.youtube.com/watch?v=2uGf8-vfFLI ，作者頻道 @DEgITx），透過 YouTube 嵌入播放器播放，版權屬於原作者。存檔存在瀏覽器 localStorage。
 
 ## 網路對戰
 

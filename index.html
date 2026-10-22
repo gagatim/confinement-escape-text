@@ -331,6 +331,22 @@ footer.credit a{color:var(--gold)}
 .achcard.done{opacity:1;border-color:var(--gold);background:linear-gradient(90deg,rgba(245,196,81,.12),var(--panel))}
 .achcard .ai{font-size:28px}
 
+
+/* 角色裝備調整區 */
+.fitchars{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 8px;-webkit-overflow-scrolling:touch}
+.fchar{flex:0 0 78px;text-align:center;background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:5px;cursor:pointer}
+.fchar .av{width:100%;aspect-ratio:1;border-radius:7px;overflow:hidden}
+.fchar .fn{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.fchar.on{border-color:var(--gold);box-shadow:0 0 12px rgba(245,196,81,.5)}
+.statgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:6px;margin-top:6px}
+.stcell{background:var(--panel2);border-radius:8px;padding:5px 8px;display:flex;flex-direction:column}
+.stcell b{font-size:17px}
+.dpos{color:var(--green);font-weight:700}.dneg{color:var(--red);font-weight:700}
+.fitpv{margin-top:10px;border:1px solid var(--gold);background:rgba(245,196,81,.08);border-radius:10px;padding:8px 10px}
+.gslot.fitsel{outline:2px solid var(--gold);outline-offset:1px}
+.fitgear.sel .gcard{outline:3px solid var(--gold);outline-offset:2px}
+.fitgear.cant{opacity:.45}
+
 /* duel */
 .draftside{display:flex;gap:6px;min-height:70px;flex-wrap:wrap}
 .draftside .av{width:60px;height:60px;border-radius:8px;overflow:hidden;border:2px solid var(--line)}
@@ -1493,14 +1509,18 @@ function addGear(base,lv=0){
 function rollGear(q){return pick(Object.keys(GEAR).filter(k=>GEAR[k].q===q));}
 function dropGear(q){return gearName(addGear(rollGear(q)));}
 // 身上生效的裝備（等級不足的不算）
-function wornGear(id){const o=SAVE.owned[id];return o&&o.eq?Object.values(o.eq).map(gearById).filter(g=>g&&lvOk(id,g.base)):[];}
-function setCounts(id){const c={};wornGear(id).forEach(g=>{const q=GEAR[g.base].q;c[q]=(c[q]||0)+1;});return c;}
-function equipBonus(id){
+// eq 是「欄位→裝備 uid」的對照；預覽時可以傳入假設的組合
+function wornOf(id,eq){return Object.values(eq||{}).map(gearById).filter(g=>g&&lvOk(id,g.base));}
+function setCountsOf(id,eq){const c={};wornOf(id,eq).forEach(g=>{const q=GEAR[g.base].q;c[q]=(c[q]||0)+1;});return c;}
+function bonusOf(id,eq){
   const s={hp:0,atk:0,def:0,spd:0,crit:0,steal:0,dodge:0};
-  wornGear(id).forEach(g=>{const t=gearStats(g);for(const k in t)s[k]+=t[k];});
-  Object.entries(setCounts(id)).forEach(([q,n])=>[2,3].forEach(k=>{if(n>=k)for(const st in SETS[q][k])s[st]+=SETS[q][k][st];}));
+  wornOf(id,eq).forEach(g=>{const t=gearStats(g);for(const k in t)s[k]+=t[k];});
+  Object.entries(setCountsOf(id,eq)).forEach(([q,n])=>[2,3].forEach(k=>{if(n>=k)for(const st in SETS[q][k])s[st]+=SETS[q][k][st];}));
   return s;
 }
+function wornGear(id){const o=SAVE.owned[id];return o?wornOf(id,o.eq):[];}
+function setCounts(id){const o=SAVE.owned[id];return o?setCountsOf(id,o.eq):{};}
+function equipBonus(id){const o=SAVE.owned[id];return bonusOf(id,o&&o.eq);}
 function setHtml(id){
   const c=setCounts(id),qs=Object.keys(c).filter(q=>c[q]>=1);
   if(!qs.length)return "";
@@ -1534,10 +1554,78 @@ function gearCard(g,onclick){
     <div class="gn r${G.q}">${G.name}</div><div class="small">${statStr(gearStats(g))}</div>${g.fx&&g.fx.length?`<div class="gfx">${fxStr(g)}</div>`:""}
     <div class="small dim">${GQ_NAME[G.q]}・${SLOTS[G.slot]}・${gearCls(g.base)} ${reqTag(null,g.base)}</div>${w?`<div class="who">👤 ${CARDS[w].name}</div>`:""}</div>`;
 }
+
+/* ===== 角色裝備調整區：看倉庫與角色，預覽穿上之後的素質 ===== */
+let GEAR_MODE="bag",FIT_CHAR="",FIT_SLOT="weapon",FIT_PICK=0;
+function modeToggle(){
+  return `<div class="filters" style="margin-top:0"><button class="${GEAR_MODE==="bag"?"on":""}" onclick="GEAR_MODE='bag';render()">📦 倉庫</button>
+    <button class="${GEAR_MODE==="fit"?"on":""}" onclick="GEAR_MODE='fit';render()">🧍 角色裝備調整</button></div>`;
+}
+// 角色的最終素質（基礎＋等級＋星數＋突破＋裝備＋套裝）；eq 可以傳入假設的裝備組合來預覽
+function fitStats(id,eq){
+  const o=SAVE.owned[id],s=cardStats(id,o.stars,lvScale(id),brOf(id)),b=bonusOf(id,eq);
+  return {hp:s.maxHp+b.hp,atk:s.atk+b.atk,def:s.def+b.def,spd:s.spd+b.spd,crit:b.crit,steal:b.steal,dodge:b.dodge};
+}
+const FIT_ROWS=[["hp","❤ 生命"],["atk","⚔ 攻擊"],["def","🛡 防禦"],["spd","💨 速度"],["crit","🎯 暴擊"],["steal","🩸 吸血"],["dodge","🌀 閃避"]];
+function fitStatHtml(cur,nw){
+  return `<div class="statgrid">${FIT_ROWS.map(([k,l])=>{
+    const pct=ST_PCT[k]?"%":"",c=cur[k],n=nw?nw[k]:c,d=n-c;
+    if(ST_PCT[k]&&!c&&!n)return "";
+    return `<div class="stcell"><span class="dim small">${l}</span><b>${n}${pct}</b>${nw&&d?`<span class="${d>0?"dpos":"dneg"} small">${d>0?"▲+":"▼"}${d}${pct}</span>`:""}</div>`;}).join("")}</div>`;
+}
+function fitSel(id){FIT_CHAR=id;FIT_PICK=0;SFX.click();render();}
+function fitSlot(sl){FIT_SLOT=sl;FIT_PICK=0;SFX.click();render();}
+function fitPick(uid){
+  const g=gearById(uid);if(!g)return;
+  if(!canWear(FIT_CHAR,g.base)){toast("職業不符，這個角色不能穿");return;}
+  if(!lvOk(FIT_CHAR,g.base)){toast(`等級不足（需 Lv.${GEAR_REQ[GEAR[g.base].q]}）`);return;}
+  FIT_PICK=FIT_PICK===uid?0:uid;SFX.click();render();
+}
+function fitEquip(){if(!FIT_PICK)return;equipTo(FIT_CHAR,FIT_PICK);FIT_PICK=0;render();}
+function fitTakeOff(sl){const o=SAVE.owned[FIT_CHAR];if(o&&o.eq){delete o.eq[sl];save();}FIT_PICK=0;SFX.click();render();}
+function viewFit(){
+  const ids=Object.keys(SAVE.owned);
+  if(!ids.length)return `<h2>裝備</h2>${modeToggle()}<p class="dim">還沒有角色。</p>`;
+  if(!SAVE.owned[FIT_CHAR])FIT_CHAR=SAVE.team[0]||ids[0];
+  const id=FIT_CHAR,o=SAVE.owned[id],eq=o.eq||{},cur=fitStats(id,eq);
+  const chars=ids.slice().sort((a,b)=>(SAVE.team.includes(b)?1:0)-(SAVE.team.includes(a)?1:0)||R_ORDER[CARDS[a].r]-R_ORDER[CARDS[b].r]||a.localeCompare(b));
+  const pick=FIT_PICK?gearById(FIT_PICK):null;
+  let nw=null;
+  if(pick&&GEAR[pick.base].slot===FIT_SLOT)nw=fitStats(id,{...eq,[FIT_SLOT]:pick.uid});else FIT_PICK=0;
+  const list=SAVE.gear.filter(g=>GEAR[g.base].slot===FIT_SLOT).sort(gearSort);
+  const pickWho=pick?gearOwner(pick.uid):null;
+  return `<h2>裝備</h2>${modeToggle()}
+  <p class="dim small">① 選角色　② 選裝備欄　③ 點倉庫裡的裝備，就能看到<b>穿上之後的素質</b>（綠色▲變強、紅色▼變弱，含套裝加成），確認再穿上。</p>
+  <div class="fitchars">${chars.map(c=>`<div class="fchar ${c===id?"on":""}" onclick="fitSel('${c}')"><div class="av">${avatar(c)}</div>
+    <div class="fn">${CARDS[c].name}</div><div class="small dim">Lv.${lvOf(c)}${SAVE.team.includes(c)?" <span style='color:var(--red)'>出戰</span>":""}</div></div>`).join("")}</div>
+  <div class="panel" style="margin-top:10px">
+    <div class="row" style="gap:12px;align-items:center">
+      <div class="av fx-${CARDS[id].r}" style="width:72px;height:72px;border-radius:10px;overflow:hidden;flex-shrink:0">${avatar(id)}</div>
+      <div style="flex:1;min-width:0"><div class="r${CARDS[id].r}">${CARDS[id].r} ${starStr(o.stars,brOf(id))}</div><b style="font-size:17px">${CARDS[id].name}</b>
+        <div>${clsTag(id)} <span class="small dim">Lv.${lvOf(id)}</span></div></div></div>
+    <div style="margin-top:10px"><b class="small">${nw?"裝上之後的素質":"目前素質"}</b>${nw?` <span class="small dim">（含套裝加成）</span>`:""}</div>
+    ${fitStatHtml(cur,nw)}
+    ${nw?`<div class="fitpv"><b>預覽：${gearName(pick)}</b> <span class="small">${statStr(gearStats(pick))}${pick.fx&&pick.fx.length?" "+fxStr(pick):""}</span>
+      ${pickWho&&pickWho!==id?`<div class="small" style="color:var(--gold)">👤 目前 ${CARDS[pickWho].name} 穿著，穿上會從他身上拿走</div>`:""}
+      <div class="row" style="margin-top:8px"><button class="pri" onclick="fitEquip()">✅ 穿上</button><button onclick="FIT_PICK=0;render()">取消</button></div></div>`:""}
+  </div>
+  <div class="gslots" style="margin-top:10px">${Object.keys(SLOTS).map(sl=>{const g=gearById(eq[sl]);
+    return `<div class="gslot ${g?"has "+GEAR[g.base].q:""} ${FIT_SLOT===sl?"fitsel":""}" onclick="fitSlot('${sl}')"><div class="small dim">${SLOTS[sl]}</div>
+      <div class="gi">${g?gearImg(g.base):"＋"}</div>${g?`<b class="r${GEAR[g.base].q}">${GEAR[g.base].name}${g.lv?" +"+g.lv:""}</b>${lvOk(id,g.base)?"":`<div class="req bad">需 Lv.${GEAR_REQ[GEAR[g.base].q]}</div>`}`:`<span class="dim small">空</span>`}</div>`;}).join("")}</div>
+  ${setHtml(id)}
+  ${eq[FIT_SLOT]?`<div class="row" style="margin-top:6px"><button class="mini" onclick="fitTakeOff('${FIT_SLOT}')">卸下目前的${SLOTS[FIT_SLOT]}</button></div>`:""}
+  <h3 style="margin-top:14px">📦 倉庫・${SLOTS[FIT_SLOT]}（${list.length} 件）</h3>
+  <div class="ggrid">${list.map(g=>{
+    const G=GEAR[g.base],can=canWear(id,g.base),lok=lvOk(id,g.base),worn=gearOwner(g.uid),isCur=eq[FIT_SLOT]===g.uid;
+    const note=isCur?`<div class="small" style="color:var(--green)">✔ ${CARDS[id].name} 穿著中</div>`:worn?`<div class="small" style="color:var(--gold)">👤 ${CARDS[worn].name} 穿著</div>`:"";
+    const why=!can?"職業不符":!lok?`需 Lv.${GEAR_REQ[G.q]}`:"";
+    return `<div class="fitgear ${FIT_PICK===g.uid?"sel":""} ${why?"cant":""}">${gearCard(g,`fitPick(${g.uid})`)}${note}${why?`<div class="small" style="color:var(--red)">✕ ${why}</div>`:""}</div>`;}).join("")||`<span class="dim">倉庫裡沒有${SLOTS[FIT_SLOT]}。去「商店」買，或打倒敵人掉落。</span>`}</div>`;
+}
 let GEAR_TAB="";
-function viewGear(){
+function viewGear(){return GEAR_MODE==="fit"?viewFit():viewBag();}
+function viewBag(){
   const list=SAVE.gear.filter(g=>!GEAR_TAB||GEAR[g.base].slot===GEAR_TAB).sort(gearSort);
-  return `<h2>裝備</h2>
+  return `<h2>裝備</h2>${modeToggle()}
   <p class="dim small">點裝備可以「強化」或「分解」；要穿到角色身上，到「隊伍」點角色→點裝備欄。武器有職業限制，防具、飾品全職業可用。<br>
   強化：+1～+4 失敗沒有損失；+5～+10 失敗會掉 1 級（裝備不會碎）。🧿保護符可以防止掉級。</p>
   <div class="row small"><span>💎 突破石 ×${SAVE.charms.stone}</span><span>🧿 保護符 ×${SAVE.charms.protect}</span><span>🍀 幸運符 ×${SAVE.charms.luck}</span><button class="mini gold" style="margin-left:auto" onclick="go('shop')">🛒 去商店</button></div>

@@ -21,7 +21,11 @@
 
 頭像 `images/avatars/*.webp` 取自本體專案。
 
-背景音樂：DEgITx - Machine Paradigm（https://www.youtube.com/watch?v=2uGf8-vfFLI ，作者頻道 @DEgITx），透過 YouTube 嵌入播放器播放，版權屬於原作者。存檔存在瀏覽器 localStorage。
+背景音樂：
+- 選單（主頁、招募、隊伍等）：Ambient Horror Track 01 — Music by Cleyton Kauffman（https://soundcloud.com/cleytonkauffman ），取自 OpenGameArt（https://opengameart.org/content/ambient-horror-track-01 ），授權 CC0，檔案在 `music/`。
+- 遠征探索：Abandoned passages (horror ambience loop) — by congusbongus，取自 OpenGameArt（https://opengameart.org/content/abandoned-passages-horror-ambience-loop ），授權 CC0。
+- 無盡深淵：Dark Cavern Ambient — by Paul Wortmann，取自 OpenGameArt（https://opengameart.org/content/dark-cavern-ambient ），授權 CC0。
+- 戰鬥／逃出成功：DEgITx - Machine Paradigm（https://www.youtube.com/watch?v=2uGf8-vfFLI ，作者頻道 @DEgITx），透過 YouTube 嵌入播放器播放，版權屬於原作者。存檔存在瀏覽器 localStorage。
 
 ## 網路對戰
 

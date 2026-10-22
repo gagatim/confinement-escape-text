@@ -272,10 +272,19 @@ footer.credit a{color:var(--gold)}
   <main id="view"></main>
   <footer class="credit">
     <div id="bgmBox"><div id="bgmPlayer"></div></div>
-    <div>🎵 背景音樂：<b>DEgITx - Machine Paradigm</b><br>
-      出處：<a href="https://www.youtube.com/watch?v=2uGf8-vfFLI" target="_blank" rel="noopener">YouTube・DEgITx - Machine Paradigm</a>
-      （作者頻道 <a href="https://www.youtube.com/@DEgITx" target="_blank" rel="noopener">@DEgITx</a>）<br>
-      音樂版權屬於原作者，本遊戲透過 YouTube 嵌入播放器播放。右上角 🎵 可以開關背景音樂。</div>
+    <div>🎵 背景音樂<br>
+      ・主頁／招募／隊伍等選單：<b>Ambient Horror Track 01</b> — Music by Cleyton Kauffman（<a href="https://soundcloud.com/cleytonkauffman" target="_blank" rel="noopener">soundcloud.com/cleytonkauffman</a>）・
+      出處 <a href="https://opengameart.org/content/ambient-horror-track-01" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
+      ・遠征探索：<b>Abandoned passages (horror ambience loop)</b> — by congusbongus・
+      出處 <a href="https://opengameart.org/content/abandoned-passages-horror-ambience-loop" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
+      ・無盡深淵：<b>Dark Cavern Ambient</b> — by Paul Wortmann・
+      出處 <a href="https://opengameart.org/content/dark-cavern-ambient" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
+      ・戰鬥／破關：<b>DEgITx - Machine Paradigm</b>・出處 <a href="https://www.youtube.com/watch?v=2uGf8-vfFLI" target="_blank" rel="noopener">YouTube</a>
+      （作者頻道 <a href="https://www.youtube.com/@DEgITx" target="_blank" rel="noopener">@DEgITx</a>），版權屬於原作者，透過 YouTube 嵌入播放器播放。<br>
+      右上角 🎵 可以開關背景音樂。</div>
+    <audio id="bgm_main" src="music/ambient_horror_track01.ogg" loop preload="auto"></audio>
+    <audio id="bgm_run" src="music/abandoned_passages.ogg" loop preload="none"></audio>
+    <audio id="bgm_abyss" src="music/dark_cavern_ambient_002.ogg" loop preload="none"></audio>
   </footer>
 </div>
 <div id="modal" onclick="if(event.target===this)closeModal()"><div class="mbox" id="mbox"></div></div>
@@ -642,24 +651,35 @@ const SFX={
 function toggleMute(){SAVE.muted=!SAVE.muted;save();renderHeader();}
 
 /* ===================== BGM ===================== */
-// 背景音樂用 YouTube 嵌入播放器循環播放（不下載音檔）；瀏覽器規定要使用者點過頁面才能出聲，所以第一次點擊時才開始播
+// 依場景換曲：選單 main、遠征探索 run、無盡深淵 abyss（music/ 裡的 CC0 曲子）；
+// 戰鬥中與逃出成功的畫面 battle 改播 YouTube 嵌入播放器（不下載音檔）。
+// 瀏覽器規定要使用者點過頁面才能出聲，所以第一次點擊時才開始播
 const BGM_ID="2uGf8-vfFLI";
-let BGM=null,BGM_READY=false,BGM_STARTED=false;
+let BGM=null,BGM_READY=false,BGM_STARTED=false,BGM_CUR=null;
 function loadBgm(){
+  ["main","run","abyss"].forEach(k=>{const a=$("#bgm_"+k);if(a)a.volume=.4;});
   window.onYouTubeIframeAPIReady=()=>{
     BGM=new YT.Player("bgmPlayer",{videoId:BGM_ID,
       playerVars:{loop:1,playlist:BGM_ID,controls:1,playsinline:1,rel:0,modestbranding:1},
-      events:{onReady(){BGM_READY=true;BGM.setVolume(35);if(BGM_STARTED&&SAVE.bgm!==false)BGM.playVideo();}}});
+      events:{onReady(){BGM_READY=true;BGM.setVolume(35);BGM_CUR=null;syncBgm();}}});
   };
   const s=document.createElement("script");s.src="https://www.youtube.com/iframe_api";document.head.appendChild(s);
 }
-function startBgm(){
-  if(BGM_STARTED)return;BGM_STARTED=true;
-  if(BGM_READY&&SAVE.bgm!==false)BGM.playVideo();
+function bgmWant(){
+  if(!BGM_STARTED||SAVE.bgm===false)return null;
+  if(VIEW==="battle"||(VIEW==="run"&&RUN&&!RUN.active&&RUN.escaped))return "battle";
+  if(VIEW==="run"&&RUN&&RUN.active)return RUN.ch===ABYSS?"abyss":"run";
+  return "main";
 }
+function syncBgm(){
+  const w=bgmWant();if(w===BGM_CUR)return;BGM_CUR=w;
+  ["main","run","abyss"].forEach(k=>{const a=$("#bgm_"+k);if(!a||!a.play)return;
+    if(w===k){a.currentTime=0;a.play().catch(()=>{});}else a.pause();});
+  if(BGM_READY){if(w==="battle"){BGM.seekTo(0,true);BGM.playVideo();}else BGM.pauseVideo();}
+}
+function startBgm(){if(BGM_STARTED)return;BGM_STARTED=true;syncBgm();}
 function toggleBgm(){
-  SAVE.bgm=SAVE.bgm===false;save();BGM_STARTED=true;
-  if(BGM_READY){SAVE.bgm?BGM.playVideo():BGM.pauseVideo();}
+  SAVE.bgm=SAVE.bgm===false;save();BGM_STARTED=true;syncBgm();
   renderHeader();toast(SAVE.bgm?"🎵 背景音樂：開":"🎵 背景音樂：關");
 }
 
@@ -684,6 +704,7 @@ function render(){
   $("#view").innerHTML=f();
   if(VIEW==="battle"){const l=$("#blog");if(l)l.scrollTop=l.scrollHeight;}
   if(CUR_B&&CUR_B.online&&!CUR_B.guest)pushSnap(CUR_B);
+  syncBgm();
 }
 function toast(msg){
   const d=document.createElement("div");
@@ -2666,7 +2687,7 @@ function seats(){
 
 /* ---- 結算 ---- */
 function endRun(escaped,lines=[]){
-  const r=RUN;r.active=false;SAVE.run=null;
+  const r=RUN;r.active=false;r.escaped=escaped;SAVE.run=null;
   const reached=r.fi,C=CHAPTERS[r.ch],abyss=r.ch===ABYSS,P=SAVE.prog;
   let bonus=0;
   const out=lines.slice();

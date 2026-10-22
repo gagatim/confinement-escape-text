@@ -2732,21 +2732,23 @@ function genCode(){const c="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let s="";for(let i
 function setDuelMode(m){if(NET){toast("請先離開房間");return;}DUEL_MODE=m;DUEL=null;render();}
 function netFail(e){console.error(e);toast("連線失敗："+(e&&e.message||e));if(NET&&NET.ref)leaveOnline();else{NET=null;render();}}
 
-async function hostRoom(){
+async function hostRoom(mode){
   if(NET)return;
+  if(mode==="own"&&!SAVE.team.length){toast("先到「隊伍」編好至少 1 名角色");return;}
   NET={status:"connecting"};render();
   try{
     const db=await fbDb();let code=null,ref=null;
     for(let i=0;i<5&&!code;i++){
       const c=genCode(),r=db.ref("rooms/"+c);
-      const tx=await r.transaction(cur=>cur?undefined:{t:Date.now()});
+      const tx=await r.transaction(cur=>cur?undefined:{t:Date.now(),m:mode==="own"?"own":"std"});
       if(tx.committed){code=c;ref=r;}
     }
     if(!code)throw new Error("無法建立房間");
     ref.onDisconnect().remove();
-    NET={ref,code,side:"A",status:"room",gone:false};
-    DUEL={phase:"lobby",step:0,picks:{A:[],B:[]},online:true};
-    ref.child("guest").on("value",s=>{if(s.val()&&DUEL&&DUEL.phase==="lobby"){DUEL.phase="draft";SFX.sr();toast("對手加入了！");render();}});
+    NET={ref,code,side:"A",status:"room",gone:false,mode:mode==="own"?"own":"std"};
+    DUEL={phase:"lobby",step:0,picks:{A:[],B:[]},online:true,own:{}};
+    ref.child("guest").on("value",s=>{if(s.val()&&DUEL&&DUEL.phase==="lobby"){DUEL.phase=NET.mode==="own"?"own":"draft";SFX.sr();toast("對手加入了！");render();}});
+    if(NET.mode==="own")ref.child("own").on("value",onOwn);
     ref.child("gl").on("value",s=>{if(s.val())opponentLeft();});
     ref.child("draft").on("value",onDraft);
     ref.child("act").on("value",s=>{const v=s.val();if(v&&CUR_B&&CUR_B.remoteResolve)CUR_B.remoteResolve(v);});
@@ -2763,14 +2765,52 @@ async function joinRoom(code){
     if(!(await ref.child("t").once("value")).exists())throw new Error("找不到房間 "+code);
     const tx=await ref.child("guest").transaction(cur=>cur?undefined:Date.now());
     if(!tx.committed)throw new Error("房間已經有人了");
+    const mode=(await ref.child("m").once("value")).val()==="own"?"own":"std";
+    if(mode==="own"&&!SAVE.team.length){ref.child("guest").remove();throw new Error("這是養成賽，請先到「隊伍」編好角色");}
     ref.child("gl").onDisconnect().set(true);
-    NET={ref,code,side:"B",status:"room",gone:false};
-    DUEL={phase:"draft",step:0,picks:{A:[],B:[]},online:true};
+    NET={ref,code,side:"B",status:"room",gone:false,mode};
+    DUEL={phase:mode==="own"?"own":"draft",step:0,picks:{A:[],B:[]},online:true,own:{}};
+    if(mode==="own")ref.child("own").on("value",onOwn);
     ref.child("t").on("value",s=>{if(!s.exists())hostLeft();});
     ref.child("draft").on("value",onDraft);
     ref.child("snap").on("value",s=>applySnap(s.val()));
     render();
   }catch(e){NET=null;netFail(e);}
+}
+// ---- 養成賽：雙方帶自己的隊伍（等級、星數、突破、裝備都算進去），不給任何獎勵 ----
+function myOwnSpec(){return SAVE.team.slice(0,3).map(id=>{const u=teamUnit(id);u.gx=u.gx||{};return u;});}
+// 房主不信任挑戰者送來的數字：只收合理範圍內的值
+function sanOwn(arr){
+  const cl=(v,a,b)=>Math.min(b,Math.max(a,Number.isFinite(+v)?+v:a)),seen=new Set(),out=[];
+  Object.values(arr||{}).slice(0,3).forEach(x=>{
+    if(!x||!CARDS[x.id]||seen.has(x.id))return;seen.add(x.id);
+    const stars=Math.round(cl(x.stars,1,5)),br=Math.round(cl(x.br,0,BR_MAX)),scale=cl(x.scale,1,lvMul(LV_MAX)),g=x.gx||{};
+    const base=cardStats(x.id,stars,scale,br);
+    out.push({id:x.id,stars,scale,br,maxHp:Math.round(cl(x.maxHp,base.maxHp,base.maxHp+2000)),
+      atk:Math.round(cl(x.atk,0,300)),def:Math.round(cl(x.def,0,200)),spd:Math.round(cl(x.spd,0,60)),
+      gx:{crit:cl(g.crit,0,100),steal:cl(g.steal,0,100),dodge:cl(g.dodge,0,100)}});
+  });
+  return out;
+}
+function onOwn(s){
+  if(!DUEL||!DUEL.online||!NET)return;
+  const v=s.val()||{};DUEL.own={A:v.A?Object.values(v.A):null,B:v.B?Object.values(v.B):null};
+  if(VIEW==="duel")render();
+  if(NET.side==="A"&&DUEL.own.A&&DUEL.own.B&&!DUEL.started)setTimeout(startOwnBattle,900);
+}
+function readyOwn(){
+  if(!NET||!NET.ref||DUEL.ownReady)return;
+  if(!SAVE.team.length){toast("先到「隊伍」編好角色");return;}
+  DUEL.ownReady=true;NET.ref.child("own/"+NET.side).set(myOwnSpec()).catch(netFail);SFX.click();render();
+}
+function startOwnBattle(){
+  if(!NET||!DUEL||DUEL.started)return;
+  const a=sanOwn(DUEL.own.A),b=sanOwn(DUEL.own.B);
+  if(!a.length||!b.length){toast("對手的隊伍資料異常");leaveOnline();return;}
+  DUEL.started=true;DUEL.phase="battle";
+  startBattle({title:"養成賽 · 房間 "+NET.code,home:"duel",ctrl:{A:"human",B:"remote"},labels:{A:"你",B:"對手"},online:NET,
+    A:a,B:b,intro:"連線建立。兩支養成過的隊伍在禁閉室中央對峙。",
+    onEnd(){leaveOnline();}});
 }
 function onDraft(s){
   if(!DUEL||!DUEL.online||!NET)return;
@@ -2875,7 +2915,7 @@ function hostLeft(){
 function leaveOnline(){
   const n=NET;NET=null;
   if(n&&n.ref){
-    ["guest","gl","draft","act","t","snap"].forEach(k=>n.ref.child(k).off());
+    ["guest","gl","draft","own","act","t","snap"].forEach(k=>n.ref.child(k).off());
     if(n.side==="A"){n.ref.onDisconnect().cancel();n.ref.remove().catch(()=>{});}
     else{n.ref.child("gl").onDisconnect().cancel();n.ref.child("gl").set(true).catch(()=>{});}
   }
@@ -2888,12 +2928,13 @@ function copyLink(l){
 }
 function viewOnline(){
   if(!NET)return `<div class="panel"><p style="margin-top:0">和朋友在不同裝置上連線對打：一人建立房間，把房號或邀請連結傳給對方。</p>
-    <button class="pri" onclick="hostRoom()">🏠 建立房間</button>
+    <div class="row"><button class="pri" onclick="hostRoom()">🏠 建立房間（標準・3★ 選角）</button>
+      <button class="gold" onclick="hostRoom('own')">🏠 建立房間（養成賽・帶自己的隊伍）</button></div>
     <h3>加入房間</h3>
     <div class="row"><input id="joinCode" maxlength="5" placeholder="5碼房號" value="${JOIN_CODE}" autocomplete="off"
       style="font:inherit;font-size:18px;letter-spacing:4px;text-transform:uppercase;width:150px;padding:6px 10px;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px">
     <button class="gold" onclick="joinRoom($('#joinCode').value)">加入</button></div>
-    <p class="dim small">雙方都以 3★ 參戰，蛇形選角。房主的裝置負責計算戰鬥：房主關掉網頁，對戰就結束；挑戰者斷線或 60 秒沒動作，改由 AI 代打。</p></div>`;
+    <p class="dim small">標準：雙方都以 3★ 參戰，蛇形選角。養成賽：雙方帶自己的隊伍（等級、星數、突破、裝備都算），沒有公平限制，也沒有獎勵；加入房間時會自動判斷是哪種。房主的裝置負責計算戰鬥：房主關掉網頁，對戰就結束；挑戰者斷線或 60 秒沒動作，改由 AI 代打。</p></div>`;
   if(NET.status==="connecting")return `<div class="panel">🌐 連線中……</div>`;
   const leave=`<button onclick="leaveOnline()">離開房間</button>`;
   if(DUEL.phase==="lobby"){
@@ -2903,6 +2944,15 @@ function viewOnline(){
       <div class="small dim" style="word-break:break-all">${link}</div>
       <div class="row" style="justify-content:center;margin-top:10px"><button class="gold" onclick="copyLink('${link}')">📋 複製邀請連結</button>${leave}</div>
       <p class="dim">等待對手加入……</p></div>`;
+  }
+  if(DUEL.phase==="own"||(NET.mode==="own"&&DUEL.phase==="battle")){
+    const me=NET.side,op=me==="A"?"B":"A",mine=myOwnSpec(),theirs=DUEL.own&&DUEL.own[op];
+    const av=(u,hide)=>`<div class="ccard ${CARDS[u.id].r}"><div class="av">${avatar(u.id)}</div><div class="nm">${CARDS[u.id].name}</div><div class="small">${u.stars}★${u.br?" 突破"+u.br:""}</div></div>`;
+    return `<div class="row"><span class="dim">房間 ${NET.code}・養成賽</span><span style="margin-left:auto">${leave}</span></div>
+      <h3>你的隊伍</h3><div class="cardgrid">${mine.map(u=>av(u)).join("")}</div>
+      <h3>對手</h3>${theirs?`<div class="cardgrid">${sanOwn(theirs).map(u=>av(u)).join("")}</div>`:`<p class="dim">對手還在準備……</p>`}
+      <div class="row" style="margin-top:12px">${DUEL.ownReady?`<span class="dim">已準備，等對手……</span>`:`<button class="pri" onclick="readyOwn()">✅ 準備好了</button>`}</div>
+      <p class="dim small">用的是「隊伍」頁編好的角色（最多 3 名）。要換人請先離開房間。</p>`;
   }
   const d=DUEL,cur=DRAFT_ORDER[d.step],me=NET.side,op=me==="A"?"B":"A",taken=d.picks.A.concat(d.picks.B),mine=d.step<6&&cur===me;
   const side=(s,label)=>`<div class="panel" style="flex:1;min-width:200px;border-color:${s===cur&&d.step<6?"var(--gold)":"var(--line)"}">

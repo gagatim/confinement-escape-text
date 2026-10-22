@@ -530,11 +530,11 @@ function avatar(id){
   return `<img src="images/avatars/${id}.webp" alt="" draggable="false" onerror="this.outerHTML='<span class=emo>${d.name.charAt(0)}</span>'">`;
 }
 function starStr(n,br=0){return (br?`<b class="brk">突破${br}</b> `:"")+"★".repeat(n)+"<span style='opacity:.25'>"+"★".repeat(5-n)+"</span>";}
-// 星級：每多1星全能力+10%，3星起防禦+1。突破後保留之前的能力，每次突破 +3%，
-// 之後每升 1 星只 +5%（一輪 5★ 共 +20%）；最後套用職業加成
+// 星級：每多1星全能力+10%，3星起防禦+1。突破後保留之前的能力，每次突破 +1.5%，
+// 之後每升 1 星只 +2.5%（一輪 5★ 共 +10%）；最後套用職業加成
 function starMult(stars,br){
   if(!br)return 1+.1*(stars-1);
-  return 1.4+(br-1)*.2+br*.03+.05*(stars-1);
+  return 1.4+(br-1)*.1+br*.015+.025*(stars-1);
 }
 function cardStats(id,stars=1,scale=1,br=0){
   const c=DEF(id), m=starMult(stars,br)*scale;
@@ -661,7 +661,7 @@ function closeModal(){$("#modal").classList.remove("show");}
 // 超簡單導引：第一次進來自動打開，之後按右上角 ❓ 重看
 const GUIDE=[
   {ic:"⛓",t:"這是什麼遊戲？",b:["你和同伴被關在禁閉室，要一路往上爬、搶上只有 <b>三個座位</b> 的直升機。","玩法只有三件事：<b>抽角色 → 組隊 → 出發遠征</b>。"]},
-  {ic:"🎴",t:"① 抽角色",b:["到「招募」花金條抽卡。<b>第一次十連必出 SSR</b>，開局的金條剛好夠。","抽到重複的角色會升星（最多 5★），每 1 星能力 +10%。","5★ 後可以用 💎突破石「突破」：星星回到 1★ 再升，能力保留並再 +3%。成功率從 60% 起越來越低，失敗不會降星。"]},
+  {ic:"🎴",t:"① 抽角色",b:["到「招募」花金條抽卡。<b>第一次十連必出 SSR</b>，開局的金條剛好夠。","抽到重複的角色會升星（最多 5★），每 1 星能力 +10%。","5★ 後可以用 💎突破石「突破」：星星回到 1★ 再升，能力保留並再 +1.5%。成功率從 30% 起越來越低，失敗不會降星。"]},
   {ic:"👥",t:"② 組隊",b:["到「隊伍」點角色 →「加入隊伍」，最多 3 人。","每個角色有 <b>職業</b>（🛡坦克／⚔戰士／🗡刺客／🎯射手／✚輔助／🔮術士），各有不同加成。","不要的角色可以「遣散」換金條，或「合成」成更高稀有度。"]},
   {ic:"🛒",t:"③ 裝備與商店",b:["「商店」可以買裝備、強化符和遠征物資（下一次遠征自動帶上）。","在角色卡片點 <b>武器／防具／飾品</b> 欄位就能穿上。武器有職業限制。","「裝備」頁可以強化到 +10。<b>強化可能失敗</b>：+5 以上會掉級，+8 以上還可能損毀，用 🧿保護符 可以保住。"]},
   {ic:"🪜",t:"④ 出發遠征",b:["每一層選一扇門進去：可能是物資、敵人、或其他逃殺者。","注意 <b>🥫補給</b>（每層吃 1 份）和 <b>☣毒氣</b>（從底層往上淹）。","遇到人可以結盟、交易或開打。打倒最上層的魔王就逃出了！"]},
@@ -761,10 +761,10 @@ function grant(id){
   if(o.stars<5){o.stars++;return {id,up:o.stars};}
   SAVE.gold+=5;SAVE.charms.stone++;return {id,refund:5};
 }
-// 突破：5★ 時消耗突破石嘗試突破。成功率從 60% 起每次 ×0.85 指數下降。
-// 成功：星星回到 1★ 重新累積，之前的能力保留，另外全能力 +3%。失敗：突破石消失，星數不變（不會降星）。
+// 突破：5★ 時消耗突破石嘗試突破。成功率從 30% 起每次 ×0.85 指數下降。
+// 成功：星星回到 1★ 重新累積，之前的能力保留，另外全能力 +1.5%。失敗：突破石消失，星數不變（不會降星）。
 const BR_MAX=10;
-function brRate(b){return Math.round(60*Math.pow(.85,b));}
+function brRate(b){return Math.round(30*Math.pow(.85,b));}
 function brCost(b){return 2+b*2;}
 function brOf(id){const o=SAVE.owned[id];return o&&o.br||0;}
 function canBreak(id){const o=SAVE.owned[id];return !!o&&o.stars>=5&&brOf(id)<BR_MAX;}
@@ -773,7 +773,7 @@ function confirmBreak(id){
   openModal(`<h3>✨ 突破 ${CARDS[id].name}</h3>
     ${BR_RES&&BR_RES.id===id?`<div class="enhres ${BR_RES.ok?"ok":"bad"}">${BR_RES.msg}</div>`:""}
     <p>成功率 <b style="color:var(--gold)">${brRate(b)}%</b>，需要 <b>💎突破石 ×${need}</b>（持有 ${have}）。</p>
-    <p class="small">成功：星星回到 <b>1★</b> 重新累積，目前的能力<b>全部保留</b>，另外全能力 <b style="color:var(--gold)">+3%</b>（突破後每升 1 星 +5%）。<br>
+    <p class="small">成功：星星回到 <b>1★</b> 重新累積，目前的能力<b>全部保留</b>，另外全能力 <b style="color:var(--gold)">+1.5%</b>（突破後每升 1 星 +2.5%）。<br>
     <span style="color:#ff8a8a">失敗：突破石消失，但<b>不會降星</b>。</span></p>
     <p class="small">突破 ${b} 5★：❤${cur.maxHp} ⚔${cur.atk} → 突破 ${b+1} 1★：<span style="color:var(--green)">❤${nx.maxHp} ⚔${nx.atk}</span></p>
     <p class="dim small">突破石：商店購買、5★ 後抽到重複卡、主線魔王、深淵守門者、練功房掉落。突破越多次，需要的突破石越多、成功率越低（最多 ${BR_MAX} 次）。</p>
@@ -789,7 +789,7 @@ function doBreak(id){
   SAVE.charms.stone-=need;
   if(rnd()*100<brRate(b)){
     o.br=b+1;o.stars=1;BR_RES={id,ok:true,msg:`✨ 突破成功！${CARDS[id].name} 到達突破 ${o.br}`};SFX.ssr();save();render();
-    return openModal(`<h3>✨ 突破成功</h3><div class="enhres ok">${CARDS[id].name} 到達突破 ${o.br}！星星回到 1★，全能力再 +3%。</div>
+    return openModal(`<h3>✨ 突破成功</h3><div class="enhres ok">${CARDS[id].name} 到達突破 ${o.br}！星星回到 1★，全能力再 +1.5%。</div>
       <div class="row"><button class="pri" onclick="BR_RES=null;showCard('${id}')">查看角色</button><button onclick="BR_RES=null;closeModal()">關閉</button></div>`);
   }
   BR_RES={id,ok:false,msg:`💥 突破失敗……💎突破石 ×${need} 消失了（星數沒有變）`};SFX.lose();save();render();confirmBreak(id);
@@ -1094,7 +1094,7 @@ const BOXES={
   box:{name:"裝備補給箱",icon:"📦",price:30,desc:"隨機裝備：R 70%／SR 27%／SSR 3%",roll:()=>{const r=rnd();return r<.03?"SSR":r<.3?"SR":"R";}},
   goldbox:{name:"黃金裝備箱",icon:"🎁",price:100,desc:"隨機裝備：SR 82%／SSR 18%",roll:()=>rnd()<.18?"SSR":"SR"}
 };
-const CHARMS={stone:{name:"突破石",icon:"💎",price:15,desc:"角色 5★ 突破用的材料（成功率 60%，失敗會消失）"},protect:{name:"保護符",icon:"🧿",price:20,desc:"強化失敗時不掉級、不損毀（失敗才消耗）"},luck:{name:"幸運符",icon:"🍀",price:12,desc:"強化成功率 +10%（每次強化消耗）"}};
+const CHARMS={stone:{name:"突破石",icon:"💎",price:15,desc:"角色 5★ 突破用的材料（成功率 30% 起遞減，失敗會消失）"},protect:{name:"保護符",icon:"🧿",price:20,desc:"強化失敗時不掉級、不損毀（失敗才消耗）"},luck:{name:"幸運符",icon:"🍀",price:12,desc:"強化成功率 +10%（每次強化消耗）"}};
 const SUPPLY={pill:6,adrenaline:8,wine:4,rope:9,gasmask:7,rocket:12,knife:8,pistol:12};
 const STASH_MAX=6,FOOD_PRICE=5,FOOD_MAX=5;
 let SHOP_TAB="gear";

@@ -260,6 +260,63 @@ footer.credit a{color:var(--gold)}
 #bgmBox{width:200px;height:113px;border-radius:8px;overflow:hidden;background:#000;flex-shrink:0}
 #bgmBox iframe{width:100%;height:100%;border:0}
 
+
+/* ===== 稀有度特效（只用 transform/opacity/box-shadow，手機也跑得動；系統設定「減少動態效果」時關閉） ===== */
+@keyframes shine{0%,55%{transform:translateX(-70%) rotate(8deg)}100%{transform:translateX(70%) rotate(8deg)}}
+@keyframes glowGold{0%,100%{box-shadow:0 0 10px rgba(245,196,81,.3)}50%{box-shadow:0 0 24px rgba(245,196,81,.75),inset 0 0 14px rgba(245,196,81,.18)}}
+@keyframes glowPurple{0%,100%{box-shadow:0 0 6px rgba(176,124,255,.2)}50%{box-shadow:0 0 16px rgba(176,124,255,.6)}}
+@keyframes glowPink{0%,100%{box-shadow:0 0 12px rgba(255,94,138,.35)}50%{box-shadow:0 0 28px rgba(255,94,138,.85),inset 0 0 14px rgba(255,94,138,.2)}}
+@keyframes exHue{0%{border-color:#5ef0ff;box-shadow:0 0 18px rgba(94,240,255,.6)}33%{border-color:#c77dff;box-shadow:0 0 24px rgba(199,125,255,.7)}66%{border-color:#ffd166;box-shadow:0 0 24px rgba(255,209,102,.7)}100%{border-color:#5ef0ff;box-shadow:0 0 18px rgba(94,240,255,.6)}}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes twinkle{0%,100%{text-shadow:0 0 4px rgba(245,196,81,.6)}50%{text-shadow:0 0 10px #ffe9a8,0 0 18px rgba(245,196,81,.9)}}
+@keyframes hotLv{0%,100%{text-shadow:0 0 6px #ff3d6e}50%{text-shadow:0 0 14px #ff3d6e,0 0 22px #ffb36b}}
+/* 角色卡 */
+.ccard{overflow:hidden}
+.ccard.SR{background:radial-gradient(circle at 50% 28%,rgba(176,124,255,.16),var(--panel) 72%);animation:glowPurple 3.2s ease-in-out infinite}
+.ccard.SSR{background:radial-gradient(circle at 50% 28%,rgba(245,196,81,.22),var(--panel) 72%);animation:glowGold 2.6s ease-in-out infinite}
+.ccard.SSR::before{content:"";position:absolute;inset:-30% -80%;background:linear-gradient(90deg,transparent 42%,rgba(255,240,190,.38) 50%,transparent 58%);animation:shine 3.8s ease-in-out infinite;pointer-events:none;z-index:2}
+.ccard.locked,.ccard.locked::before{animation:none}.ccard.locked::before{display:none}
+.ccard.brkc .av{box-shadow:0 0 0 2px #ff9cf0,0 0 14px rgba(255,120,230,.75)}
+.stars.max{animation:twinkle 1.8s ease-in-out infinite}
+/* 戰鬥中的角色頭像外框 */
+.ucard.q-SR .uav{box-shadow:0 0 0 2px var(--purple),0 0 10px rgba(176,124,255,.5)}
+.ucard.q-SSR .uav{box-shadow:0 0 0 2px var(--gold),0 0 14px rgba(245,196,81,.65)}
+/* 角色詳情大頭像 */
+.av.fx-SR{box-shadow:0 0 0 2px var(--purple),0 0 18px rgba(176,124,255,.6)}
+.av.fx-SSR{animation:glowGold 2.4s ease-in-out infinite;border:2px solid var(--gold)}
+/* 抽卡翻開 */
+.pull.SR.flip .f{animation:glowPurple 2.4s ease-in-out infinite}
+.pull.SSR.flip .f{animation:glowGold 1.8s ease-in-out infinite}
+.pull.SSR.flip .f::after{content:"";position:absolute;inset:-30% -80%;background:linear-gradient(90deg,transparent 42%,rgba(255,240,190,.5) 50%,transparent 58%);animation:shine 2.4s ease-in-out infinite;pointer-events:none}
+/* 裝備卡 */
+.gcard{overflow:hidden}
+.gcard.SR{background:radial-gradient(circle at 50% 20%,rgba(176,124,255,.14),var(--panel) 70%)}
+.gcard.SSR{background:radial-gradient(circle at 50% 20%,rgba(245,196,81,.18),var(--panel) 70%);animation:glowGold 2.8s ease-in-out infinite}
+.gcard.UR{background:radial-gradient(circle at 50% 20%,rgba(255,94,138,.2),var(--panel) 70%);animation:glowPink 2.2s ease-in-out infinite}
+.gcard.EX{animation:exHue 4s linear infinite}
+.gcard.SSR::before,.gcard.UR::before,.gcard.EX::before{content:"";position:absolute;inset:-30% -80%;background:linear-gradient(90deg,transparent 42%,rgba(255,255,255,.28) 50%,transparent 58%);animation:shine 3.4s ease-in-out infinite;pointer-events:none}
+.gcard.SSR .gi{filter:drop-shadow(0 0 6px rgba(245,196,81,.8))}
+.gcard.UR .gi{filter:drop-shadow(0 0 8px rgba(255,94,138,.9));animation:floaty 2.4s ease-in-out infinite}
+.gcard.EX .gi{filter:drop-shadow(0 0 10px rgba(94,240,255,.95));animation:floaty 2s ease-in-out infinite}
+.gcard .lv.hi{color:#ff8fab;animation:hotLv 1.6s ease-in-out infinite}
+.gcard .lv.max{background:linear-gradient(90deg,#ffd166,#ff5e8a,#5ef0ff);-webkit-background-clip:text;background-clip:text;color:transparent;animation:none;filter:drop-shadow(0 0 6px rgba(255,94,138,.8))}
+/* 角色身上的裝備欄 */
+.gslot.SR{border-color:var(--purple)}
+.gslot.SSR{border-color:var(--gold);box-shadow:0 0 10px rgba(245,196,81,.4)}
+.gslot.UR{border-color:#ff5e8a;box-shadow:0 0 12px rgba(255,94,138,.5)}
+.gslot.EX{animation:exHue 4s linear infinite}
+/* 裝備大圖示（詳情、開箱） */
+.bigicon{font-size:64px;text-align:center;min-width:90px}
+.bigicon.fx-SR{filter:drop-shadow(0 0 10px rgba(176,124,255,.8))}
+.bigicon.fx-SSR{filter:drop-shadow(0 0 14px rgba(245,196,81,.9))}
+.bigicon.fx-UR{filter:drop-shadow(0 0 16px rgba(255,94,138,.95));animation:floaty 2.4s ease-in-out infinite}
+.bigicon.fx-EX{filter:drop-shadow(0 0 18px rgba(94,240,255,1));animation:floaty 2s ease-in-out infinite}
+/* 魔王卡 */
+.bosscard:not(.lockc){animation:glowPink 3s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){
+  .ccard,.ccard::before,.stars.max,.av.fx-SSR,.pull .f,.pull .f::after,.gcard,.gcard::before,.gcard .gi,.gcard .lv,.gslot,.bigicon,.bosscard{animation:none!important}
+}
+
 /* duel */
 .draftside{display:flex;gap:6px;min-height:70px;flex-wrap:wrap}
 .draftside .av{width:60px;height:60px;border-radius:8px;overflow:hidden;border:2px solid var(--line)}
@@ -1090,9 +1147,9 @@ let SHOW_LOCKED=false;
 function sortedIds(){return Object.keys(CARDS).sort((a,b)=>R_ORDER[CARDS[a].r]-R_ORDER[CARDS[b].r]||a.localeCompare(b));}
 function cardTile(id,onclick,extraCls=""){
   const c=CARDS[id],o=SAVE.owned[id];
-  return `<div class="ccard ${c.r} ${o?"":"locked"} ${SAVE.team.includes(id)?"inteam":""} ${extraCls}" onclick="${onclick}">
+  return `<div class="ccard ${c.r} ${o?"":"locked"} ${o&&o.br?"brkc":""} ${SAVE.team.includes(id)?"inteam":""} ${extraCls}" onclick="${onclick}">
     <div class="av">${avatar(id)}</div><div class="nm">${c.name}</div>
-    <div class="stars">${o?starStr(o.stars,o.br):"未獲得"}</div>${o&&canBreak(id)?`<div class="small" style="color:var(--gold)">✨可突破</div>`:""}<div class="small"><span class="r${c.r}">${c.r}</span>${o?` <b>Lv.${lvOf(id)}</b>`:""} ${clsTag(id)}</div></div>`;
+    <div class="stars ${o&&o.stars>=5?"max":""}">${o?starStr(o.stars,o.br):"未獲得"}</div>${o&&canBreak(id)?`<div class="small" style="color:var(--gold)">✨可突破</div>`:""}<div class="small"><span class="r${c.r}">${c.r}</span>${o?` <b>Lv.${lvOf(id)}</b>`:""} ${clsTag(id)}</div></div>`;
 }
 let TEAM_CLS="";
 function clsFilter(cur,fn){
@@ -1120,7 +1177,7 @@ function skillHtml(d){
 function showCard(id){
   const c=CARDS[id],o=SAVE.owned[id],s=cardStats(id,o?o.stars:1,o?lvScale(id):1,brOf(id)),inT=SAVE.team.includes(id),e=equipBonus(id);
   const sv=(k,v)=>`${v}${e[k]?`<span style="color:var(--green)">+${e[k]}</span>`:""}`;
-  openModal(`<div class="detail"><div class="av">${avatar(id)}</div><div style="flex:1">
+  openModal(`<div class="detail"><div class="av fx-${c.r}">${avatar(id)}</div><div style="flex:1">
     <div class="r${c.r}">${c.r} ${o?starStr(o.stars,brOf(id)):""}</div><h2 style="margin:2px 0">${c.name}</h2>
     <div>${clsTag(id)} <span class="dim small">${CLASSES[c.cls].desc}</span></div>${o?lvBar(id):""}
     <div class="small">❤ ${sv("hp",s.maxHp)}　⚔ ${sv("atk",s.atk)}　🛡 ${sv("def",s.def)}　💨 ${sv("spd",s.spd)}</div>
@@ -1198,6 +1255,7 @@ function openSynth(tier){
         <div class="stars">${starStr(o.stars)}</div><div class="small" style="color:var(--gold)">${b||(u?`投入 ${u}★`:"&nbsp;")}</div></div>`;}).join("")||`<span class="dim">沒有 ${t} 角色</span>`}</div>
     <div class="row" style="margin-top:10px"><b style="margin-right:auto;color:${n>=SYN_COST?"var(--gold)":"inherit"}">已投入 ${n}/${SYN_COST}★</b>
       <button onclick="SYN.pick={};openSynth()">清除</button>
+      <button class="gold" onclick="confirmAutoSynth()">⚡ 一鍵合成</button>
       <button class="pri" onclick="doSynth()" ${n===SYN_COST?"":"disabled"}>合成</button><button onclick="closeModal()">關閉</button></div>`);
 }
 function synAdd(id){
@@ -1210,14 +1268,58 @@ function doSynth(){
   if(synTotal()!==SYN_COST)return;
   const gone=Object.keys(SYN.pick).filter(id=>SYN.pick[id]>=SAVE.owned[id].stars);
   if(Object.keys(SAVE.owned).length-gone.length<2){toast("合成後至少要保留 2 名其他角色");return;}
-  Object.entries(SYN.pick).forEach(([id,n])=>{SAVE.owned[id].stars-=n;if(SAVE.owned[id].stars<=0)delete SAVE.owned[id];});
-  const up=SYN_UP[SYN.tier],pool=POOL[up],fresh=pool.filter(id=>!SAVE.owned[id]);
-  const id=fresh.length&&rnd()<.6?pick(fresh):pick(pool),gr=grant(id);
+  const {id,gr}=synthCore(SYN.pick,SYN.tier),up=SYN_UP[SYN.tier];
   SYN.pick={};save();up==="SSR"?SFX.ssr():SFX.sr();render();
   openModal(`<h3>🔮 合成成功</h3><div class="detail"><div class="av">${avatar(id)}</div><div>
     <div class="r${up}">${up}</div><h2 style="margin:2px 0">${CARDS[id].name}</h2>
     <div>${gr.isNew?"NEW!":gr.up?`升至 ${gr.up}★`:`已滿星，🪙+${gr.refund}、💎+1`}</div></div></div>
     <div class="row" style="margin-top:12px"><button class="pri" onclick="openSynth()">繼續合成</button><button onclick="showCard('${id}')">查看角色</button><button onclick="closeModal()">關閉</button></div>`);
+}
+// 合成一次：扣掉投入的星數，給 1 名高一階的隨機角色（60% 優先沒有的）
+function synthCore(pk,tier){
+  Object.entries(pk).forEach(([id,n])=>{SAVE.owned[id].stars-=n;if(SAVE.owned[id].stars<=0)delete SAVE.owned[id];});
+  const up=SYN_UP[tier],pool=POOL[up],fresh=pool.filter(id=>!SAVE.owned[id]);
+  const id=fresh.length&&rnd()<.6?pick(fresh):pick(pool);
+  return {id,gr:grant(id)};
+}
+// 一鍵合成：自動挑材料、能合幾次就合幾次。優先用等級低、星數少的角色；隊伍中、遠征中、已突破的不會被用到
+function synthPlan(t){
+  const left={};let total=Object.keys(SAVE.owned).length;
+  Object.keys(SAVE.owned).forEach(id=>left[id]=SAVE.owned[id].stars);
+  const elig=Object.keys(SAVE.owned).filter(id=>CARDS[id].r===t&&!synBlock(id))
+    .sort((a,b)=>lvOf(a)-lvOf(b)||SAVE.owned[a].stars-SAVE.owned[b].stars||a.localeCompare(b));
+  const plan=[];
+  for(;;){
+    const pk={};let need=SYN_COST;
+    for(const id of elig){if(!left[id])continue;const n=Math.min(left[id],need);pk[id]=n;need-=n;if(!need)break;}
+    if(need>0)break;
+    const gone=Object.keys(pk).filter(id=>pk[id]>=left[id]).length;
+    if(total-gone<2)break;
+    Object.entries(pk).forEach(([id,n])=>{left[id]-=n;if(!left[id])total--;});
+    plan.push(pk);
+  }
+  return plan;
+}
+function confirmAutoSynth(){
+  const t=SYN.tier,plan=synthPlan(t);
+  if(!plan.length){toast(`可用的 ${t} 角色不夠 ${SYN_COST}★（隊伍中、遠征中、已突破的不算）`);return;}
+  const use={};plan.forEach(pk=>Object.entries(pk).forEach(([id,n])=>use[id]=(use[id]||0)+n));
+  const list=Object.entries(use).map(([id,n])=>`${CARDS[id].name} ${n}★${n>=SAVE.owned[id].stars?"（整張）":""}`).join("、");
+  openModal(`<h3>⚡ 一鍵合成 ${t} → ${SYN_UP[t]}</h3>
+    <p>可以合成 <b style="color:var(--gold)">${plan.length} 次</b>，得到 ${plan.length} 名隨機 ${SYN_UP[t]} 角色。</p>
+    <p class="small">會用掉：${list}</p>
+    <p class="dim small">優先用等級低、星數少的角色。隊伍中、遠征中、已突破的角色不會被用到，標「整張」的角色會從收藏移除（裝備自動卸下）。</p>
+    <div class="row"><button class="pri" onclick="doAutoSynth()">⚡ 開始合成</button><button onclick="openSynth()">返回</button></div>`);
+}
+function doAutoSynth(){
+  const t=SYN.tier,plan=synthPlan(t),res=[];
+  plan.forEach(pk=>res.push(synthCore(pk,t)));
+  SYN.pick={};save();SYN_UP[t]==="SSR"?SFX.ssr():SFX.sr();render();
+  glog("🔮SYNTH",`一鍵合成 ${t}×${res.length}：${res.map(r=>CARDS[r.id].name).join("、")}`);
+  openModal(`<h3>⚡ 一鍵合成完成（${res.length} 次）</h3>
+    <div class="cardgrid">${res.map(({id,gr})=>`<div class="ccard ${CARDS[id].r}" onclick="showCard('${id}')"><div class="av">${avatar(id)}</div><div class="nm">${CARDS[id].name}</div>
+      <div class="small" style="color:var(--gold)">${gr.isNew?"NEW!":gr.up?`升至 ${gr.up}★`:`滿星 🪙+${gr.refund}`}</div></div>`).join("")}</div>
+    <div class="row" style="margin-top:12px"><button class="pri" onclick="openSynth()">回到合成</button><button onclick="closeModal()">關閉</button></div>`);
 }
 // 熔煉：兩名同稀有度角色（整張卡）→ 1 名同稀有度的其他角色，優先給還沒擁有的。
 // 新角色的等級、星數、突破都取兩者中較低的；如果抽到已經擁有的角色，各項保留較高的那邊
@@ -1349,7 +1451,7 @@ function openSlot(id,sl){
 function gearSort(a,b){return GQ.indexOf(GEAR[b.base].q)-GQ.indexOf(GEAR[a.base].q)||b.lv-a.lv||a.uid-b.uid;}
 function gearCard(g,onclick){
   const G=GEAR[g.base],w=gearOwner(g.uid);
-  return `<div class="gcard ${G.q}" onclick="${onclick}">${g.lv?`<span class="lv">+${g.lv}</span>`:""}<div class="gi">${G.icon}</div>
+  return `<div class="gcard ${G.q}" onclick="${onclick}">${g.lv?`<span class="lv ${g.lv>=ENH_MAX?"max":g.lv>=7?"hi":""}">+${g.lv}</span>`:""}<div class="gi">${G.icon}</div>
     <div class="gn r${G.q}">${G.name}</div><div class="small">${statStr(gearStats(g))}</div>${g.fx&&g.fx.length?`<div class="gfx">${fxStr(g)}</div>`:""}
     <div class="small dim">${GQ_NAME[G.q]}・${SLOTS[G.slot]}・${gearCls(g.base)} ${reqTag(null,g.base)}</div>${w?`<div class="who">👤 ${CARDS[w].name}</div>`:""}</div>`;
 }
@@ -1367,7 +1469,7 @@ function openGear(uid){
   const g=gearById(uid);if(!g)return closeModal();
   const G=GEAR[g.base],w=gearOwner(uid),cands=Object.keys(SAVE.owned).filter(id=>canWear(id,g.base)&&lvOk(id,g.base)&&id!==w).sort((a,b)=>R_ORDER[CARDS[a].r]-R_ORDER[CARDS[b].r]);
   const sell=GEAR_SELL[G.q]+g.lv*4;
-  openModal(`<div class="detail"><div style="font-size:64px;text-align:center;min-width:90px">${G.icon}</div><div style="flex:1">
+  openModal(`<div class="detail"><div class="bigicon fx-${G.q}">${G.icon}</div><div style="flex:1">
     <div class="r${G.q}">${G.q}（${GQ_NAME[G.q]}）・${SLOTS[G.slot]}</div><h2 style="margin:2px 0">${G.name}${g.lv?` <span style="color:var(--gold)">+${g.lv}</span>`:""}</h2>
     <div>${statStr(gearStats(g))}</div>
     <div class="small dim">品質 ${g.roll||100}%（同種裝備數值會浮動）</div>
@@ -1486,7 +1588,7 @@ function buyGear(k){
 function buyBox(k){
   const b=BOXES[k];if(!pay(b.price))return;
   const q=b.roll(),g=addGear(rollGear(q));save();q==="SSR"||q==="UR"?SFX.ssr():q==="SR"?SFX.sr():SFX.flip();render();
-  openModal(`<h3>${b.icon} 打開${b.name}</h3><div style="text-align:center;font-size:64px">${GEAR[g.base].icon}</div>
+  openModal(`<h3>${b.icon} 打開${b.name}</h3><div class="bigicon fx-${q}" style="margin:6px 0">${GEAR[g.base].icon}</div>
     <h2 style="text-align:center;margin:4px 0" class="r${q}">${q}　${GEAR[g.base].name}</h2>
     <p style="text-align:center">${statStr(gearStats(g))}${g.fx.length?`<br><span class="gfx">${fxStr(g)}</span>`:""}<br><span class="dim small">${GQ_NAME[q]}・品質 ${g.roll}%・${SLOTS[GEAR[g.base].slot]}・${gearCls(g.base)}・需 Lv.${GEAR_REQ[q]}</span></p>
     <div class="row"><button class="gold" onclick="buyBox('${k}')" ${SAVE.gold<b.price?"disabled":""}>再開一個（🪙${b.price}）</button>
@@ -1924,7 +2026,7 @@ function unitCard(B,u){
   if(u.buffs.some(b=>b.v>0))st.push("▲");
   if(u.buffs.some(b=>b.v<0))st.push("▼");
   const d=DEF(u.id),cl=CARDS[u.id]?CLASSES[CARDS[u.id].cls]:null;
-  return `<div class="ucard s${u.side} ${d.boss2?"bossu":""} ${u.flags&&u.flags.p2?"p2":""} ${u.alive?"":"dead"} ${B.active===u&&!B.over?"active":""} ${tg?"targetable":""}" id="u${u.uid}" onclick="onUnitClick(${u.uid})" title="${d.skill.name}：${d.skill.desc}\n${d.passive.name}：${d.passive.desc}">
+  return `<div class="ucard s${u.side} ${CARDS[u.id]?"q-"+CARDS[u.id].r:""} ${d.boss2?"bossu":""} ${u.flags&&u.flags.p2?"p2":""} ${u.alive?"":"dead"} ${B.active===u&&!B.over?"active":""} ${tg?"targetable":""}" id="u${u.uid}" onclick="onUnitClick(${u.uid})" title="${d.skill.name}：${d.skill.desc}\n${d.passive.name}：${d.passive.desc}">
     <div class="uav">${avatar(u.id,u.flags&&u.flags.p2)}</div>
     ${u.cd>0&&u.alive?`<div class="cdbadge">✦${u.cd}</div>`:""}
     <div class="uname">${cl?`<span title="${cl.name}：${cl.desc}">${cl.icon}</span>`:""}${u.ally?"🤝":""}${u.name}</div>

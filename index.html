@@ -71,6 +71,7 @@ h3{margin:14px 0 8px;font-size:16px;color:#c9ced5}
 .emo{font-size:40px;line-height:1}
 .ccard .nm{font-weight:700;font-size:14px;margin-top:4px}
 .stars{color:var(--gold);font-size:11px;letter-spacing:-1px}
+.brk{color:#ff9cf0;letter-spacing:0;text-shadow:0 0 6px rgba(255,120,230,.6)}
 .teamslots{display:grid;grid-template-columns:repeat(3,minmax(0,140px));gap:10px}
 .slot{border:2px dashed var(--line);border-radius:12px;min-height:150px;display:flex;align-items:center;justify-content:center;color:var(--dim)}
 
@@ -528,11 +529,16 @@ function avatar(id){
   if(d.emoji) return `<span class="emo">${d.emoji}</span>`;
   return `<img src="images/avatars/${id}.webp" alt="" draggable="false" onerror="this.outerHTML='<span class=emo>${d.name.charAt(0)}</span>'">`;
 }
-function starStr(n){return "★".repeat(n)+"<span style='opacity:.25'>"+"★".repeat(5-n)+"</span>";}
-// 星級：每多1星全能力+10%，3星起防禦+1；再套用職業加成
-function cardStats(id,stars=1,scale=1){
-  const c=DEF(id), m=(1+.1*(stars-1))*scale;
-  const s={maxHp:Math.round(c.hp*m),atk:Math.max(1,Math.round(c.atk*m)),def:c.def+(stars>=3?1:0),spd:c.spd};
+function starStr(n,br=0){return (br?`<b class="brk">突破${br}</b> `:"")+"★".repeat(n)+"<span style='opacity:.25'>"+"★".repeat(5-n)+"</span>";}
+// 星級：每多1星全能力+10%，3星起防禦+1。突破後保留之前的能力，每次突破 +3%，
+// 之後每升 1 星只 +5%（一輪 5★ 共 +20%）；最後套用職業加成
+function starMult(stars,br){
+  if(!br)return 1+.1*(stars-1);
+  return 1.4+(br-1)*.2+br*.03+.05*(stars-1);
+}
+function cardStats(id,stars=1,scale=1,br=0){
+  const c=DEF(id), m=starMult(stars,br)*scale;
+  const s={maxHp:Math.round(c.hp*m),atk:Math.max(1,Math.round(c.atk*m)),def:c.def+(stars>=3||br?1:0),spd:c.spd};
   if(c.cls==="tank"){s.maxHp=Math.round(s.maxHp*1.15);s.def++;}
   if(c.cls==="warrior")s.atk+=Math.max(1,Math.round(s.atk*.15));
   if(c.cls==="assassin")s.spd++;
@@ -563,6 +569,7 @@ function migrate(s){
   if(!s.stash)s.stash={items:[],food:0};
   if(!s.charms)s.charms={protect:0,luck:0};
   if(!s.train)s.train={best:0};
+  if(s.charms.stone==null)s.charms.stone=0;
   return s;
 }
 function exportSave(){
@@ -654,7 +661,7 @@ function closeModal(){$("#modal").classList.remove("show");}
 // 超簡單導引：第一次進來自動打開，之後按右上角 ❓ 重看
 const GUIDE=[
   {ic:"⛓",t:"這是什麼遊戲？",b:["你和同伴被關在禁閉室，要一路往上爬、搶上只有 <b>三個座位</b> 的直升機。","玩法只有三件事：<b>抽角色 → 組隊 → 出發遠征</b>。"]},
-  {ic:"🎴",t:"① 抽角色",b:["到「招募」花金條抽卡。<b>第一次十連必出 SSR</b>，開局的金條剛好夠。","抽到重複的角色會升星（最多 5★），每 1 星能力 +10%。"]},
+  {ic:"🎴",t:"① 抽角色",b:["到「招募」花金條抽卡。<b>第一次十連必出 SSR</b>，開局的金條剛好夠。","抽到重複的角色會升星（最多 5★），每 1 星能力 +10%。","5★ 後可以用 💎突破石「突破」：星星回到 1★ 再升，能力保留並再 +3%。成功率從 60% 起越來越低，失敗不會降星。"]},
   {ic:"👥",t:"② 組隊",b:["到「隊伍」點角色 →「加入隊伍」，最多 3 人。","每個角色有 <b>職業</b>（🛡坦克／⚔戰士／🗡刺客／🎯射手／✚輔助／🔮術士），各有不同加成。","不要的角色可以「遣散」換金條，或「合成」成更高稀有度。"]},
   {ic:"🛒",t:"③ 裝備與商店",b:["「商店」可以買裝備、強化符和遠征物資（下一次遠征自動帶上）。","在角色卡片點 <b>武器／防具／飾品</b> 欄位就能穿上。武器有職業限制。","「裝備」頁可以強化到 +10。<b>強化可能失敗</b>：+5 以上會掉級，+8 以上還可能損毀，用 🧿保護符 可以保住。"]},
   {ic:"🪜",t:"④ 出發遠征",b:["每一層選一扇門進去：可能是物資、敵人、或其他逃殺者。","注意 <b>🥫補給</b>（每層吃 1 份）和 <b>☣毒氣</b>（從底層往上淹）。","遇到人可以結盟、交易或開打。打倒最上層的魔王就逃出了！"]},
@@ -752,7 +759,40 @@ function grant(id){
   const o=SAVE.owned[id];
   if(!o){SAVE.owned[id]={stars:1};return {id,isNew:true};}
   if(o.stars<5){o.stars++;return {id,up:o.stars};}
-  SAVE.gold+=5;return {id,refund:5};
+  SAVE.gold+=5;SAVE.charms.stone++;return {id,refund:5};
+}
+// 突破：5★ 時消耗突破石嘗試突破。成功率從 60% 起每次 ×0.85 指數下降。
+// 成功：星星回到 1★ 重新累積，之前的能力保留，另外全能力 +3%。失敗：突破石消失，星數不變（不會降星）。
+const BR_MAX=10;
+function brRate(b){return Math.round(60*Math.pow(.85,b));}
+function brCost(b){return 2+b*2;}
+function brOf(id){const o=SAVE.owned[id];return o&&o.br||0;}
+function canBreak(id){const o=SAVE.owned[id];return !!o&&o.stars>=5&&brOf(id)<BR_MAX;}
+function confirmBreak(id){
+  const b=brOf(id),cur=cardStats(id,5,1,b),nx=cardStats(id,1,1,b+1),need=brCost(b),have=SAVE.charms.stone;
+  openModal(`<h3>✨ 突破 ${CARDS[id].name}</h3>
+    ${BR_RES&&BR_RES.id===id?`<div class="enhres ${BR_RES.ok?"ok":"bad"}">${BR_RES.msg}</div>`:""}
+    <p>成功率 <b style="color:var(--gold)">${brRate(b)}%</b>，需要 <b>💎突破石 ×${need}</b>（持有 ${have}）。</p>
+    <p class="small">成功：星星回到 <b>1★</b> 重新累積，目前的能力<b>全部保留</b>，另外全能力 <b style="color:var(--gold)">+3%</b>（突破後每升 1 星 +5%）。<br>
+    <span style="color:#ff8a8a">失敗：突破石消失，但<b>不會降星</b>。</span></p>
+    <p class="small">突破 ${b} 5★：❤${cur.maxHp} ⚔${cur.atk} → 突破 ${b+1} 1★：<span style="color:var(--green)">❤${nx.maxHp} ⚔${nx.atk}</span></p>
+    <p class="dim small">突破石：商店購買、5★ 後抽到重複卡、主線魔王、深淵守門者、練功房掉落。突破越多次，需要的突破石越多、成功率越低（最多 ${BR_MAX} 次）。</p>
+    <div class="row"><button class="pri" onclick="doBreak('${id}')" ${have<need?"disabled":""}>✨ 突破（💎×${need}）</button>
+    ${have<need?`<button class="gold" onclick="SHOP_TAB='charm';closeModal();go('shop')">🛒 去買突破石</button>`:""}
+    <button onclick="BR_RES=null;showCard('${id}')">返回</button></div>`);
+}
+let BR_RES=null;
+function doBreak(id){
+  if(!canBreak(id))return;
+  const o=SAVE.owned[id],b=brOf(id),need=brCost(b);
+  if(SAVE.charms.stone<need){toast("突破石不足");return;}
+  SAVE.charms.stone-=need;
+  if(rnd()*100<brRate(b)){
+    o.br=b+1;o.stars=1;BR_RES={id,ok:true,msg:`✨ 突破成功！${CARDS[id].name} 到達突破 ${o.br}`};SFX.ssr();save();render();
+    return openModal(`<h3>✨ 突破成功</h3><div class="enhres ok">${CARDS[id].name} 到達突破 ${o.br}！星星回到 1★，全能力再 +3%。</div>
+      <div class="row"><button class="pri" onclick="BR_RES=null;showCard('${id}')">查看角色</button><button onclick="BR_RES=null;closeModal()">關閉</button></div>`);
+  }
+  BR_RES={id,ok:false,msg:`💥 突破失敗……💎突破石 ×${need} 消失了（星數沒有變）`};SFX.lose();save();render();confirmBreak(id);
 }
 function doPull(n){
   const cost=n===10?TEN_COST:PULL_COST;
@@ -781,7 +821,7 @@ function showGacha(res){
         <div class="b">?</div>
         <div class="f"><div class="av">${avatar(x.id)}</div><div class="nm r${c.r}">${c.name}</div>
           <div class="small r${c.r}">${c.r}</div>
-          <div class="badge">${x.isNew?"NEW!":x.up?"升至"+x.up+"★":"🪙+"+x.refund}</div></div>
+          <div class="badge">${x.isNew?"NEW!":x.up?"升至"+x.up+"★":"🪙+"+x.refund+" 💎+1"}</div></div>
       </div></div>`;}).join("")}
     </div>
     <div class="row"><button onclick="flipAll()">全部翻開</button><button class="pri" onclick="closeGacha()">完成</button></div>`;
@@ -803,7 +843,7 @@ function cardTile(id,onclick,extraCls=""){
   const c=CARDS[id],o=SAVE.owned[id];
   return `<div class="ccard ${c.r} ${o?"":"locked"} ${SAVE.team.includes(id)?"inteam":""} ${extraCls}" onclick="${onclick}">
     <div class="av">${avatar(id)}</div><div class="nm">${c.name}</div>
-    <div class="stars">${o?starStr(o.stars):"未獲得"}</div><div class="small"><span class="r${c.r}">${c.r}</span>${o?` <b>Lv.${lvOf(id)}</b>`:""} ${clsTag(id)}</div></div>`;
+    <div class="stars">${o?starStr(o.stars,o.br):"未獲得"}</div>${o&&canBreak(id)?`<div class="small" style="color:var(--gold)">✨可突破</div>`:""}<div class="small"><span class="r${c.r}">${c.r}</span>${o?` <b>Lv.${lvOf(id)}</b>`:""} ${clsTag(id)}</div></div>`;
 }
 let TEAM_CLS="";
 function clsFilter(cur,fn){
@@ -828,10 +868,10 @@ function skillHtml(d){
   <div class="sk"><b>◈ ${d.passive.name}</b> <span class="dim small">被動</span><br>${d.passive.desc}</div>`;
 }
 function showCard(id){
-  const c=CARDS[id],o=SAVE.owned[id],s=cardStats(id,o?o.stars:1,o?lvScale(id):1),inT=SAVE.team.includes(id),e=equipBonus(id);
+  const c=CARDS[id],o=SAVE.owned[id],s=cardStats(id,o?o.stars:1,o?lvScale(id):1,brOf(id)),inT=SAVE.team.includes(id),e=equipBonus(id);
   const sv=(k,v)=>`${v}${e[k]?`<span style="color:var(--green)">+${e[k]}</span>`:""}`;
   openModal(`<div class="detail"><div class="av">${avatar(id)}</div><div style="flex:1">
-    <div class="r${c.r}">${c.r} ${o?starStr(o.stars):""}</div><h2 style="margin:2px 0">${c.name}</h2>
+    <div class="r${c.r}">${c.r} ${o?starStr(o.stars,brOf(id)):""}</div><h2 style="margin:2px 0">${c.name}</h2>
     <div>${clsTag(id)} <span class="dim small">${CLASSES[c.cls].desc}</span></div>${o?lvBar(id):""}
     <div class="small">❤ ${sv("hp",s.maxHp)}　⚔ ${sv("atk",s.atk)}　🛡 ${sv("def",s.def)}　💨 ${sv("spd",s.spd)}</div>
     ${o?`<div class="gslots">${Object.keys(SLOTS).map(sl=>{const g=gearById(o.eq&&o.eq[sl]);
@@ -840,7 +880,9 @@ function showCard(id){
     ${skillHtml(c)}
     <div class="row" style="margin-top:12px">
       ${o?(inT?`<button onclick="toggleTeam('${id}')">移出隊伍</button>`:`<button class="pri" onclick="toggleTeam('${id}')" ${SAVE.team.length>=3?"disabled":""}>加入隊伍${SAVE.team.length>=3?"（已滿）":""}</button>`):`<span class="dim">尚未獲得</span>`}
+      ${canBreak(id)?`<button class="gold" onclick="BR_RES=null;confirmBreak('${id}')">✨ 突破（${brOf(id)}→${brOf(id)+1}）</button>`:""}
       <button onclick="closeModal()" style="margin-left:auto">關閉</button></div>
+    ${o&&o.stars>=5&&!canBreak(id)?`<div class="dim small" style="margin-top:6px">已突破到上限（${BR_MAX}）。</div>`:o&&!brOf(id)&&o.stars<5?`<div class="dim small" style="margin-top:6px">升到 5★ 後可以「突破」，讓角色變得更強。</div>`:""}
     ${o?sellHtml(id):""}`);
 }
 // 遣散：每顆星算一張卡的價值。期望值低於抽卡價（約5／抽），不會變成刷錢手段
@@ -851,29 +893,32 @@ function sellBlock(id){
   if(Object.keys(SAVE.owned).length<=3)return "至少要保留 3 名角色";
   return "";
 }
+function cardWorth(id){const o=SAVE.owned[id];return o.stars+brOf(id)*5;}
 function sellHtml(id){
   const o=SAVE.owned[id],p=SELL_PRICE[CARDS[id].r],why=sellBlock(id);
   return `<div class="sk"><b>💰 遣散</b> <span class="dim small">每 1 星可換 🪙${p}</span>
     ${why?`<div class="dim small">${why}</div>`:`<div class="row" style="margin-top:6px">
       ${o.stars>1?`<button class="mini" onclick="sellCard('${id}',1)">降 1 星（🪙+${p}）</button>`:""}
-      <button class="mini" onclick="confirmSell('${id}')">全部遣散（🪙+${p*o.stars}）</button></div>`}</div>`;
+      <button class="mini" onclick="confirmSell('${id}')">全部遣散（🪙+${p*cardWorth(id)}）</button></div>`}</div>`;
 }
 function sellCard(id,n){
   const o=SAVE.owned[id];if(!o||sellBlock(id))return;
-  n=Math.min(n,o.stars);const g=SELL_PRICE[CARDS[id].r]*n;
-  o.stars-=n;if(o.stars<=0)delete SAVE.owned[id];
+  // 降星不會降到 0；全部遣散時連突破一起算錢
+  if(n>=o.stars)n=cardWorth(id);
+  const g=SELL_PRICE[CARDS[id].r]*n;
+  if(n>=cardWorth(id))delete SAVE.owned[id];else o.stars-=n;
   SAVE.gold+=g;save();SFX.click();toast(`遣散 ${CARDS[id].name}，🪙+${g}`);
   if(SAVE.owned[id])showCard(id);else closeModal();
   render();
 }
 function confirmSell(id){
-  const o=SAVE.owned[id],g=SELL_PRICE[CARDS[id].r]*o.stars;
-  openModal(`<h3>遣散 ${CARDS[id].name}？</h3><p class="dim">這張卡（${o.stars}★）會從收藏中移除，換得 🪙${g}。之後抽到會從 1★ 重新開始。</p>
+  const o=SAVE.owned[id],g=SELL_PRICE[CARDS[id].r]*cardWorth(id);
+  openModal(`<h3>遣散 ${CARDS[id].name}？</h3><p class="dim">這張卡（${brOf(id)?`突破${brOf(id)} `:""}${o.stars}★）會從收藏中移除，換得 🪙${g}。之後抽到會從 1★ 重新開始。</p>
     <div class="row"><button class="pri" onclick="sellCard('${id}',99)">遣散</button><button onclick="showCard('${id}')">取消</button></div>`);
 }
 // 一鍵：把不在隊伍裡的 R 卡全部遣散（保留至少 3 名角色）
 function sellAllR(go){
-  const ids=Object.keys(SAVE.owned).filter(id=>CARDS[id].r==="R"&&!sellBlock(id));
+  const ids=Object.keys(SAVE.owned).filter(id=>CARDS[id].r==="R"&&!sellBlock(id)&&!brOf(id));
   const keep=Math.max(0,3-(Object.keys(SAVE.owned).length-ids.length)),list=ids.slice(keep);
   const g=list.reduce((a,id)=>a+SELL_PRICE.R*SAVE.owned[id].stars,0);
   if(!list.length){toast("沒有可以遣散的 R 卡");return;}
@@ -887,6 +932,7 @@ let SYN={tier:"R",pick:{}};
 function synBlock(id){
   if(SAVE.team.includes(id))return "隊伍中";
   if(SAVE.run&&SAVE.run.party.some(m=>!m.ally&&m.id===id))return "遠征中";
+  if(brOf(id))return "已突破";
   return "";
 }
 function synTotal(){return Object.values(SYN.pick).reduce((a,b)=>a+b,0);}
@@ -919,7 +965,7 @@ function doSynth(){
   SYN.pick={};save();up==="SSR"?SFX.ssr():SFX.sr();render();
   openModal(`<h3>🔮 合成成功</h3><div class="detail"><div class="av">${avatar(id)}</div><div>
     <div class="r${up}">${up}</div><h2 style="margin:2px 0">${CARDS[id].name}</h2>
-    <div>${gr.isNew?"NEW!":gr.up?`升至 ${gr.up}★`:`已滿星，🪙+${gr.refund}`}</div></div></div>
+    <div>${gr.isNew?"NEW!":gr.up?`升至 ${gr.up}★`:`已滿星，🪙+${gr.refund}、💎+1`}</div></div></div>
     <div class="row" style="margin-top:12px"><button class="pri" onclick="openSynth()">繼續合成</button><button onclick="showCard('${id}')">查看角色</button><button onclick="closeModal()">關閉</button></div>`);
 }
 function toggleTeam(id){
@@ -972,7 +1018,7 @@ function viewGear(){
   return `<h2>裝備</h2>
   <p class="dim small">點裝備可以「強化」或「分解」；要穿到角色身上，到「隊伍」點角色→點裝備欄。武器有職業限制，防具、飾品全職業可用。<br>
   強化：+1～+4 失敗沒有損失；+5～+7 失敗會掉 1 級；+8～+10 失敗會掉 1 級，還有 20% 機率裝備損毀。🧿保護符可以防止掉級和損毀。</p>
-  <div class="row small"><span>🧿 保護符 ×${SAVE.charms.protect}</span><span>🍀 幸運符 ×${SAVE.charms.luck}</span><button class="mini gold" style="margin-left:auto" onclick="go('shop')">🛒 去商店</button></div>
+  <div class="row small"><span>💎 突破石 ×${SAVE.charms.stone}</span><span>🧿 保護符 ×${SAVE.charms.protect}</span><span>🍀 幸運符 ×${SAVE.charms.luck}</span><button class="mini gold" style="margin-left:auto" onclick="go('shop')">🛒 去商店</button></div>
   <div class="filters"><button class="${GEAR_TAB?"":"on"}" onclick="GEAR_TAB='';render()">全部（${SAVE.gear.length}）</button>${Object.keys(SLOTS).map(k=>`<button class="${GEAR_TAB===k?"on":""}" onclick="GEAR_TAB='${k}';render()">${SLOTS[k]}</button>`).join("")}</div>
   <div class="ggrid">${list.map(g=>gearCard(g,`openGear(${g.uid})`)).join("")||`<span class="dim">還沒有裝備。去「商店」買一件，或在遠征、競技場打倒敵人掉落。</span>`}</div>`;
 }
@@ -1048,7 +1094,7 @@ const BOXES={
   box:{name:"裝備補給箱",icon:"📦",price:30,desc:"隨機裝備：R 70%／SR 27%／SSR 3%",roll:()=>{const r=rnd();return r<.03?"SSR":r<.3?"SR":"R";}},
   goldbox:{name:"黃金裝備箱",icon:"🎁",price:100,desc:"隨機裝備：SR 82%／SSR 18%",roll:()=>rnd()<.18?"SSR":"SR"}
 };
-const CHARMS={protect:{name:"保護符",icon:"🧿",price:20,desc:"強化失敗時不掉級、不損毀（失敗才消耗）"},luck:{name:"幸運符",icon:"🍀",price:12,desc:"強化成功率 +10%（每次強化消耗）"}};
+const CHARMS={stone:{name:"突破石",icon:"💎",price:15,desc:"角色 5★ 突破用的材料（成功率 60%，失敗會消失）"},protect:{name:"保護符",icon:"🧿",price:20,desc:"強化失敗時不掉級、不損毀（失敗才消耗）"},luck:{name:"幸運符",icon:"🍀",price:12,desc:"強化成功率 +10%（每次強化消耗）"}};
 const SUPPLY={pill:6,adrenaline:8,wine:4,rope:9,gasmask:7,rocket:12,knife:8,pistol:12};
 const STASH_MAX=6,FOOD_PRICE=5,FOOD_MAX=5;
 let SHOP_TAB="gear";
@@ -1104,8 +1150,8 @@ function buySupply(id){
 function buyFood(){if(SAVE.stash.food>=FOOD_MAX){toast("補給包已達上限");return;}if(!pay(FOOD_PRICE))return;SAVE.stash.food++;save();SFX.click();render();}
 // 我方隊伍成員（含等級與永久裝備加成），競技場、練功房用
 function teamUnit(id){
-  const o=SAVE.owned[id],e=equipBonus(id),sc=lvScale(id),s=cardStats(id,o.stars,sc);
-  return {id,stars:o.stars,scale:sc,maxHp:s.maxHp+e.hp,atk:e.atk,def:e.def,spd:e.spd};
+  const o=SAVE.owned[id],e=equipBonus(id),sc=lvScale(id),br=brOf(id),s=cardStats(id,o.stars,sc,br);
+  return {id,stars:o.stars,scale:sc,br,maxHp:s.maxHp+e.hp,atk:e.atk,def:e.def,spd:e.spd};
 }
 
 /* ===================== LEVEL ===================== */
@@ -1175,6 +1221,7 @@ function startTrain(){
         const dead=B.units.filter(u=>u.side==="A"&&!u.alive).map(u=>u.id);
         notes.push(expLine(r.exp,gainExp(ids,r.exp,dead)));
         SAVE.gold+=r.gold;notes.push(`🪙+${r.gold}`);
+        if(rnd()<.08){SAVE.charms.stone++;notes.push("💎 撿到突破石 ×1");}
         if(rnd()<.1)notes.push(`🎁 怪物掉下了 <b>${dropGear(s>=15&&rnd()<.3?"SR":"R")}</b>（已放進裝備）`);
         if(s>trainBest()){SAVE.train.best=s;if(s<TRAIN_MAX)notes.push(`🔓 解鎖第 ${s+1} 關`);}
       }
@@ -1186,7 +1233,7 @@ function startTrain(){
 /* ===================== BATTLE ENGINE ===================== */
 let UID=0,CUR_B=null;
 function mkUnit(o){
-  const d=DEF(o.id),s=cardStats(o.id,o.stars||1,o.scale||1);
+  const d=DEF(o.id),s=cardStats(o.id,o.stars||1,o.scale||1,o.br||0);
   const u={uid:++UID,id:o.id,name:o.name||d.name,side:o.side,stars:o.stars||1,
     maxHp:o.maxHp||s.maxHp,atk:s.atk+(o.atk||0),def:s.def+(o.def||0),spd:s.spd+(o.spd||0),
     cd:0,buffs:[],st:{},perm:{},flags:{},alive:true,ally:!!o.ally,ref:o.ref||null};
@@ -2062,13 +2109,13 @@ function aliveMembers(){return RUN.party.filter(m=>m.alive);}
 function allyMember(){return RUN.party.find(m=>m.ally&&m.alive);}
 function memberAtk(m){const w=m.weapon?ITEMS[m.weapon].weapon*(m.id==="merc"?2:1):0;return (m.bonus.atk||0)+w+(m.gear?m.gear.atk:0);}
 function mkMember(id,stars,extra={}){
-  const s=cardStats(id,stars,extra.scale||1),gr=extra.gear||null,hp=s.maxHp+(gr?gr.hp:0);
+  const s=cardStats(id,stars,extra.scale||1,extra.br||0),gr=extra.gear||null,hp=s.maxHp+(gr?gr.hp:0);
   return {id,stars,name:extra.name||CARDS[id].name,maxHp:hp,hp:extra.hp!=null?extra.hp:hp,bonus:{atk:0,def:0,spd:0},
-    weapon:null,ally:!!extra.ally,trust:extra.trust||0,alive:true,scale:extra.scale||1,gear:gr};
+    weapon:null,ally:!!extra.ally,trust:extra.trust||0,alive:true,scale:extra.scale||1,br:extra.br||0,gear:gr};
 }
 function memberToUnit(m){
   const g=m.gear||{};
-  return {id:m.id,stars:m.stars,scale:m.scale,name:m.name,hp:m.hp,maxHp:m.maxHp,atk:memberAtk(m),def:(m.bonus.def||0)+(g.def||0),spd:(m.bonus.spd||0)+(g.spd||0),ally:m.ally,ref:m};
+  return {id:m.id,stars:m.stars,scale:m.scale,br:m.br||0,name:m.name,hp:m.hp,maxHp:m.maxHp,atk:memberAtk(m),def:(m.bonus.def||0)+(g.def||0),spd:(m.bonus.spd||0)+(g.spd||0),ally:m.ally,ref:m};
 }
 function gasIdx(){return Math.floor((RUN.time-1)*.9)-1;}
 function addGold(n){n=Math.round(n*(hasRun("rich")?1.3:1));RUN.gold+=n;return n;}
@@ -2084,7 +2131,7 @@ function startRun(c=0){
   if(!team.length){toast("先去「隊伍」編隊吧");return;}
   if(!unlocked(c)){toast("尚未解鎖");return;}
   const C=CHAPTERS[c];
-  RUN={active:true,ch:c,fi:0,time:0,food:3,gold:0,items:[],party:team.map(id=>mkMember(id,SAVE.owned[id].stars,{gear:equipBonus(id),scale:lvScale(id)})),
+  RUN={active:true,ch:c,fi:0,time:0,food:3,gold:0,items:[],party:team.map(id=>mkMember(id,SAVE.owned[id].stars,{gear:equipBonus(id),scale:lvScale(id),br:brOf(id)})),
     visited:{},choices:null,scene:null,sel:null,log:[],floors:C.abyss?[{label:"D0"}]:C.floors.map(f=>({label:f.label,rooms:f.rooms}))};
   const st=SAVE.stash,packed=st.items.map(gainItem);RUN.food+=st.food;
   const intro=[];if(packed.length||st.food)intro.push(`🎒 你們帶上了從商店買的行囊：${packed.join("、")}${st.food?`${packed.length?"、":""}🥫補給+${st.food}`:""}。`);
@@ -2464,6 +2511,7 @@ function abyssBoss(L){
         CUR_B=null;VIEW="run";
         if(!win||runLost())return endRun(false,["你們被深淵吞沒了。"]);
         const g=addGold(10+fi*2),t=gainItem(pick(LOOT_TABLE)),l=[`守門者化成一灘黑水。🪙+${g}，還留下了 ${t}。`,runExp(20+fi*2)];
+        SAVE.charms.stone++;l.push("💎 撿到突破石 ×1");
         if(rnd()<.35)l.push(`🎁 黑水裡沉著一件裝備：<b>${dropGear(fi>=15&&rnd()<.3?"SSR":"SR")}</b>（已放進裝備）`);
         SAVE.prog.abyssBest=Math.max(SAVE.prog.abyssBest,fi);
         persistRun("post");
@@ -2521,6 +2569,7 @@ function endRun(escaped,lines=[]){
       bonus=30*(r.ch+1);P.clears[r.ch]=(P.clears[r.ch]||0)+1;
       const q=r.ch>=4?(rnd()<.35?"SSR":"SR"):r.ch>=2?(rnd()<.12?"SSR":"SR"):(rnd()<.3?"SR":"R");
       out.push(`🎁 ${C.bossRoom}留下了一件裝備：<b>${dropGear(q)}</b>（已放進裝備）`);
+      const st=1+Math.floor(r.ch/2);SAVE.charms.stone+=st;out.push(`💎 撿到突破石 ×${st}`);
       if(P.cleared<=r.ch){
         P.cleared=r.ch+1;bonus+=FIRST_CLEAR[r.ch];
         out.push(`🏅 首次通關「${C.name}」！額外 🪙${FIRST_CLEAR[r.ch]}`);
@@ -2533,7 +2582,7 @@ function endRun(escaped,lines=[]){
     const al=r.party.find(m=>m.ally&&m.alive);
     if(al){
       const gr=grant(al.id);
-      out.push(`🤝 ${al.name} 跟你交換了聯絡方式。<b>獲得職業卡：${CARDS[al.id].name}</b>${gr.isNew?"（NEW!）":gr.up?`（升至${gr.up}★）`:`（滿星，🪙+${gr.refund}）`}`);
+      out.push(`🤝 ${al.name} 跟你交換了聯絡方式。<b>獲得職業卡：${CARDS[al.id].name}</b>${gr.isNew?"（NEW!）":gr.up?`（升至${gr.up}★）`:`（滿星，🪙+${gr.refund}、💎+1）`}`);
       SFX.ssr();
     }else SFX.win();
     if(!abyss)SAVE.stats.escapes++;
@@ -2613,7 +2662,7 @@ function viewRun(){
     return `<div class="member ${m.alive?"":"deadm"}"><div class="mav">${avatar(m.id)}</div><div class="mi">
       <b style="color:${m.ally?"var(--gold)":"var(--sideA)"}">${m.ally?"🤝 ":""}${m.name}</b> <span class="stars">${"★".repeat(m.stars)}</span>
       <div class="hpbar ${pct>50?"hi":""}"><i style="width:${pct}%"></i><span>${m.hp}/${m.maxHp}</span></div>
-      <div class="dim">⚔${cardStats(m.id,m.stars,m.scale).atk+memberAtk(m)} ${m.weapon?ITEMS[m.weapon].icon:""} ${m.bonus.def?"🛡+"+m.bonus.def:""}</div>
+      <div class="dim">⚔${cardStats(m.id,m.stars,m.scale,m.br||0).atk+memberAtk(m)} ${m.weapon?ITEMS[m.weapon].icon:""} ${m.bonus.def?"🛡+"+m.bonus.def:""}</div>
       ${m.ally?`<div class="trust"><i style="width:${clamp(m.trust,0,100)}%;background:${m.trust<40?"var(--red)":"var(--gold)"}"></i></div><div class="dim">信任 ${m.trust}</div>`:""}
     </div>${r.sel!=null&&m.alive&&r.active?`<button class="mini gold" onclick="applyOutItem(${i})">使用</button>`:""}</div>`;}).join("");
   const side=`<div class="panel">

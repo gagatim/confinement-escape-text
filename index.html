@@ -1215,7 +1215,25 @@ function viewTeam(){
   <label class="small"><input type="checkbox" ${SHOW_LOCKED?"checked":""} onchange="SHOW_LOCKED=this.checked;render()"> 顯示未獲得</label></div>
   ${clsFilter(TEAM_CLS,"setTeamCls")}
   ${TEAM_CLS?`<p class="small dim" style="margin:0 0 8px">${CLASSES[TEAM_CLS].icon}${CLASSES[TEAM_CLS].name}：${CLASSES[TEAM_CLS].desc}</p>`:""}
-  <div class="cardgrid">${ids.map(id=>cardTile(id,`showCard('${id}')`)).join("")}</div>`;
+  <div class="cardgrid">${ids.map(id=>cardTile(id,`showCard('${id}')`)).join("")}</div>
+  <h3 style="margin-top:22px">👑 魔王角色 <span class="dim small">（無法獲取・僅供展示）</span></h3>
+  <p class="dim small" style="margin-top:0">支線「魔王討伐」的 8 位魔王。點開可以看一般型態、爆氣型態、技能和個人故事。</p>
+  <div class="bossgrid">${BOSS_LIST.map(id=>`<div class="bosscard" onclick="openBossShow('${id}')"><div class="bav"><img src="images/bosses/${id}_1.webp" alt=""></div>
+    <div class="bn">${MONSTERS[id].name}</div><div class="small dim">${MONSTERS[id].quote}</div></div>`).join("")}</div>`;
+}
+// 魔王展示：一般／爆氣兩種型態都看得到（魔王只在遠征的魔王討伐出現，不能獲得）
+let BOSS_PH=1;
+function openBossShow(id,ph){
+  if(ph)BOSS_PH=ph;
+  const M=MONSTERS[id],i=BOSS_LIST.indexOf(id);
+  openModal(`<div class="detail"><div class="av" style="width:150px;min-width:150px;box-shadow:0 0 18px ${BOSS_PH===2?"rgba(229,72,77,.8)":"rgba(176,124,255,.5)"}"><img class="avimg" src="images/bosses/${id}_${BOSS_PH}.webp" alt=""></div>
+    <div style="flex:1"><div class="rEX">魔王 ${i+1}／8・無法獲取</div><h2 style="margin:2px 0">${M.name}</h2>
+    <div class="small" style="font-style:italic">「${M.quote}」</div>
+    <div class="row" style="margin-top:8px"><button class="mini ${BOSS_PH===1?"pri":""}" onclick="openBossShow('${id}',1)">一般型態</button><button class="mini ${BOSS_PH===2?"pri":""}" onclick="openBossShow('${id}',2)">💢 爆氣型態</button></div></div></div>
+    <div class="sk"><b>📜 ${M.name}的故事</b>${BOSS_STORY[id].map(t=>`<p style="margin:6px 0">${t}</p>`).join("")}</div>
+    ${skillHtml(M)}
+    <div class="sk"><b>💢 爆氣</b><br>第一條命打完後爆氣：生命回復到 ${Math.round(M.boss2.hp*100)}%、攻擊+${Math.round(M.boss2.atk*100)}%、速度+${M.boss2.spd}、解除減益與中毒、技能冷卻 -1。</div>
+    <div class="row" style="margin-top:12px"><button class="pri" onclick="closeModal();go('run')">前往魔王討伐</button><button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
 }
 function skillHtml(d){
   return `<div class="sk"><b>✦ ${d.skill.name}</b> <span class="dim small">冷卻 ${d.skill.cd}</span><br>${d.skill.desc}</div>

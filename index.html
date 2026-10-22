@@ -662,7 +662,7 @@ function closeModal(){$("#modal").classList.remove("show");}
 const GUIDE=[
   {ic:"⛓",t:"這是什麼遊戲？",b:["你和同伴被關在禁閉室，要一路往上爬、搶上只有 <b>三個座位</b> 的直升機。","玩法只有三件事：<b>抽角色 → 組隊 → 出發遠征</b>。"]},
   {ic:"🎴",t:"① 抽角色",b:["到「招募」花金條抽卡。<b>第一次十連必出 SSR</b>，開局的金條剛好夠。","抽到重複的角色會升星（最多 5★），每 1 星能力 +10%。","5★ 後可以用 💎突破石「突破」：星星回到 1★ 再升，能力保留並再 +1.5%。成功率從 30% 起越來越低，失敗不會降星。"]},
-  {ic:"👥",t:"② 組隊",b:["到「隊伍」點角色 →「加入隊伍」，最多 3 人。","每個角色有 <b>職業</b>（🛡坦克／⚔戰士／🗡刺客／🎯射手／✚輔助／🔮術士），各有不同加成。","不要的角色可以「遣散」換金條，或「合成」成更高稀有度。"]},
+  {ic:"👥",t:"② 組隊",b:["到「隊伍」點角色 →「加入隊伍」，最多 3 人。","每個角色有 <b>職業</b>（🛡坦克／⚔戰士／🗡刺客／🎯射手／✚輔助／🔮術士），各有不同加成。","不要的角色可以「遣散」換金條、「合成」成更高稀有度，或「🔥熔煉」：2 名同稀有度 → 1 名同稀有度的其他角色（等級取較低的）。"]},
   {ic:"🛒",t:"③ 裝備與商店",b:["「商店」可以買裝備、強化符和遠征物資（下一次遠征自動帶上）。","在角色卡片點 <b>武器／防具／飾品</b> 欄位就能穿上。武器有職業限制。","「裝備」頁可以強化到 +10。<b>強化可能失敗</b>：+5 以上會掉級，+8 以上還可能損毀，用 🧿保護符 可以保住。"]},
   {ic:"🪜",t:"④ 出發遠征",b:["每一層選一扇門進去：可能是物資、敵人、或其他逃殺者。","注意 <b>🥫補給</b>（每層吃 1 份）和 <b>☣毒氣</b>（從底層往上淹）。","遇到人可以結盟、交易或開打。打倒最上層的魔王就逃出了！"]},
   {ic:"⚔️",t:"⑤ 戰鬥",b:["輪到你的角色時，按「普通攻擊」或「技能」，再點目標。","懶得操作就按「自動」，讓 AI 幫你打。"]},
@@ -854,9 +854,10 @@ function viewTeam(){
   const ids=sortedIds().filter(id=>(SHOW_LOCKED||SAVE.owned[id])&&(!TEAM_CLS||CARDS[id].cls===TEAM_CLS));
   return `<h2>出戰隊伍</h2>
   <div class="teamslots">${[0,1,2].map(i=>{const id=SAVE.team[i];return id?cardTile(id,`showCard('${id}')`):`<div class="slot">空位</div>`;}).join("")}</div>
-  <p class="dim small">點卡片查看技能、加入或移出隊伍。遠征與競技場都使用這支隊伍。不要的角色可以在卡片裡「遣散」換金條（R 🪙3／SR 🪙10／SSR 🪙30，每星計算），或用「合成」把 6★ 份的 R 換成 1 名 SR、6★ 份的 SR 換成 1 名 SSR。</p>
+  <p class="dim small">點卡片查看技能、加入或移出隊伍。遠征與競技場都使用這支隊伍。不要的角色可以在卡片裡「遣散」換金條（R 🪙3／SR 🪙10／SSR 🪙30，每星計算），或用「合成」把 6★ 份的 R 換成 1 名 SR、6★ 份的 SR 換成 1 名 SSR，或用「熔煉」把 2 名同稀有度角色熔成 1 名同稀有度的其他角色（等級、星數、突破取較低的）。</p>
   <div class="row"><h3 style="margin-right:auto">收藏（${Object.keys(SAVE.owned).length}/${Object.keys(CARDS).length}）</h3>
   <button class="mini gold" onclick="openSynth()">🔮 合成</button>
+  <button class="mini gold" onclick="openSmelt()">🔥 熔煉</button>
   <button class="mini" onclick="sellAllR()">💰 一鍵遣散 R 卡</button>
   <label class="small"><input type="checkbox" ${SHOW_LOCKED?"checked":""} onchange="SHOW_LOCKED=this.checked;render()"> 顯示未獲得</label></div>
   ${clsFilter(TEAM_CLS,"setTeamCls")}
@@ -967,6 +968,76 @@ function doSynth(){
     <div class="r${up}">${up}</div><h2 style="margin:2px 0">${CARDS[id].name}</h2>
     <div>${gr.isNew?"NEW!":gr.up?`升至 ${gr.up}★`:`已滿星，🪙+${gr.refund}、💎+1`}</div></div></div>
     <div class="row" style="margin-top:12px"><button class="pri" onclick="openSynth()">繼續合成</button><button onclick="showCard('${id}')">查看角色</button><button onclick="closeModal()">關閉</button></div>`);
+}
+// 熔煉：兩名同稀有度角色（整張卡）→ 1 名同稀有度的其他角色，優先給還沒擁有的。
+// 新角色的等級、星數、突破都取兩者中較低的；如果抽到已經擁有的角色，各項保留較高的那邊
+let SMELT={tier:"R",pick:[]};
+const SMELT_HELP=`<div class="sk small"><b>📖 熔煉說明</b><ul style="padding-left:18px;margin:4px 0">
+  <li>選 <b>2 名同稀有度</b> 的角色丟進熔爐，會熔成 <b>1 名同稀有度的其他角色</b>（不會是放進去的那兩名）。</li>
+  <li>優先熔出 <b>還沒擁有</b> 的角色；同稀有度全部都有了，才會熔出已經擁有的。</li>
+  <li>新角色的 <b>等級（Lv）、星數、突破</b> 都取兩名材料中 <b>較低</b> 的那個。</li>
+  <li>熔出已擁有的角色時，原本那張卡的等級／星數／突破，各項保留較高的那邊。</li>
+  <li>放進去的兩名角色會 <b>整張消失</b>（包含所有星數），身上的裝備自動卸下回到倉庫。</li>
+  <li>隊伍中、遠征中的角色不能熔煉；熔煉後至少要保留 3 名角色。</li></ul></div>`;
+function smeltBlock(id){
+  if(SAVE.team.includes(id))return "隊伍中";
+  if(SAVE.run&&SAVE.run.party.some(m=>!m.ally&&m.id===id))return "遠征中";
+  return "";
+}
+function smeltResult(){
+  const [a,b]=SMELT.pick.map(id=>SAVE.owned[id]);
+  const low=lvOf(SMELT.pick[0])<=lvOf(SMELT.pick[1])?a:b;
+  return {lv:low.lv||1,exp:low.exp||0,stars:Math.min(a.stars,b.stars),br:Math.min(a.br||0,b.br||0)};
+}
+function openSmelt(tier){
+  if(tier&&tier!==SMELT.tier)SMELT={tier,pick:[]};
+  SMELT.pick=SMELT.pick.filter(id=>SAVE.owned[id]&&!smeltBlock(id));
+  const t=SMELT.tier,ids=sortedIds().filter(id=>SAVE.owned[id]&&CARDS[id].r===t),ok=SMELT.pick.length===2;
+  const pool=POOL[t].filter(id=>!SMELT.pick.includes(id)),fresh=pool.filter(id=>!SAVE.owned[id]);
+  const r=ok?smeltResult():null;
+  openModal(`<h3>🔥 熔煉</h3>
+    <div class="row" style="margin-bottom:8px">${["R","SR","SSR"].map(k=>`<button class="mini ${k===t?"pri":""}" onclick="openSmelt('${k}')">${k}</button>`).join("")}</div>
+    ${SMELT_HELP}
+    <p class="dim small" style="margin:8px 0 4px">點 2 名 ${t} 角色放進熔爐（再點一次取消）。</p>
+    <div class="cardgrid">${ids.map(id=>{const o=SAVE.owned[id],b=smeltBlock(id),on=SMELT.pick.includes(id);
+      return `<div class="ccard ${t} ${b?"locked":""}" style="${on?"outline:3px solid var(--red);outline-offset:2px":""}" ${b?"":`onclick="smeltToggle('${id}')"`}><div class="av">${avatar(id)}</div><div class="nm">${CARDS[id].name}</div>
+        <div class="stars">${starStr(o.stars,o.br)}</div><div class="small">Lv.${lvOf(id)} ${clsTag(id)}</div><div class="small" style="color:var(--red)">${b||(on?"🔥 放入熔爐":"&nbsp;")}</div></div>`;}).join("")||`<span class="dim">沒有 ${t} 角色</span>`}</div>
+    <div class="panel small" style="margin-top:10px">${ok
+      ?`熔爐：<b>${SMELT.pick.map(id=>CARDS[id].name).join(" ＋ ")}</b> → 隨機 ${t} 角色${fresh.length?`（還沒擁有的 ${fresh.length} 名中隨機）`:"（全部都有了，會熔出已擁有的）"}<br>
+        新角色：<b>Lv.${r.lv}</b>・<b>${r.stars}★</b>${r.br?`・<b>突破${r.br}</b>`:""}`
+      :`已放入 ${SMELT.pick.length}/2`}</div>
+    <div class="row" style="margin-top:10px">
+      <button class="pri" onclick="doSmelt()" ${ok&&pool.length?"":"disabled"}>🔥 熔煉</button>
+      <button onclick="SMELT.pick=[];openSmelt()">清除</button><button style="margin-left:auto" onclick="closeModal()">關閉</button></div>`);
+}
+function smeltToggle(id){
+  if(SMELT.pick.includes(id))SMELT.pick=SMELT.pick.filter(x=>x!==id);
+  else if(SMELT.pick.length>=2){toast("熔爐只能放 2 名角色");return;}
+  else SMELT.pick.push(id);
+  SFX.click();openSmelt();
+}
+function doSmelt(){
+  if(SMELT.pick.length!==2)return;
+  const t=SMELT.tier,pool=POOL[t].filter(id=>!SMELT.pick.includes(id));if(!pool.length)return;
+  const fresh=pool.filter(id=>!SAVE.owned[id]),nid=fresh.length?pick(fresh):pick(pool);
+  if(Object.keys(SAVE.owned).length-2+(SAVE.owned[nid]?0:1)<3){toast("熔煉後至少要保留 3 名角色");return;}
+  const r=smeltResult(),gone=SMELT.pick.map(id=>CARDS[id].name);
+  SMELT.pick.forEach(id=>delete SAVE.owned[id]);
+  const old=SAVE.owned[nid];let note;
+  if(!old){SAVE.owned[nid]={stars:r.stars,lv:r.lv,exp:r.exp,br:r.br};note="NEW!";}
+  else{
+    const lvUp=r.lv>lvOf(nid);
+    if(lvUp){old.lv=r.lv;old.exp=r.exp;}
+    old.stars=Math.max(old.stars,r.stars);old.br=Math.max(old.br||0,r.br);
+    note="已經擁有：等級、星數、突破各保留較高的";
+  }
+  SMELT.pick=[];save();t==="SSR"?SFX.ssr():t==="SR"?SFX.sr():SFX.flip();render();
+  const o=SAVE.owned[nid];
+  openModal(`<h3>🔥 熔煉完成</h3><p class="dim small">${gone.join("、")} 熔進了熔爐……</p>
+    <div class="detail"><div class="av">${avatar(nid)}</div><div>
+    <div class="r${t}">${t} ${starStr(o.stars,o.br)}</div><h2 style="margin:2px 0">${CARDS[nid].name}</h2>
+    <div>${clsTag(nid)} <b>Lv.${lvOf(nid)}</b></div><div class="small" style="color:var(--gold)">${note}</div></div></div>
+    <div class="row" style="margin-top:12px"><button class="pri" onclick="openSmelt()">繼續熔煉</button><button onclick="showCard('${nid}')">查看角色</button><button onclick="closeModal()">關閉</button></div>`);
 }
 function toggleTeam(id){
   if(SAVE.team.includes(id))SAVE.team=SAVE.team.filter(x=>x!==id);

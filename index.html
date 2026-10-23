@@ -241,6 +241,9 @@ b.sA{color:var(--sideA)} b.sB{color:var(--sideB)}
 .gfx{font-size:11px;color:#7fe3ff}
 .fxrare{color:#e0a8ff;font-weight:bold;text-shadow:0 0 6px #b84dff;animation:fxrareGlow 1.2s ease-in-out infinite alternate}
 @keyframes fxrareGlow{from{color:#e0a8ff;text-shadow:0 0 4px #b84dff}to{color:#8fe9ff;text-shadow:0 0 12px #5ad1ff,0 0 16px #b84dff}}
+.gcard.oc20{border-color:#ff5e8a;animation:ocGlow 1.8s ease-in-out infinite alternate}
+@keyframes ocGlow{from{box-shadow:0 0 6px #ffd166,0 0 12px rgba(255,94,138,.5)}to{box-shadow:0 0 14px #5ef0ff,0 0 26px rgba(255,94,138,.8)}}
+.gcard .ocb{position:absolute;top:6px;left:8px;font-size:10px;font-weight:900;padding:1px 5px;border-radius:8px;color:#1a1a1a;background:linear-gradient(90deg,#ffd166,#ff5e8a,#5ef0ff)}
 .fxmax{color:#ffd54a;font-weight:bold;text-shadow:0 0 6px #ffb300;animation:fxmaxGlow 1.6s ease-in-out infinite alternate}
 @keyframes fxmaxGlow{from{text-shadow:0 0 3px #ffb300}to{text-shadow:0 0 9px #ffd54a,0 0 14px #ff9800}}
 .req{font-size:11px;color:var(--dim)}.req.bad{color:var(--red);font-weight:700}
@@ -817,8 +820,8 @@ function affixRoll(k,q){
   const [lo,hi]=affixSpan(k,q);return bellRoll(lo,hi);
 }
 // 依權重不重複地抽 n 種詞條
-function pickAffixKeys(n){
-  const pool=Object.keys(AFFIX).map(k=>[k,AFFIX_W[k]==null?1:AFFIX_W[k]]),out=[];
+function pickAffixKeys(n,skip=[]){
+  const pool=Object.keys(AFFIX).filter(k=>!skip.includes(k)).map(k=>[k,AFFIX_W[k]==null?1:AFFIX_W[k]]),out=[];
   while(out.length<n&&pool.length){
     let r=rnd()*pool.reduce((t,x)=>t+x[1],0),i=0;
     while(i<pool.length-1&&r>=pool[i][1]){r-=pool[i][1];i++;}
@@ -862,13 +865,18 @@ const ST_LBL={hp:"❤",atk:"⚔",def:"🛡",spd:"💨",crit:"暴擊",steal:"吸�
 const ST_PCT={crit:1,steal:1,dodge:1,dr:1};
 const DR_CAP=30; // 裝備減傷%上限
 const ENH_MAX=10;
-const ENH_RATE=[100,95,90,80,70,60,50,40,32,25]; // 依目前等級：+0→+1 為 100%
+const ENH_RATE=[100,95,90,80,70,60,50,40,32,25, 10,5,5,4,4,3,3,2,1,1]; // 依目前等級：+0→+1 為 100%；+10 以後是「超頻區」
+// 超頻區：+11～+20，只有 SSR 以上的裝備能進入；每級只加 3.5%（+10 以前每級 8%），失敗一定掉 1 級，花費 🪙1000 起跳
+const ENH_OC=20,ENH_OC_Q=["SSR","UR","EX"];
+const LUCK_MAX_LV=12; // 幸運符只能用在 +12 以下的裝備
+function enhCap(g){return ENH_OC_Q.includes(GEAR[g.base].q)?ENH_OC:ENH_MAX;}
+function enhMul(lv){return 1+.08*Math.min(lv,ENH_MAX)+.035*Math.max(0,lv-ENH_MAX);}
 const GEAR_SELL={N:2,R:5,SR:15,SSR:40,UR:100,EX:150};
-function enhCost(lv){return 5+lv*5;}
+function enhCost(lv){return lv<ENH_MAX?5+lv*5:1000+(lv-ENH_MAX)*800;}
 // 數值 = 基礎 × 浮動品質(roll%) × 強化；詞條是固定加值，不吃強化
 function gearStats(g){
   const b=GEAR[g.base].st,o={},roll=(g.roll||100)/100;
-  for(const k in b)o[k]=Math.max(1,Math.round(b[k]*roll*(1+.08*g.lv)));
+  for(const k in b)o[k]=Math.max(1,Math.round(b[k]*roll*enhMul(g.lv)));
   (g.fx||[]).forEach(f=>o[f.k]=(o[f.k]||0)+f.v);
   return o;
 }
@@ -963,9 +971,9 @@ function validSave(s){
   for(const g of s.gear||[]){
     const G=GEAR[g.base];if(!G)return "出現不存在的裝備";
     if(uids.has(g.uid))return "裝備資料重複";uids.add(g.uid);
-    if(!isInt(g.lv,0,ENH_MAX))return `${G.name} 強化等級異常`;
+    if(!isInt(g.lv,0,enhCap(g)))return `${G.name} 強化等級異常`;
     if(g.roll!=null&&!isInt(g.roll,GEAR_ROLL[G.q][0],GEAR_ROLL[G.q][1]))return `${G.name} 品質異常`;
-    const fx=g.fx||[];if(fx.length>3||new Set(fx.map(f=>f.k)).size!==fx.length)return `${G.name} 詞條異常`;
+    const fx=g.fx||[];if(fx.length>3+(g.lv>=ENH_OC?1:0)||new Set(fx.map(f=>f.k)).size!==fx.length)return `${G.name} 詞條異常`;
     for(const f of fx){const A=AFFIX[f.k];if(!A||!isInt(f.v,1,affixSpan(f.k,G.q)[1]+1))return `${G.name} 詞條數值異常`;}
   }
   for(const k in s.charms)if(!isInt(s.charms[k],0,99999))return "強化道具數量異常";
@@ -1008,6 +1016,7 @@ function migrate(s){
   s.team=(s.team||[]).filter(id=>s.owned[id]);
   if(s.charms.stone==null)s.charms.stone=0;
   if(!s.shards)s.shards={R:0,SR:0,SSR:0};
+  if(!s.login)s.login={last:"",streak:0};
   return s;
 }
 function exportSave(){
@@ -1201,6 +1210,34 @@ function nextHint(){
 }
 
 /* ===================== HOME ===================== */
+/* ===== 每日登入獎勵：7 天一輪，連續登入才會往下一天走，斷掉就從第 1 天重來 ===== */
+const LOGIN_REWARDS=[
+  {gold:60},{gold:80},{stone:2},{gold:100},{protect:2},{gold:120},{gold:200,stone:2,luck:2}];
+function loginTxt(r){return [r.gold&&`🪙${r.gold}`,r.stone&&`💎突破石×${r.stone}`,r.protect&&`🧿保護符×${r.protect}`,r.luck&&`🍀幸運符×${r.luck}`].filter(Boolean).join(" ");}
+function dateStr(off=0){const d=new Date();d.setDate(d.getDate()+off);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
+// 今天可不可以領：日期比上次領的晚才行（系統時間往回調不算）；回傳 {ok, day}（day 是這次會領到第幾天）
+function loginState(){
+  const L=SAVE.login||{last:"",streak:0},today=dateStr();
+  if(L.last&&today<=L.last)return {ok:false,day:((L.streak-1)%7)+1,done:today===L.last};
+  const streak=L.last===dateStr(-1)?L.streak+1:1;
+  return {ok:true,day:((streak-1)%7)+1,streak};
+}
+function claimLogin(){
+  const st=loginState();if(!st.ok)return;
+  const r=LOGIN_REWARDS[st.day-1];
+  SAVE.login={last:dateStr(),streak:st.streak};
+  SAVE.gold+=r.gold||0;SAVE.charms.stone+=r.stone||0;SAVE.charms.protect+=r.protect||0;SAVE.charms.luck+=r.luck||0;
+  save();SFX.sr();toast(`登入第 ${st.day} 天：${loginTxt(r)}`);render();
+}
+function loginPanel(){
+  const st=loginState();
+  return `<div class="panel"><div class="row"><b style="margin-right:auto">📅 每日登入獎勵</b>
+    ${st.ok?`<button class="gold" onclick="claimLogin()">領取第 ${st.day} 天</button>`:`<span class="dim small">今天已領取，明天再來</span>`}</div>
+    <div class="row small" style="margin-top:8px;gap:6px;flex-wrap:wrap">${LOGIN_REWARDS.map((r,i)=>{
+      const n=i+1,got=st.ok?n<st.day:n<=st.day,cur=st.ok&&n===st.day;
+      return `<div style="flex:1;min-width:84px;padding:6px;border:1px solid ${cur?"var(--gold)":"#444"};border-radius:6px;text-align:center;${got?"opacity:.45":""}">第 ${n} 天<br>${loginTxt(r)}${got?"<br>✅":""}</div>`;}).join("")}</div>
+    <div class="dim small" style="margin-top:6px">連續登入才會往下一天，中斷就從第 1 天重新開始；第 7 天領完會回到第 1 天。</div></div>`;
+}
 function viewHome(){
   const own=Object.keys(SAVE.owned).length,st=SAVE.stats;
   return `<div class="hero"><h1>禁閉逃殺</h1><div class="sub">文 字 獄 ・ 抽 卡 ・ 結 盟 ・ 背 叛</div></div>
@@ -1208,6 +1245,7 @@ function viewHome(){
     <p style="margin:0">你在停屍間冰冷的鐵櫃裡醒來。廣播說：<b>「直升機只有三個座位。」</b><br>
     <span class="dim">招募囚犯、組成三人小隊，從 B7 一路殺上停機坪。路上遇到的人——可以結盟，也可以先下手為強。</span></p>
   </div>
+  ${loginPanel()}
   ${(h=>`<div class="nexthint"><span>👉 ${h[0]}</span><button class="pri mini" style="margin-left:auto" onclick="go('${h[1]}')">${h[2]}</button></div>`)(nextHint())}
   <div class="modes">
     <div class="mode" onclick="go('gacha')"><div class="ic">🎴</div><b>招募所</b><p>花金條抽取職業卡。SSR 3%・十連保底 SR・60 抽保底 SSR</p></div>
@@ -1824,7 +1862,7 @@ function sortBar(){
 }
 function gearCard(g,onclick){
   const G=GEAR[g.base],w=gearOwner(g.uid);
-  return `<div class="gcard ${G.q}" onclick="${onclick}">${g.lv?`<span class="lv ${g.lv>=ENH_MAX?"max":g.lv>=7?"hi":""}">+${g.lv}</span>`:""}<div class="gi">${gearImg(g.base)}</div>
+  return `<div class="gcard ${G.q} ${g.lv>=ENH_OC?"oc20":""}" onclick="${onclick}">${g.lv>=ENH_OC?`<span class="ocb">⚡超頻</span>`:""}${g.lv?`<span class="lv ${g.lv>=ENH_MAX?"max":g.lv>=7?"hi":""}">+${g.lv}</span>`:""}<div class="gi">${gearImg(g.base)}</div>
     <div class="gn r${G.q}">${qTag(G.q)}${G.name}</div><div class="small">${statStr(gearStats(g))}</div>${g.fx&&g.fx.length?`<div class="gfx">${fxStr(g)}</div>`:""}
     <div class="small dim">${GQ_NAME[G.q]}・${SLOTS[G.slot]}・${gearCls(g.base)} ${reqTag(null,g.base)}</div><div class="small gpow">⚡ 強度 ${gearPower(g)}</div>${w?`<div class="who">👤 ${CARDS[w].name}</div>`:""}</div>`;
 }
@@ -1968,7 +2006,7 @@ function viewBag(){
 function openGear(uid){
   const g=gearById(uid);if(!g)return closeModal();
   const G=GEAR[g.base],w=gearOwner(uid),cands=Object.keys(SAVE.owned).filter(id=>canWear(id,g.base)&&lvOk(id,g.base)&&id!==w).sort((a,b)=>R_ORDER[CARDS[a].r]-R_ORDER[CARDS[b].r]);
-  const sell=GEAR_SELL[G.q]+g.lv*4;
+  const sell=GEAR_SELL[G.q]+Math.min(g.lv,ENH_MAX)*4;
   openModal(`<div class="detail"><div class="bigicon fx-${G.q}">${gearImg(g.base)}</div><div style="flex:1">
     <div class="r${G.q}">${G.q}（${GQ_NAME[G.q]}）・${SLOTS[G.slot]}</div><h2 style="margin:2px 0">${qTag(G.q)}${G.name}${g.lv?` <span style="color:var(--gold)">+${g.lv}</span>`:""}</h2>
     <div>${statStr(gearStats(g))}</div>
@@ -1978,19 +2016,19 @@ function openGear(uid){
     <div class="small dim">套裝：${SETS[G.q].name}（2件 ${statStr(SETS[G.q][2])}／3件 ${statStr(SETS[G.q][3])}）</div>
     ${w?`<div class="small" style="color:var(--green)">👤 ${CARDS[w].name} 正在使用</div>`:""}</div></div>
     <div class="row" style="margin-top:12px">
-      <button class="pri" onclick="openEnhance(${uid})" ${g.lv>=ENH_MAX?"disabled":""}>🔨 強化${g.lv>=ENH_MAX?"（已滿）":""}</button>
+      <button class="pri" onclick="openEnhance(${uid})" ${g.lv>=enhCap(g)?"disabled":""}>🔨 強化${g.lv>=enhCap(g)?"（已滿）":""}</button>
       ${w?`<button onclick="unequip(${uid});save();openGear(${uid});render()">卸下</button>`:""}
       <button onclick="confirmGearSell(${uid})">💰 分解（🪙+${sell}）</button>
       <button style="margin-left:auto" onclick="closeModal()">關閉</button></div>
     ${cands.length?`<div class="sk"><b>👤 裝備給</b><div class="row" style="margin-top:6px">${cands.map(id=>`<button class="mini" onclick="equipTo('${id}',${uid});openGear(${uid});render()">${CARDS[id].name}</button>`).join("")}</div></div>`:""}`);
 }
 function confirmGearSell(uid){
-  const g=gearById(uid),p=GEAR_SELL[GEAR[g.base].q]+g.lv*4;
+  const g=gearById(uid),p=GEAR_SELL[GEAR[g.base].q]+Math.min(g.lv,ENH_MAX)*4;
   openModal(`<h3>分解 ${qTag(GEAR[g.base].q)}${gearName(g)}？</h3><p class="dim">裝備會消失，換得 🪙${p}。</p>
     <div class="row"><button class="pri" onclick="sellGear(${uid})">分解</button><button onclick="openGear(${uid})">取消</button></div>`);
 }
 function sellGear(uid){
-  const g=gearById(uid);if(!g)return;const p=GEAR_SELL[GEAR[g.base].q]+g.lv*4;
+  const g=gearById(uid);if(!g)return;const p=GEAR_SELL[GEAR[g.base].q]+Math.min(g.lv,ENH_MAX)*4;
   unequip(uid);SAVE.gear=SAVE.gear.filter(x=>x!==g);SAVE.gold+=p;save();closeModal();toast(`分解完成，🪙+${p}`);render();
 }
 // 一鍵售出：同品質、沒穿在角色身上、沒強化過（+0）的裝備全部分解
@@ -2042,31 +2080,35 @@ function openEnhance(uid){
   const g=gearById(uid);
   if(!g){openModal(`${ENH.res?`<div class="enhres bad">${ENH.res.msg}</div>`:""}<div class="row"><button onclick="closeModal();render()">關閉</button></div>`);return;}
   if(!SAVE.charms.protect)ENH.protect=false;
-  if(!SAVE.charms.luck)ENH.luck=false;
-  const max=g.lv>=ENH_MAX,rate=max?0:Math.min(100,ENH_RATE[g.lv]+(ENH.luck?10:0)),cost=enhCost(g.lv);
-  const risk=g.lv<4?"失敗：沒有損失":"失敗：掉 1 級";
+  if(!SAVE.charms.luck||g.lv>LUCK_MAX_LV)ENH.luck=false;
+  const cap=enhCap(g),max=g.lv>=cap,rate=max?0:Math.min(100,ENH_RATE[g.lv]+(ENH.luck?10:0)),cost=enhCost(g.lv);
+  const risk=g.lv<4?"失敗：沒有損失":g.lv>=ENH_MAX?"⚡超頻區：失敗掉 1 級":"失敗：掉 1 級";
   const nx={...g,lv:g.lv+1};
   openModal(`<h3>🔨 強化 ${qTag(GEAR[g.base].q)}${gearName(g)}</h3>
     ${ENH.res?`<div class="enhres ${ENH.res.ok?"ok":"bad"}">${ENH.res.msg}</div>`:""}
-    ${max?`<p>已經強化到 +${ENH_MAX}，無法再強化。</p>`:`
+    ${max?`<p>已經強化到 +${cap}，無法再強化。</p>`:`
     <div>${statStr(gearStats(g))} <b>→</b> <span style="color:var(--green)">${statStr(gearStats(nx))}</span></div>
     <div style="margin-top:8px">成功率 <b style="color:var(--gold)">${rate}%</b>　<span class="dim small">${ENH.protect?"🧿 已使用保護符：失敗不掉級":risk}</span></div>
     <div class="ratebar"><i style="width:${rate}%"></i></div>
     <div class="row small" style="margin-top:6px">
       <label><input type="checkbox" ${ENH.protect?"checked":""} ${SAVE.charms.protect?"":"disabled"} onchange="ENH.protect=this.checked;openEnhance(${uid})"> 🧿 保護符（剩 ${SAVE.charms.protect}）</label>
-      <label><input type="checkbox" ${ENH.luck?"checked":""} ${SAVE.charms.luck?"":"disabled"} onchange="ENH.luck=this.checked;openEnhance(${uid})"> 🍀 幸運符 +10%（剩 ${SAVE.charms.luck}）</label></div>`}
+      <label><input type="checkbox" ${ENH.luck?"checked":""} ${SAVE.charms.luck&&g.lv<=LUCK_MAX_LV?"":"disabled"} onchange="ENH.luck=this.checked;openEnhance(${uid})"> 🍀 幸運符 +10%（剩 ${SAVE.charms.luck}${g.lv>LUCK_MAX_LV?`，+${LUCK_MAX_LV} 以上不能用`:""}）</label></div>`}
     <div class="row" style="margin-top:12px">
       ${max?"":`<button class="pri" onclick="doEnhance(${uid})" ${SAVE.gold<cost?"disabled":""}>🔨 強化（🪙${cost}）</button>`}
       <button onclick="openGear(${uid})">返回</button><button style="margin-left:auto" onclick="closeModal();render()">關閉</button></div>`);
 }
 function doEnhance(uid){
-  const g=gearById(uid);if(!g||g.lv>=ENH_MAX)return;
+  const g=gearById(uid);if(!g||g.lv>=enhCap(g))return;
   const cost=enhCost(g.lv);if(SAVE.gold<cost){toast("金條不足");return;}
   SAVE.gold-=cost;
-  const prot=ENH.protect&&SAVE.charms.protect>0,luck=ENH.luck&&SAVE.charms.luck>0;
+  const prot=ENH.protect&&SAVE.charms.protect>0,luck=ENH.luck&&SAVE.charms.luck>0&&g.lv<=LUCK_MAX_LV;
   if(luck)SAVE.charms.luck--;
   const rate=Math.min(100,ENH_RATE[g.lv]+(luck?10:0)),from=g.lv;
-  if(rnd()*100<rate){g.lv++;ENH.res={ok:true,msg:`✨ 強化成功！+${from} → +${g.lv}`};g.lv>=7?SFX.ssr():SFX.sr();}
+  if(rnd()*100<rate){g.lv++;ENH.res={ok:true,msg:`✨ 強化成功！+${from} → +${g.lv}`};g.lv>=7?SFX.ssr():SFX.sr();
+    if(g.lv===ENH_OC){ // +20：額外增加 1 條隨機詞條（不與現有的重複）
+      g.fx=g.fx||[];const [k]=pickAffixKeys(1,g.fx.map(f=>f.k));
+      if(k){g.fx.push({k,v:affixRoll(k,GEAR[g.base].q)});ENH.res.msg+=`<br>⚡ 超頻完成！獲得額外詞條：${fxStr({base:g.base,fx:[g.fx[g.fx.length-1]]})}`;}
+      SFX.ssr();}}
   else if(from<4){ENH.res={ok:false,msg:`💥 強化失敗……（+${from}，沒有損失）`};SFX.lose();}
   else if(prot){SAVE.charms.protect--;ENH.res={ok:false,msg:`💥 強化失敗！🧿 保護符碎了，等級保住在 +${from}`};SFX.miss();}
   else{g.lv--;ENH.res={ok:false,msg:`💥 強化失敗！+${from} → +${g.lv}`};SFX.lose();}
@@ -2084,6 +2126,7 @@ const GEAR_HELP=`<div class="sk small"><b>📖 裝備說明</b><ul style="paddin
   <li><b>稀有度</b>：N 普通 ＜ R 稀有 ＜ SR 精良 ＜ SSR 史詩 ＜ UR 傳說。</li>
   <li><b>穿戴等級</b>：普通、稀有不限；精良要角色 Lv.5、史詩 Lv.10、傳說 Lv.15。等級不足穿不上（之前穿著的會失效）。</li>
   <li><b>數值浮動</b>：每件裝備有自己的「品質 %」，同一種裝備數值會有高低。</li>
+  <li><b>⚡超頻區</b>：SSR 以上的裝備強化到 +10 後可以繼續衝到 +20。每級只加 3.5%、成功率從 10% 降到 1%、每次 🪙1000 起跳，失敗一定掉 1 級（🧿保護符可擋）。🍀幸運符只能用在 +12 以下。強化到 +20 時會額外增加 1 條隨機詞條，裝備卡也會出現「⚡超頻」特效。</li>
   <li><b>隨機詞條</b>：稀有度越高詞條越多（稀有 0～1、精良 1、史詩 1～2、傳說 2～3），可能是攻擊、生命、防禦、速度、暴擊、吸血、閃避、減傷（總減傷上限 30%）。詞條不吃強化。骰到該欄最大值會顯示 🌟 發光；另有 1% 機率出現 💎 <b>稀有詞條</b>，數值為最大值再 +1（百分比 +1%、數字 +1）。完整範圍見「裝備圖鑑」的詞條數值表。</li>
   <li><b>套裝</b>：同一稀有度的武器／防具／飾品穿 2 件、3 件會有額外效果（例如史詩 3 件：暴擊+5%、吸血+10%）。</li>
   <li><b>EX 魔王專屬</b>：只會從「魔王討伐（支線）」的 8 位魔王掉落，每位一件，需 Lv.12，固定 3 條詞條，有自己的「魔王套裝」。</li></ul></div>`;

@@ -1284,6 +1284,7 @@ function renderInner(){
   if(VIEW==="battle"){const l=$("#blog");if(l)l.scrollTop=l.scrollHeight;kbApply();}
   if(CUR_B&&CUR_B.online&&!CUR_B.guest)pushSnap(CUR_B);
   syncBgm();
+  startNpcVoice();
 }
 function toast(msg){
   const d=document.createElement("div");
@@ -4800,6 +4801,62 @@ function seat37Room(ch,L){
   RUN.scene.npc=QING_NPC(["我一直在想，這個座位是留給誰的。","現在我知道了。","——是留給，願意回頭的人。"]);
   render();
 }
+/* ===== 劇情配音（voice/story/）：對話框裡有配音的句子，會依序播放；播放期間選項鎖住，聽完才能繼續 ===== */
+// 原句 → 檔名（舞台提示「（……）」不唸）。音效關閉時不播也不鎖；檔案載入失敗或瀏覽器擋住自動播放時，會自動解鎖，不會卡死
+const STORY_VOX={
+ "……往上的路，被回收者堵住了。": "ashen_01",
+ "它抓走很多人。我守著這裡，沒讓它進來。": "ashen_02",
+ "（他回頭看了一眼火堆旁的人。）……能不能，讓他們也跟著走。": "ashen_03",
+ "……阿燼。": "ashen_04",
+ "我的名字。": "ashen_05",
+ "站我後面。": "ashen_06",
+ "……站我後面。": "ashen_07",
+ "……那一頁，是怎麼來的。": "ashen_08",
+ "我在深淵喊過很多次。沒有人回答。": "ashen_09",
+ "後來，我就不喊了。": "ashen_10",
+ "……原來，有人聽見。": "ashen_11",
+ "……你們受傷了。": "qing_01",
+ "我叫晴。以前，是替被淘汰的人祈福、記下名字的人。": "qing_02",
+ "他們要我把名字刪掉。我沒有答應。": "qing_03",
+ "所以我被關在這裡。……不過沒關係，他們關得住我，關不住名字。": "qing_04",
+ "治愈之光，與你同在。": "qing_05",
+ "……請多指教。": "qing_06",
+ "我一直在想，這個座位是留給誰的。": "qing_07",
+ "現在我知道了。": "qing_08",
+ "——是留給，願意回頭的人。": "qing_09"
+};
+let NPCV={scene:null,audio:null,done:true,q:[]};
+function npcVoiceLocked(){return !!RUN&&!!RUN.scene&&NPCV.scene===RUN.scene&&!NPCV.done;}
+function stopNpcVoice(){if(NPCV.audio){try{NPCV.audio.pause();}catch(e){}NPCV.audio=null;}NPCV.done=true;}
+function npcVoiceUnlock(){
+  NPCV.done=true;NPCV.audio=null;
+  document.querySelectorAll("#view .scene .opts button").forEach(b=>{b.disabled=false;});
+  const h=document.getElementById("npcHint");if(h)h.remove();
+}
+function startNpcVoice(){
+  const sc=RUN&&RUN.scene;
+  if(VIEW!=="run"||!sc||NPCV.scene===sc)return;     // 同一個場景只播一次
+  stopNpcVoice();NPCV.scene=sc;
+  const q=sc.npc?sc.npc.lines.map(t=>STORY_VOX[t]).filter(Boolean):[];
+  if(!q.length||SAVE.muted){NPCV.done=true;return;}
+  NPCV.done=false;NPCV.q=q;
+  const opts=document.querySelector("#view .scene .opts");
+  if(opts){opts.querySelectorAll("button").forEach(b=>{b.disabled=true;});
+    if(!document.getElementById("npcHint"))opts.insertAdjacentHTML("beforebegin",'<div id="npcHint" class="dim small" style="margin-top:8px">🔊 對話播放中……聽完才能繼續</div>');}
+  const next=()=>{
+    if(NPCV.scene!==sc||NPCV.done)return;
+    const f=NPCV.q.shift();if(!f)return npcVoiceUnlock();
+    let adv=false,tm=0;
+    const go=()=>{if(adv)return;adv=true;clearTimeout(tm);setTimeout(next,350);};
+    try{
+      const a=new Audio(`voice/story/${f}.mp3`);NPCV.audio=a;a.volume=.95;
+      a.addEventListener("ended",go);a.addEventListener("error",go);
+      tm=setTimeout(go,15000);                       // 保險：單句最久等 15 秒
+      const pr=a.play();if(pr&&pr.catch)pr.catch(go);
+    }catch(e){go();}
+  };
+  next();
+}
 const ASHEN_NPC=lines=>({id:"ashen",name:"阿燼",img:"images/avatars/ashen.webp",icon:"🗡",lines});
 function ashenCamp(ch,L){
   const where=loc(ch);
@@ -4919,6 +4976,7 @@ function seats(){
 
 /* ---- 結算 ---- */
 function endRun(escaped,lines=[]){
+  stopNpcVoice();
   const r=RUN;r.active=false;r.escaped=escaped;SAVE.run=null;SAVE.runCk=null;
   glog("🏁RUN",`${CHAPTERS[r.ch].name}（${diffName(r.diff)}）結束：${escaped?"逃出":"失敗"}，到達 ${r.fi}`);
   const reached=r.fi,C=CHAPTERS[r.ch],abyss=r.ch===ABYSS,P=SAVE.prog;
@@ -5022,7 +5080,7 @@ function viewRun(){
     const s=r.scene;
     main=`<div class="scene"><div class="loc">${s.loc}</div><h2>${s.title}</h2>
       <div class="txt">${s.lines.filter(Boolean).map((t,i)=>`<p style="animation-delay:${i*.18}s">${t}</p>`).join("")}</div>${s.npc?npcBox(s.npc):""}
-      <div class="opts">${s.opts.map((o,i)=>`<button class="${o.cls||""}" onclick="sceneOpt(${i})">${o.label}</button>`).join("")}</div></div>`;
+      ${npcVoiceLocked()?'<div id="npcHint" class="dim small" style="margin-top:8px">🔊 對話播放中……聽完才能繼續</div>':""}<div class="opts">${s.opts.map((o,i)=>`<button class="${o.cls||""}" ${npcVoiceLocked()?"disabled":""} onclick="sceneOpt(${i})">${o.label}</button>`).join("")}</div></div>`;
   }
   const al=allyMember();
   const party=r.party.map((m,i)=>{const pct=m.hp/m.maxHp*100;
@@ -5048,6 +5106,7 @@ function viewRun(){
 let TAP_T=0;
 function tapOk(){const n=Date.now();if(n-TAP_T<350)return false;TAP_T=n;return true;}
 function sceneOpt(i){
+  if(npcVoiceLocked()){toast("對話還沒說完，請先聽完");return;}
   if(!tapOk())return;
   const o=RUN&&RUN.scene&&RUN.scene.opts[i];if(!o){glog("❌SCENE","選項不存在："+i);return openStuck();}
   SFX.click();glog("👉CHOICE",`${RUN.scene.title}：${String(o.label).replace(/<[^>]+>/g,"")}`);

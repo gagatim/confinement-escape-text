@@ -2,3 +2,7 @@
 - 模型  https://huggingface.co/hexgrad/Kokoro-82M
 - 程式  https://github.com/hexgrad/kokoro
 - 聲音  zm_yunjian／zm_yunyang（中文男聲），僅調整語速
+
+劇情角色（阿燼、晴）對話配音：voice/story/，同樣以 Kokoro-82M 生成（Apache-2.0）
+- 阿燼  zm_yunxi（語速 0.85）
+- 晴    zf_xiaoxiao（語速 0.9）

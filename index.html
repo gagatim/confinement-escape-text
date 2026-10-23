@@ -472,6 +472,10 @@ footer.credit a{color:var(--gold)}
     <audio id="bgm_shop" src="music/bossa_nova_shop.mp3" loop preload="none"></audio>
     <audio id="bgm_arena" src="music/arena_epic_boss_battle.ogg" loop preload="none"></audio>
     <audio id="bgm_duel" src="music/jrpg_battle_loop.mp3" loop preload="none"></audio>
+    <audio id="bgm_boss_hard1" src="music/boss/boss_hard_battle_1.ogg" loop preload="none"></audio>
+    <audio id="bgm_boss_hard2" src="music/boss/boss_hard_battle_2.ogg" loop preload="none"></audio>
+    <audio id="bgm_boss_heavy1" src="music/boss/boss_heavy_battle_1.ogg" loop preload="none"></audio>
+    <audio id="bgm_boss_heavy2" src="music/boss/boss_heavy_battle_2.ogg" loop preload="none"></audio>
   </footer>
 </div>
 <div id="modal" onclick="if(event.target===this)closeModal()"><div class="mbox" id="mbox"></div></div>
@@ -1150,9 +1154,12 @@ function toggleMute(){SAVE.muted=!SAVE.muted;save();renderHeader();}
 // 戰鬥中與逃出成功的畫面 battle 改播 YouTube 嵌入播放器（不下載音檔）。
 // 瀏覽器規定要使用者點過頁面才能出聲，所以第一次點擊時才開始播
 const BGM_ID="2uGf8-vfFLI";
+const BGM_KEYS=["main","town","shop","ach","train","run","abyss","story","arena","duel","boss_hard1","boss_hard2","boss_heavy1","boss_heavy2"];
+// 支線八大魔王各自的戰鬥配樂（OpenGameArt MintoDog，CC0）；越後面的魔王越重
+const BOSS_BGM={doomhunter:"boss_hard1",voidlord:"boss_heavy2",fatejudge:"boss_hard2",reaper:"boss_heavy2",abyssking:"boss_hard1",nightemperor:"boss_heavy2",overlord:"boss_heavy1",endwalker:"boss_heavy1"};
 let BGM=null,BGM_READY=false,BGM_STARTED=false,BGM_CUR=null;
 function loadBgm(){
-  ["main","town","shop","ach","train","run","abyss","story","arena","duel"].forEach(k=>{const a=$("#bgm_"+k);if(a)a.volume=.4;});
+  BGM_KEYS.forEach(k=>{const a=$("#bgm_"+k);if(a)a.volume=.4;});
   window.onYouTubeIframeAPIReady=()=>{
     BGM=new YT.Player("bgmPlayer",{videoId:BGM_ID,
       playerVars:{loop:1,playlist:BGM_ID,controls:1,playsinline:1,rel:0,modestbranding:1},
@@ -1162,7 +1169,9 @@ function loadBgm(){
 }
 function bgmWant(){
   if(!BGM_STARTED||SAVE.bgm===false)return null;
-  if(VIEW==="battle"){ // 競技場、雙人對決（含網路對戰）的戰鬥用各自的專屬曲，其他戰鬥用 YouTube 那首
+  if(VIEW==="battle"){
+    if(CUR_B&&CUR_B.cfg&&CUR_B.cfg.bgm)return CUR_B.cfg.bgm; // 支線魔王專屬配樂
+    // 競技場、雙人對決（含網路對戰）的戰鬥用各自的專屬曲，其他戰鬥用 YouTube 那首
     if(CUR_B&&(CUR_B.online||CUR_B.guest||BATTLE_HOME==="duel"))return "duel";
     if(BATTLE_HOME==="arena")return "arena";
     if(BATTLE_HOME==="train")return "train"; // 練功房的戰鬥也用練功房專屬曲
@@ -1181,7 +1190,7 @@ function bgmWant(){
 }
 function syncBgm(){
   const w=bgmWant();if(w===BGM_CUR)return;BGM_CUR=w;
-  ["main","town","shop","ach","train","run","abyss","story","arena","duel"].forEach(k=>{const a=$("#bgm_"+k);if(!a||!a.play)return;
+  BGM_KEYS.forEach(k=>{const a=$("#bgm_"+k);if(!a||!a.play)return;
     if(w===k){a.currentTime=0;a.play().catch(()=>{});}else a.pause();});
   if(BGM_READY){if(w==="battle"){BGM.seekTo(0,true);BGM.playVideo();}else BGM.pauseVideo();}
 }
@@ -3254,7 +3263,7 @@ Object.assign(MONSTERS,{
       use(B,u){const f=foes(B,u);if(!f.length)return;const t=pick(f);blog(B,"🌟 金色的光球從天而降。","bad");hit(B,u,t,2);foes(B,u).filter(x=>x!==t).forEach(x=>hit(B,u,x,.8));buff(B,u,"atk",Math.max(1,Math.round(stat(u,"atk")*.2)),3);}},
     passive:{name:"霸者之威",desc:"受到的傷害降低25%；暴擊率+15%。"}},
   endwalker:{name:"終焉行者",img:true,r:"SSR",hp:20000,atk:1080,def:330,spd:240,drp:.25,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:15,steal:15},
-    quote:"最後一個站著的，才是真正的勝者。",
+    quote:"最後一個活著的，才是真正的勝者",
     skill:{name:"終焉",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成1.2倍傷害。爆氣後改為1.6倍，每人30%機率暈眩。",
       use(B,u){blog(B,"⛓ 「遊戲結束。」","bad");foes(B,u).forEach(t=>{hit(B,u,t,u.flags.p2?1.6:1.2);if(u.flags.p2&&t.alive&&rnd()<.3)stun(B,t,1);});}},
     passive:{name:"最後的勝者",desc:"受到的傷害降低25%；暴擊率+15%、吸血15%。"}}
@@ -3308,11 +3317,20 @@ function openBoss(id){
       專屬裝備 <b class="rEX">${GEAR_IMG.has(BOSS_DROP[id])?gearImg(BOSS_DROP[id],"inl"):G.icon}${G.name}</b>（${statStr(G.st)}）：${n?"2% 機率掉落":"首次討伐必定掉落"}</div>
     <div class="row" style="margin-top:12px"><button class="pri" onclick="startBoss('${id}')" ${SAVE.team.length?"":"disabled"}>⚔ 挑戰</button><button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
 }
+// 開打前先讓魔王說台詞：立繪＋名字＋台詞，按「開戰」才進入戰鬥
 function startBoss(id){
+  if(!SAVE.team.length)return;
+  const M=MONSTERS[id];
+  openModal(`<div style="text-align:center"><img src="images/bosses/${id}_1.webp" alt="" style="max-width:220px;width:60%;filter:drop-shadow(0 0 18px rgba(255,60,60,.55))">
+    <div class="rEX" style="margin-top:6px">支線魔王</div><h2 style="margin:2px 0">${M.name}</h2>
+    <p style="font-size:18px;font-style:italic;margin:14px 8px;line-height:1.6;text-shadow:0 0 12px rgba(229,72,77,.6)">「${M.quote}」</p>
+    <div class="row" style="justify-content:center"><button class="pri" onclick="beginBoss('${id}')">⚔ 開戰</button><button onclick="closeModal()">撤退</button></div></div>`);
+}
+function beginBoss(id){
   if(!SAVE.team.length)return;
   closeModal();
   const i=BOSS_LIST.indexOf(id),M=MONSTERS[id],r=bossReward(i),ids=SAVE.team.slice();
-  startBattle({title:`魔王討伐・${M.name}`,home:"run",maxRound:200,A:ids.map(teamUnit),B:[{id,stars:1,gx:M.gx}],
+  startBattle({title:`魔王討伐・${M.name}`,home:"run",maxRound:200,A:ids.map(teamUnit),B:[{id,stars:1,gx:M.gx}],bgm:BOSS_BGM[id],
     intro:`「${M.quote}」`,
     resultNote:B=>B.over==="A"?`${M.name} 倒下了。`:"魔王太強了……升級、升星、換裝備後再來。",
     onEnd(win,B){

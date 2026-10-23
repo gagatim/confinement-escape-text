@@ -1268,6 +1268,7 @@ let VIEW="home";
 const NAV=[["home","主頁"],["gacha","招募"],["team","隊伍"],["gear","裝備"],["shop","商店"],["run","遠征"],["train","練功房"],["arena","競技場"],["duel","雙人對決"],["ach","成就"],["story","故事"]];
 function locked(){return (RUN&&RUN.active)||(CUR_B&&!CUR_B.done)||(DUEL&&DUEL.phase==="battle")||!!NET;}
 function go(v){
+  if(npcVoiceLocked()&&v!==VIEW){toast("對話還沒說完，請先聽完");return;}
   stopEndVoice();
   if(locked()&&v!==VIEW){toast("進行中無法離開（遠征中可按「放棄遠征」）");return;}
   SFX.click();VIEW=v;NAV_OPEN=false;render();window.scrollTo(0,0);
@@ -3590,6 +3591,7 @@ function resetFloor(){
 // 最後手段：結束戰鬥、關掉所有視窗、離開遠征畫面回主頁（遠征存檔保留，之後可以按「繼續遠征」）
 function forceHome(){
   glog("🏠FORCE","強制回到主頁："+VIEW);
+  stopEndVoice();stopNpcVoice();
   if(CUR_B){CUR_B.aborted=true;CUR_B.done=true;}
   CUR_B=null;
   if(NET){try{leaveOnline();}catch(e){NET=null;}}
@@ -4902,15 +4904,27 @@ const STORY_VOX={
 };
 // 第 13～15 章的結局配音（key＝章節索引 12、13、14）：旁白用一個聲音，阿燼、晴的台詞用各自的聲音，依序播放；不鎖按鈕，可隨時離開或按「重聽結局」
 const END_VOX={"12": ["end13_01"], "13": ["end14_01", "end14_02", "end14_03", "end14_04", "end14_05", "end14_06", "end14_07"], "14": ["end15_01", "end15_02", "end15_03", "end15_04", "end15_05", "end15_06"]};
-let ENDV={audio:null,id:0};
-function stopEndVoice(){ENDV.id++;if(ENDV.audio){try{ENDV.audio.pause();}catch(e){}ENDV.audio=null;}}
-function playEndVoice(ch){
+let ENDV={audio:null,id:0,lock:false,scene:null};
+function stopEndVoice(){ENDV.id++;ENDV.lock=false;if(ENDV.audio){try{ENDV.audio.pause();}catch(e){}ENDV.audio=null;}}
+function endVoiceUnlock(){
+  ENDV.lock=false;
+  document.querySelectorAll("#view .scene .opts button").forEach(b=>{b.disabled=false;});
+  const h=document.getElementById("npcHint");if(h)h.remove();
+}
+// force＝第一次通關：結局要聽完才能按按鈕、才能離開；之後重打不強迫
+function playEndVoice(ch,force=false){
   stopEndVoice();
   const q=(END_VOX[ch]||[]).slice();if(!q.length||SAVE.muted)return;
   const my=ENDV.id;
+  if(force&&RUN&&RUN.scene){
+    ENDV.lock=true;ENDV.scene=RUN.scene;
+    const opts=document.querySelector("#view .scene .opts");
+    if(opts){opts.querySelectorAll("button").forEach(b=>{b.disabled=true;});
+      if(!document.getElementById("npcHint"))opts.insertAdjacentHTML("beforebegin",'<div id="npcHint" class="dim small" style="margin-top:8px">🔊 結局播放中……第一次通關，請先聽完</div>');}
+  }
   const next=()=>{
     if(ENDV.id!==my)return;
-    const f=q.shift();if(!f)return;
+    const f=q.shift();if(!f){if(ENDV.lock)endVoiceUnlock();return;}
     let adv=false,tm=0;
     const go=()=>{if(adv)return;adv=true;clearTimeout(tm);setTimeout(next,300);};
     try{
@@ -4923,7 +4937,7 @@ function playEndVoice(ch){
   next();
 }
 let NPCV={scene:null,audio:null,done:true,q:[]};
-function npcVoiceLocked(){return !!RUN&&!!RUN.scene&&NPCV.scene===RUN.scene&&!NPCV.done;}
+function npcVoiceLocked(){return !!RUN&&!!RUN.scene&&((NPCV.scene===RUN.scene&&!NPCV.done)||(ENDV.lock&&ENDV.scene===RUN.scene));}
 function stopNpcVoice(){if(NPCV.audio){try{NPCV.audio.pause();}catch(e){}NPCV.audio=null;}NPCV.done=true;}
 function npcVoiceUnlock(){
   NPCV.done=true;NPCV.audio=null;
@@ -5078,6 +5092,7 @@ function endRun(escaped,lines=[]){
   const r=RUN;r.active=false;r.escaped=escaped;SAVE.run=null;SAVE.runCk=null;
   glog("🏁RUN",`${CHAPTERS[r.ch].name}（${diffName(r.diff)}）結束：${escaped?"逃出":"失敗"}，到達 ${r.fi}`);
   const reached=r.fi,C=CHAPTERS[r.ch],abyss=r.ch===ABYSS,P=SAVE.prog;
+  const firstClear=!abyss&&escaped&&P.cleared<=r.ch; // 這一章第一次通關
   let bonus=0;
   const out=lines.slice();
   if(escaped){
@@ -5118,7 +5133,7 @@ function endRun(escaped,lines=[]){
     ...(escaped&&!abyss&&END_VOX[r.ch]?[{label:"🔊 重聽結局",act(){playEndVoice(r.ch);}}]:[]),
     ...(escaped&&!abyss&&CHAPTERS[r.ch+1]&&r.ch+1<ABYSS?[{label:`➡ 前往第 ${r.ch+2} 章`,act(){RUN=null;startRun(r.ch+1,r.diff);}}]:[])]};
   r.choices=null;if(escaped&&!abyss)kingSay("end",r.ch);VIEW="run";render();
-  if(escaped&&!abyss)playEndVoice(r.ch);
+  if(escaped&&!abyss)playEndVoice(r.ch,firstClear);
 }
 
 /* ---- 遠征介面 ---- */

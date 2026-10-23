@@ -816,8 +816,9 @@ const AFFIX_W={steal:.5};
 function bellRoll(lo,hi){
   if(hi<=lo)return lo;
   const r=rnd();if(r<.02)return lo;if(r>=.98)return hi;
-  const [x,y]=r<.15?[0,.3]:r>=.85?[.7,1]:[.3,.7],n=hi-lo,c=[];
-  for(let i=0;i<=n;i++){const t=i/n;if(t>=x-1e-9&&t<=y+1e-9)c.push(lo+i);}
+  const band=r<.15?0:r>=.85?2:1,n=hi-lo,c=[];
+  for(let i=0;i<=n;i++){const t=i/n,e=1e-9; // 偏低／偏高不含 30%、70% 邊界，中間含邊界，三段不重疊
+    if(band===0?t<.3-e:band===2?t>.7+e:t>=.3-e&&t<=.7+e)c.push(lo+i);}
   return c.length?pick(c):(rnd()<.5?lo:hi);
 }
 function affixRoll(k,q){
@@ -873,6 +874,8 @@ const ENH_MAX=10;
 const ENH_RATE=[100,95,90,80,70,60,50,40,32,25, 10,5,5,4,4,3,3,2,1,1]; // 依目前等級：+0→+1 為 100%；+10 以後是「超頻區」
 // 超頻區：+11～+20，只有 SSR 以上的裝備能進入；每級只加 3.5%（+10 以前每級 8%），失敗一定掉 1 級，花費 🪙1000 起跳
 const ENH_OC=20,ENH_OC_Q=["SSR","UR","EX"];
+// 存檔檢查只擋「明顯離譜」的裝備數值（寬鬆一點，之後調整遊戲數值時舊頁面不容易誤判）
+const GEAR_LV_SANE=30,GEAR_FX_SANE=6;
 const LUCK_MAX_LV=12; // 幸運符只能用在 +12 以下的裝備
 function enhCap(g){return ENH_OC_Q.includes(GEAR[g.base].q)?ENH_OC:ENH_MAX;}
 function enhMul(lv){return 1+.08*Math.min(lv,ENH_MAX)+.035*Math.max(0,lv-ENH_MAX);}
@@ -922,6 +925,16 @@ function cardStats(id,stars=1,scale=1,br=0){
 
 /* ===================== SAVE ===================== */
 const SAVE_KEY="jbts_textgame_v1";
+// 遊戲版本（存檔格式有新增內容、舊頁面可能誤判時加 1）。存檔會記錄是哪個版本寫的；
+// 舊頁面讀到比自己新的存檔時，不做作弊檢查、不清空、也不寫回，只提示玩家重新整理頁面
+const APP_V=2;
+let STALE=false;
+const isNewerSave=s=>!!s&&(s.appv||0)>APP_V;
+function staleNotice(){
+  openModal(`<h3>🔄 遊戲有新版本</h3><p>這份存檔是用比較新的版本存的，目前這個頁面太舊了。<br>請<b>重新整理頁面</b>（手機可以關掉分頁重開，電腦按 Ctrl+F5）。</p>
+    <p class="dim small">在更新之前，存檔不會被修改，也不會上傳，可以放心。</p>
+    <div class="row"><button class="pri" onclick="location.reload()">重新整理</button></div>`);
+}
 function newSave(){
   const s={v:1,gold:150,pity:0,pulls:0,owned:{},team:[],arenaTier:1,firstTen:true,muted:false,
     stats:{runs:0,escapes:0,best:0,arenaWins:0},prog:{cleared:0,clears:{},abyssBest:0},run:null};
@@ -955,7 +968,7 @@ let TAMPER="";
 function loadSave(){
   try{
     const raw=JSON.parse(localStorage.getItem(SAVE_KEY));
-    if(raw){const {s,bad}=unpackSave(raw);if(bad){TAMPER=bad;return newSave();}if(s&&s.v===1)return migrate(s);}
+    if(raw){const {s,bad}=unpackSave(raw);if(bad){TAMPER=bad;return newSave();}if(isNewerSave(s)){STALE=true;return s;}if(s&&s.v===1)return migrate(s);}
   }catch(e){}
   return newSave();
 }
@@ -976,10 +989,10 @@ function validSave(s){
   for(const g of s.gear||[]){
     const G=GEAR[g.base];if(!G)return "出現不存在的裝備";
     if(uids.has(g.uid))return "裝備資料重複";uids.add(g.uid);
-    if(!isInt(g.lv,0,enhCap(g)))return `${G.name} 強化等級異常`;
+    if(!isInt(g.lv,0,GEAR_LV_SANE))return `${G.name} 強化等級異常`;
     if(g.roll!=null&&!isInt(g.roll,GEAR_ROLL[G.q][0],GEAR_ROLL[G.q][1]))return `${G.name} 品質異常`;
-    const fx=g.fx||[];if(fx.length>3+(g.lv>=ENH_OC?1:0)||new Set(fx.map(f=>f.k)).size!==fx.length)return `${G.name} 詞條異常`;
-    for(const f of fx){const A=AFFIX[f.k];if(!A||!isInt(f.v,1,affixSpan(f.k,G.q)[1]+1))return `${G.name} 詞條數值異常`;}
+    const fx=g.fx||[];if(fx.length>GEAR_FX_SANE||new Set(fx.map(f=>f.k)).size!==fx.length)return `${G.name} 詞條異常`;
+    for(const f of fx){const A=AFFIX[f.k];if(!A||!isInt(f.v,1,Math.ceil(affixSpan(f.k,G.q)[1]*1.5)+2))return `${G.name} 詞條數值異常`;}
   }
   for(const k in s.charms)if(!isInt(s.charms[k],0,99999))return "強化道具數量異常";
   if(s.shards)for(const k in s.shards)if(!isInt(s.shards[k],0,99999))return "碎片數量異常";
@@ -995,7 +1008,7 @@ function tamperNotice(why){
   openModal(`<h3>⚠ 偵測到存檔被修改</h3><p>原因：<b>${why}</b></p><p class="dim">為了公平，這份存檔已經<b style="color:var(--red)">清空</b>，請重新開始。</p>
     <div class="row"><button class="pri" onclick="closeModal()">知道了</button></div>`);
 }
-function checkIntegrity(){if(!SAVE)return true;const why=validSave(SAVE);if(why){wipeTampered(why);return false;}return true;}
+function checkIntegrity(){if(!SAVE||STALE)return true;const why=validSave(SAVE);if(why){wipeTampered(why);return false;}return true;}
 // 舊存檔補欄位：已逃出過禁閉室就算通關第1章
 function migrate(s){
   if(!s.prog)s.prog={cleared:s.stats&&s.stats.escapes>0?1:0,clears:{},abyssBest:0};
@@ -1044,12 +1057,15 @@ function doImport(){
   try{
     const {s,bad}=unpackSave(JSON.parse(decodeURIComponent(escape(atob($("#saveCode").value.trim())))));
     if(bad){toast("這段存檔代碼被修改過，無法匯入");return;}
+    if(isNewerSave(s)){toast("這段存檔代碼來自較新的版本，請先重新整理頁面更新遊戲");return;}
     if(!s||s.v!==1||!s.owned||!s.stats)throw 0;
     const why=validSave(migrate(s));if(why){toast("存檔代碼數值異常（"+why+"），無法匯入");return;}
     SAVE=migrate(s);SAVE.run=null;RUN=null;save();closeModal();toast("匯入成功！");go("home");
   }catch(e){toast("代碼格式不對，請確認有完整複製");}
 }
 function save(){
+  if(STALE)return;
+  SAVE.appv=APP_V;
   if(SAVE_READY&&!checkIntegrity())return;
   if(SAVE_READY)checkAch();
   SAVE.updatedAt=Date.now();
@@ -3496,6 +3512,7 @@ async function pullCloud(ask){
     const snap=await (await fbDb()).ref("users/"+ACCT.uid+"/save").get();
     if(!snap.exists()){await uploadSave();if(ask){closeModal();toast("雲端還沒有存檔，已上傳這台裝置的存檔");}return;}
     const {s,bad}=unpackSave(snap.val());
+    if(!bad&&isNewerSave(s)){toast("雲端存檔來自較新的版本，請先重新整理頁面更新遊戲");glog("❌CLOUD","雲端存檔版本較新");return;}
     if(bad||!s||s.v!==1){toast("雲端存檔異常，沒有載入");glog("❌CLOUD","雲端存檔簽章不符");return;}
     const why=validSave(migrate(s));if(why){toast("雲端存檔數值異常（"+why+"），沒有載入");glog("❌CLOUD",why);return;}
     CLOUD_PENDING=s;
@@ -3519,7 +3536,7 @@ function useCloud(){
 }
 function scheduleUpload(){if(!ACCT)return;clearTimeout(SYNC_T);SYNC_T=setTimeout(()=>uploadSave(),3000);}
 async function uploadSave(manual){
-  if(!ACCT)return;
+  if(!ACCT||STALE)return;
   try{await (await fbDb()).ref("users/"+ACCT.uid).set({name:ACCT.name,save:packSave(SAVE),t:Date.now()});
     SYNC_MSG="已同步 "+new Date().toLocaleTimeString();if(manual){toast("☁ 存檔已上傳");closeModal();}}
   catch(e){SYNC_MSG="上傳失敗："+authErr(e);glog("❌CLOUD",e&&e.code||e);if(manual)toast(authErr(e));}
@@ -4586,9 +4603,10 @@ function sceneOpt(i){
 (()=>{const q=new URLSearchParams(location.search).get("room");
   if(q&&/^[A-Za-z0-9]{5}$/.test(q)){JOIN_CODE=q.toUpperCase();DUEL_MODE="online";VIEW="duel";history.replaceState(null,"",location.pathname);}})();
 // 開機時檢查存檔：簽章不符或數值異常就清空；之後每 5 秒檢查一次記憶體裡的數值
-const BOOT_BAD=TAMPER||validSave(SAVE);
+const BOOT_BAD=STALE?"":TAMPER||validSave(SAVE);
 if(BOOT_BAD){SAVE=newSave();RUN=null;}
 SAVE_READY=true;save();
+if(STALE)setTimeout(staleNotice,0);
 if(BOOT_BAD)setTimeout(()=>tamperNotice(BOOT_BAD),0);
 setInterval(checkIntegrity,5000);
 // 戰鬥看門狗：電腦方行動超過 20 秒沒有進展（不是在等玩家操作），提醒玩家用 🆘

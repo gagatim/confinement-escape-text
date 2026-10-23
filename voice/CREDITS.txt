@@ -3,6 +3,6 @@
 - 程式  https://github.com/hexgrad/kokoro
 - 聲音  zm_yunjian／zm_yunyang（中文男聲），僅調整語速
 
-劇情角色（阿燼、晴）對話配音：voice/story/，同樣以 Kokoro-82M 生成（Apache-2.0）
-- 阿燼  zm_yunxi（語速 0.85）
-- 晴    zf_xiaoxiao（語速 0.9）
+劇情角色（阿燼、晴）對話配音：voice/story/，以微軟語音（edge-tts）生成。授權為灰色地帶，正式公開前建議改用 Azure 官方語音服務或自行授權的配音。
+- 阿燼  微軟 zh-CN-YunxiNeural（雲希）
+- 晴    微軟 zh-CN-XiaoyiNeural（曉伊，語速 -5%）

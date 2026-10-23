@@ -1003,10 +1003,51 @@ function validSave(s){
   return "";
 }
 // 發現作弊：清空存檔重新開始
-function wipeTampered(why){SAVE=newSave();RUN=null;CUR_B=null;VIEW="home";save();render();tamperNotice(why);}
+function wipeTampered(why){backupSave(packSave(SAVE),why);SAVE=newSave();RUN=null;CUR_B=null;VIEW="home";save();render();tamperNotice(why);}
 function tamperNotice(why){
   openModal(`<h3>⚠ 偵測到存檔被修改</h3><p>原因：<b>${why}</b></p><p class="dim">為了公平，這份存檔已經<b style="color:var(--red)">清空</b>，請重新開始。</p>
-    <div class="row"><button class="pri" onclick="closeModal()">知道了</button></div>`);
+    <p class="dim small">如果你沒有改過存檔，可能是遊戲誤判。清空前的存檔已經自動備份，可以按下面的按鈕還原（還原時會再檢查一次，通過才會載入）。</p>
+    <div class="row"><button class="pri" onclick="closeModal()">知道了</button><button class="gold" onclick="openRestore()">♻ 還原備份</button></div>`);
+}
+/* ----- 清空前的備份：本機保留最近 3 份；有登入帳號的話，雲端另存一份在 users/{uid}/backup ----- */
+const BK_KEY="jbts_backup";
+let PENDING_CLOUD_BK=null;
+function readBackups(){try{const l=JSON.parse(localStorage.getItem(BK_KEY));return Array.isArray(l)?l:[];}catch(e){return [];}}
+function backupSave(pack,why){
+  if(!pack)return;
+  try{localStorage.setItem(BK_KEY,JSON.stringify([{t:Date.now(),why,pack},...readBackups()].slice(0,3)));}catch(e){}
+  if(typeof ACCT!=="undefined"&&ACCT)cloudBackup(pack,why);else PENDING_CLOUD_BK={pack,why};
+}
+async function cloudBackup(pack,why){try{await (await fbDb()).ref("users/"+ACCT.uid+"/backup").set({t:Date.now(),why,pack});}catch(e){}}
+function bkSummary(pack){try{const {s}=unpackSave(pack);return s?saveSummary(s):"（無法讀取）";}catch(e){return "（無法讀取）";}}
+function openRestore(){
+  const l=readBackups();
+  openModal(`<h3>♻ 還原備份</h3><p class="dim small">清空前自動備份的存檔，最多 3 份。還原會覆蓋目前這台裝置的存檔，而且會重新做一次數值檢查。</p>
+    ${l.length?l.map((b,i)=>`<div class="sk"><b>${new Date(b.t).toLocaleString()}</b> <span class="dim small">（原因：${b.why}）</span><br>${bkSummary(b.pack)}
+      <div class="row" style="margin-top:6px"><button class="mini pri" onclick="restoreBackup(${i})">還原這份</button><button class="mini" onclick="exportBackup(${i})">匯出代碼</button></div></div>`).join(""):'<p class="dim">這台裝置沒有備份。</p>'}
+    <div class="row">${typeof ACCT!=="undefined"&&ACCT?'<button class="gold" onclick="restoreCloudBackup()">☁ 讀取雲端備份</button>':""}<button onclick="closeModal()">關閉</button></div>`);
+}
+function restorePack(pack){
+  try{
+    const {s,bad}=unpackSave(pack);
+    if(bad||!s||s.v!==1){toast("這份備份無法使用（"+(bad||"格式不對")+"）");return;}
+    if(isNewerSave(s)){toast("這份備份來自較新的版本，請先重新整理頁面更新遊戲");return;}
+    const m=migrate(s),why=validSave(m);
+    if(why){toast("這份備份仍然被判定異常（"+why+"），請等遊戲更新後再試");return;}
+    SAVE=m;SAVE.run=null;RUN=null;CUR_B=null;save();closeModal();toast("✅ 已還原備份");go("home");
+  }catch(e){toast("還原失敗");}
+}
+function restoreBackup(i){const b=readBackups()[i];if(b)restorePack(b.pack);}
+async function restoreCloudBackup(){
+  try{const snap=await (await fbDb()).ref("users/"+ACCT.uid+"/backup").get();
+    if(!snap.exists()){toast("雲端沒有備份");return;}restorePack(snap.val().pack);}catch(e){toast("讀取雲端備份失敗");}
+}
+function exportBackup(i){
+  const b=readBackups()[i];if(!b)return;
+  const code=btoa(unescape(encodeURIComponent(JSON.stringify(b.pack))));
+  openModal(`<h3>匯出備份代碼</h3><p class="dim small">複製這段代碼，可以用「匯入存檔」貼回來，也可以交給開發者檢查。</p>
+    <textarea id="saveCode" readonly style="width:100%;height:120px;font-size:11px">${code}</textarea>
+    <div class="row"><button class="pri" onclick="copySave()">📋 複製</button><button onclick="openRestore()">返回</button></div>`);
 }
 function checkIntegrity(){if(!SAVE||STALE)return true;const why=validSave(SAVE);if(why){wipeTampered(why);return false;}return true;}
 // 舊存檔補欄位：已逃出過禁閉室就算通關第1章
@@ -1289,6 +1330,7 @@ function viewHome(){
     <span class="dim">存檔會自動保存在這個瀏覽器（遠征中途關掉也能接著玩）。</span>
     <button class="mini" style="margin-left:auto" onclick="exportSave()">📤 匯出存檔</button>
     <button class="mini" onclick="importSave()">📥 匯入存檔</button>
+    ${readBackups().length?'<button class="mini gold" onclick="openRestore()">♻ 還原備份</button>':""}
     <button class="mini" onclick="resetSave()">重置存檔</button>
   </div>`;
 }
@@ -3537,7 +3579,9 @@ function useCloud(){
 function scheduleUpload(){if(!ACCT)return;clearTimeout(SYNC_T);SYNC_T=setTimeout(()=>uploadSave(),3000);}
 async function uploadSave(manual){
   if(!ACCT||STALE)return;
-  try{await (await fbDb()).ref("users/"+ACCT.uid).set({name:ACCT.name,save:packSave(SAVE),t:Date.now()});
+  try{
+    if(PENDING_CLOUD_BK){const b=PENDING_CLOUD_BK;PENDING_CLOUD_BK=null;await cloudBackup(b.pack,b.why);} // 清空後第一次上傳前，先把清空前的存檔備份到雲端
+    await (await fbDb()).ref("users/"+ACCT.uid).update({name:ACCT.name,save:packSave(SAVE),t:Date.now()}); // update 才不會洗掉 backup
     SYNC_MSG="已同步 "+new Date().toLocaleTimeString();if(manual){toast("☁ 存檔已上傳");closeModal();}}
   catch(e){SYNC_MSG="上傳失敗："+authErr(e);glog("❌CLOUD",e&&e.code||e);if(manual)toast(authErr(e));}
 }
@@ -4598,13 +4642,32 @@ function sceneOpt(i){
   try{o.act();}catch(e){glog("❌SCENE",`${RUN.scene&&RUN.scene.title}：${e&&e.stack||e}`);toast("發生錯誤，已記錄。可以按「🐞 卡住了」重置這一層");}
 }
 
+/* ===================== 新版本偵測 ===================== */
+// 比較「目前載入的頁面」和伺服器上 index.html 的最後修改時間；伺服器比較新就在畫面下方提醒玩家重新整理（不會自動重新整理，避免打斷戰鬥）
+let UPD_SHOWN=false;
+async function checkUpdate(){
+  if(UPD_SHOWN||!/^https?:$/.test(location.protocol)||typeof fetch!=="function")return;
+  try{
+    const r=await fetch(location.pathname,{method:"HEAD",cache:"no-store"}),lm=Date.parse(r.headers.get("last-modified")||""),mine=Date.parse(document.lastModified);
+    if(!lm||!mine||lm<=mine+2000)return;
+    UPD_SHOWN=true;
+    const b=document.createElement("div");
+    b.style.cssText="position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:60;background:#1b2330;border:1px solid var(--gold);border-radius:10px;padding:10px 14px;box-shadow:0 4px 18px rgba(0,0,0,.6);display:flex;gap:10px;align-items:center;max-width:92vw";
+    b.innerHTML='<span class="small">🔄 遊戲有新版本</span><button class="mini pri" onclick="location.reload()">重新整理</button><button class="mini" onclick="this.parentNode.remove()">稍後</button>';
+    document.body.appendChild(b);
+  }catch(e){}
+}
+setTimeout(checkUpdate,15000);
+setInterval(checkUpdate,300000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkUpdate();});
+
 /* ===================== BOOT ===================== */
 // 邀請連結 ?room=XXXXX：直接進網路對戰並加入房間
 (()=>{const q=new URLSearchParams(location.search).get("room");
   if(q&&/^[A-Za-z0-9]{5}$/.test(q)){JOIN_CODE=q.toUpperCase();DUEL_MODE="online";VIEW="duel";history.replaceState(null,"",location.pathname);}})();
 // 開機時檢查存檔：簽章不符或數值異常就清空；之後每 5 秒檢查一次記憶體裡的數值
 const BOOT_BAD=STALE?"":TAMPER||validSave(SAVE);
-if(BOOT_BAD){SAVE=newSave();RUN=null;}
+if(BOOT_BAD){try{backupSave(JSON.parse(localStorage.getItem(SAVE_KEY)),BOOT_BAD);}catch(e){}SAVE=newSave();RUN=null;}
 SAVE_READY=true;save();
 if(STALE)setTimeout(staleNotice,0);
 if(BOOT_BAD)setTimeout(()=>tamperNotice(BOOT_BAD),0);

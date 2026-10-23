@@ -536,7 +536,7 @@ const CARDS={
     passive:{name:"暗影共鳴",desc:"場上任何其他角色（敵我皆算）倒下時，自己恢復5%最大生命（至少1），並永久攻擊提高3%（至少+1，本場）。"}},
   vampire:{name:"吸血鬼",r:"SSR",hp:30,atk:6,def:1,spd:4,
     skill:{name:"血宴",cd:4,t:"none",kind:"dmg",desc:"冷卻4回合。對全體敵人各造成0.8倍攻擊傷害，並把造成的總傷害的50%轉成自己的生命。",
-      use(B,u){let s=0;foes(B,u).forEach(t=>s+=hit(B,u,t,.8));if(s)heal(B,u,Math.ceil(s/2));}},
+      use(B,u){let s=0;foes(B,u).forEach(t=>s+=hit(B,u,t,.8)*leechK(t));if(s)heal(B,u,Math.ceil(s/2));}},
     passive:{name:"夜之血族",desc:"每個自己的回合開始時，恢復2%最大生命（至少1）。"}},
   berserker:{name:"狂戰士",r:"SSR",hp:37,atk:7,def:0,spd:4,
     skill:{name:"狂暴旋風",cd:3,t:"none",kind:"dmg",desc:"冷卻3回合。對全體敵人各造成1.38倍攻擊傷害；施放後自己失去0.5%最大生命（至少1點），生命最低會留在1，不會因此倒下。",
@@ -2518,6 +2518,8 @@ function heal(B,u,n){
 }
 function revive(B,u,pct){u.alive=true;u.hp=Math.max(1,Math.ceil(u.maxHp*pct));u.st={};u.buffs=[];fx(B,u,"復活","heal");}
 
+// 吸血減免：怪物資料的 leechRed（0.3＝對自己造成傷害時，吸血效果少 30%）
+function leechK(t){const d=DEF(t.id);return 1-((d&&d.leechRed)||0);}
 const SPLASH_IDS=["reclaimer","editor","nameless"];
 // 支線魔王「激動模式」：這幾位魔王面對 5 人以上的隊伍時啟動（開戰時判斷）：單體攻擊擴散 20%、技能與普通攻擊傷害 +10%
 const FRENZY_IDS=["doomhunter","voidlord","fatejudge","reaper","abyssking","nightemperor","overlord","endwalker"];
@@ -2579,8 +2581,10 @@ function hit(B,a,t,mult,o={}){
   fx(B,t,(crit?"💥":"")+"-"+d,crit?"crit":"dmg");
   if(isBossUnit(a))screenShake(crit||d>=t.maxHp*.25);
   crit?SFX.crit():SFX.hit();
-  if(a.id==="butcher"&&a.alive)heal(B,a,Math.max(1,Math.round(d*.3)));
-  if(a.gx&&a.gx.steal&&a.alive&&a!==t)heal(B,a,Math.max(1,Math.round(d*a.gx.steal/100)));
+  const lk=leechK(t); // 目標若有「吸血減免」，吸血的回復量打折
+  const lh=x=>lk<1?Math.round(x*lk):Math.max(1,Math.round(x)); // 有吸血減免時，不再保底回復 1 點
+  if(a.id==="butcher"&&a.alive)heal(B,a,lh(d*.3));
+  if(a.gx&&a.gx.steal&&a.alive&&a!==t)heal(B,a,lh(d*a.gx.steal/100));
   if((SPLASH_IDS.includes(a.id)||(a.flags&&a.flags.frenzy))&&!o.noSpread&&!o.counter&&d>0){ // 第13～15章魔王「擴散攻擊」：其餘敵人各受到該傷害的 20%
     const sp=Math.max(1,Math.round(d*.2)),others=foes(B,a).filter(x=>x!==t);
     if(others.length){blog(B,`💥 ${nm(a)} 的攻擊擴散開來，其餘敵人各受到 ${sp} 點傷害。`);
@@ -3376,52 +3380,52 @@ function viewOnline(){
 // img:true 的怪物頭像在 images/bosses/{id}_1.webp（一般）與 {id}_2.webp（爆氣）
 const BOSS_LIST=["doomhunter","voidlord","fatejudge","reaper","abyssking","nightemperor","overlord","endwalker"];
 Object.assign(MONSTERS,{
-  doomhunter:{name:"滅世獵手",img:true,r:"SSR",hp:267,atk:30,def:8,spd:12,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:25},
+  doomhunter:{name:"滅世獵手",img:true,r:"SSR",leechRed:0.1,hp:267,atk:30,def:8,spd:12,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:25},
     quote:"追蹤、狩獵，直到目標消失。",
     skill:{name:"鎖定狙殺",cd:3,t:"none",kind:"dmg",desc:"狙擊生命最低的敵人（2.4倍、無視防禦）。爆氣後改為3倍，並對其他敵人掃射0.6倍。",
       use(B,u){const f=foes(B,u).sort((a,b)=>a.hp-b.hp);if(!f.length)return;blog(B,"🎯 紅色雷射點停在了獵物的眉心。","bad");
         hit(B,u,f[0],u.flags.p2?3:2.4,{pierce:true});if(u.flags.p2)foes(B,u).filter(x=>x!==f[0]).forEach(t=>hit(B,u,t,.6,{noSpread:true}));}},
-    passive:{name:"獵殺本能",desc:"暴擊率+25%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
-  voidlord:{name:"虛空主宰",img:true,r:"SSR",hp:667,atk:63,def:18,spd:21,boss2:{hp:.7,atk:.35,spd:2},gx:{dodge:15},
+    passive:{name:"獵殺本能",desc:"暴擊率+25%。｜吸血減免：玩家對自己造成傷害時，吸血效果減少 10%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
+  voidlord:{name:"虛空主宰",img:true,r:"SSR",leechRed:0.1,hp:667,atk:63,def:18,spd:21,boss2:{hp:.7,atk:.35,spd:2},gx:{dodge:15},
     quote:"我掌控的不只是數據，而是整個禁閉區的規則。",
     skill:{name:"系統覆寫",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.8倍傷害，每人40%機率暈眩1回合。爆氣後再清除敵人所有增益，並使其攻擊降低25%（2回合）。",
       use(B,u){blog(B,"💠 所有螢幕同時跳出同一行字：「權限已轉移」。","bad");foes(B,u).forEach(t=>{hit(B,u,t,.8,{noSpread:true});if(t.alive&&rnd()<.4)stun(B,t,1);
         if(u.flags.p2&&t.alive){t.buffs=t.buffs.filter(b=>b.v<0);buff(B,t,"atk",-Math.max(1,Math.round(stat(t,"atk")*.25)),2);}});}},
-    passive:{name:"虛體",desc:"閃避率+15%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
-  fatejudge:{name:"命運裁決者",img:true,r:"SSR",hp:1666,atk:138,def:42,spd:36,drp:.15,boss2:{hp:.7,atk:.35,spd:2},
+    passive:{name:"虛體",desc:"閃避率+15%。｜吸血減免：玩家對自己造成傷害時，吸血效果減少 10%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
+  fatejudge:{name:"命運裁決者",img:true,r:"SSR",leechRed:0.3,hp:1666,atk:138,def:42,spd:36,drp:.15,boss2:{hp:.7,atk:.35,spd:2},
     quote:"你的命運，由我來決定。",
     skill:{name:"命運之輪",cd:3,t:"none",kind:"dmg",desc:"轉動命運之輪，隨機：全體1倍傷害／自身恢復8%生命／單體2.5倍傷害。爆氣後一次轉兩格。",
       use(B,u){for(let n=0;n<(u.flags.p2?2:1);n++){const k=ri(1,3),f=foes(B,u);if(!f.length)break;
         if(k===1){blog(B,"☸ 命運之輪停在「審判」。","bad");f.forEach(t=>hit(B,u,t,1,{noSpread:true}));}
         else if(k===2){blog(B,"☸ 命運之輪停在「延命」。","bad");heal(B,u,Math.round(u.maxHp*.08));}
         else{blog(B,"☸ 命運之輪停在「處刑」。","bad");hit(B,u,pick(f),2.5);}}}},
-    passive:{name:"定數",desc:"受到的傷害降低15%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
-  reaper:{name:"死神代行者",img:true,r:"SSR",hp:2000,atk:156,def:42,spd:42,boss2:{hp:.7,atk:.35,spd:2},gx:{steal:20},
+    passive:{name:"定數",desc:"受到的傷害降低15%。｜吸血減免：玩家對自己造成傷害時，吸血效果減少 30%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
+  reaper:{name:"死神代行者",img:true,r:"SSR",leechRed:0.3,hp:2000,atk:156,def:42,spd:42,boss2:{hp:.7,atk:.35,spd:2},gx:{steal:20},
     quote:"死亡不是終點，而是我的任務。",
     skill:{name:"收割",cd:3,t:"none",kind:"dmg",desc:"對生命最低的敵人揮下鐮刀（1.8倍）。爆氣後全體敵人再中毒（每回合受到自身攻擊20%的傷害，3回合）。",
       use(B,u){const f=foes(B,u).sort((a,b)=>a.hp-b.hp);if(!f.length)return;blog(B,"⚰ 鎖鏈嘩啦作響，鐮刀落下。","bad");hit(B,u,f[0],1.8);
         if(u.flags.p2)foes(B,u).forEach(t=>poison(B,t,Math.max(1,Math.round(stat(u,"atk")*.2)),3));}},
-    passive:{name:"魂之收割",desc:"造成傷害時恢復傷害20%的生命。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
-  abyssking:{name:"深淵君王",img:true,r:"SSR",hp:2400,atk:168,def:54,spd:30,drp:.2,regenp:.03,boss2:{hp:.7,atk:.35,spd:2},
+    passive:{name:"魂之收割",desc:"造成傷害時恢復傷害20%的生命。｜吸血減免：玩家對自己造成傷害時，吸血效果減少 30%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
+  abyssking:{name:"深淵君王",img:true,r:"SSR",leechRed:0.4,hp:2400,atk:168,def:54,spd:30,drp:.2,regenp:.03,boss2:{hp:.7,atk:.35,spd:2},
     quote:"這片禁閉區，現在由我來支配。",
     skill:{name:"王權壓制",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.9倍傷害，並使其攻擊降低25%（2回合）。爆氣後傷害提高到1.2倍。",
       use(B,u){blog(B,"👑 「跪下。」整個房間的空氣沉了下來。","bad");foes(B,u).forEach(t=>{hit(B,u,t,u.flags.p2?1.2:.9,{noSpread:true});if(t.alive)buff(B,t,"atk",-Math.max(1,Math.round(stat(t,"atk")*.25)),2);});}},
-    passive:{name:"王之軀",desc:"受到的傷害降低20%；每回合恢復3%最大生命。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
-  nightemperor:{name:"永夜帝王",img:true,r:"SSR",hp:4299,atk:270,def:81,spd:54,regenp:.04,boss2:{hp:.7,atk:.35,spd:2},gx:{dodge:10},
+    passive:{name:"王之軀",desc:"受到的傷害降低20%；每回合恢復3%最大生命。｜吸血減免：玩家對自己造成傷害時，吸血效果減少 40%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
+  nightemperor:{name:"永夜帝王",img:true,r:"SSR",leechRed:0.4,hp:4299,atk:270,def:81,spd:54,regenp:.04,boss2:{hp:.7,atk:.35,spd:2},gx:{dodge:10},
     quote:"黑夜，是我的王座。",
     skill:{name:"永夜降臨",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.7倍傷害並中毒（每回合受到自身攻擊20%的傷害，3回合），自身恢復5%生命。爆氣後中毒加重為30%。",
       use(B,u){blog(B,"🌑 燈全滅了。黑暗裡只剩下那雙紫色的眼睛。","bad");foes(B,u).forEach(t=>{hit(B,u,t,.7,{noSpread:true});if(t.alive)poison(B,t,Math.max(1,Math.round(stat(u,"atk")*(u.flags.p2?.3:.2))),3);});heal(B,u,Math.round(u.maxHp*.05));}},
-    passive:{name:"夜之主",desc:"每回合恢復4%最大生命；閃避率+10%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
-  overlord:{name:"天命霸主",img:true,r:"SSR",hp:17000,atk:990,def:300,spd:180,drp:.25,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:15},
+    passive:{name:"夜之主",desc:"每回合恢復4%最大生命；閃避率+10%。｜吸血減免：玩家對自己造成傷害時，吸血效果減少 40%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
+  overlord:{name:"天命霸主",img:true,r:"SSR",leechRed:0.5,hp:17000,atk:990,def:300,spd:180,drp:.25,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:15},
     quote:"命運？由我來定義！",
     skill:{name:"天命審判",cd:3,t:"none",kind:"dmg",desc:"對單一敵人造成2倍傷害、其他敵人0.8倍，自身攻擊提高20%（3回合）。",
       use(B,u){const f=foes(B,u);if(!f.length)return;const t=pick(f);blog(B,"🌟 金色的光球從天而降。","bad");hit(B,u,t,2);foes(B,u).filter(x=>x!==t).forEach(x=>hit(B,u,x,.8,{noSpread:true}));buff(B,u,"atk",Math.max(1,Math.round(stat(u,"atk")*.2)),3);}},
-    passive:{name:"霸者之威",desc:"受到的傷害降低25%；暴擊率+15%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
-  endwalker:{name:"終焉行者",img:true,r:"SSR",hp:20000,atk:1080,def:330,spd:240,drp:.25,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:15,steal:15},
+    passive:{name:"霸者之威",desc:"受到的傷害降低25%；暴擊率+15%。｜吸血減免：玩家對自己造成傷害時，吸血效果減少 50%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
+  endwalker:{name:"終焉行者",img:true,r:"SSR",leechRed:0.7,hp:20000,atk:1080,def:330,spd:240,drp:.25,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:15,steal:15},
     quote:"最後一個活著的，才是真正的勝者",
     skill:{name:"終焉",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成1.2倍傷害。爆氣後改為1.6倍，每人30%機率暈眩。",
       use(B,u){blog(B,"⛓ 「遊戲結束。」","bad");foes(B,u).forEach(t=>{hit(B,u,t,u.flags.p2?1.6:1.2,{noSpread:true});if(u.flags.p2&&t.alive&&rnd()<.3)stun(B,t,1);});}},
-    passive:{name:"最後的勝者",desc:"受到的傷害降低25%；暴擊率+15%、吸血15%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}}
+    passive:{name:"最後的勝者",desc:"受到的傷害降低25%；暴擊率+15%、吸血15%。｜吸血減免：玩家對自己造成傷害時，吸血效果減少 70%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}}
 });
 // 支線魔王的小弟：命運裁決者、死神代行者、深淵君王、永夜帝王、天命霸主、終焉行者各帶兩名；生命、攻擊、防禦、速度都是魔王的 1/3
 const BOSS_MINION={

@@ -142,6 +142,10 @@ button,.door,.ccard,.ucard,.gcard,.chap,.bosscard,.item,.pull{touch-action:manip
 .ust{min-height:16px;font-size:12px}
 .cdbadge{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.75);font-size:11px;border-radius:6px;padding:0 5px}
 .shake{animation:shake .35s}
+#view.bshake{animation:bshake .4s}
+#view.bshake.big{animation:bshakeBig .6s}
+@keyframes bshake{10%{transform:translate(-5px,3px)}30%{transform:translate(5px,-3px)}50%{transform:translate(-4px,2px)}70%{transform:translate(3px,-2px)}90%{transform:translate(-1px,1px)}}
+@keyframes bshakeBig{8%{transform:translate(-11px,6px) rotate(-.4deg)}22%{transform:translate(10px,-7px) rotate(.4deg)}38%{transform:translate(-9px,5px)}54%{transform:translate(7px,-4px)}70%{transform:translate(-4px,3px)}86%{transform:translate(2px,-1px)}}
 @keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
 .apanel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;margin:10px 0;min-height:60px}
 .apanel .who{font-weight:700;margin-bottom:6px}
@@ -332,6 +336,7 @@ footer.credit a{color:var(--gold)}
 /* 魔王卡 */
 .bosscard:not(.lockc){animation:glowPink 3s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){
+  #view.bshake{animation:none!important}
   .ccard,.ccard::before,.stars.max,.av.fx-SSR,.pull .f,.pull .f::after,.gcard,.gcard::before,.gcard .gi,.gcard .lv,.gslot,.bigicon,.bosscard{animation:none!important}
 }
 
@@ -2363,6 +2368,7 @@ function hit(B,a,t,mult,o={}){
   t.hp-=d;
   blog(B,`${nm(a)} → ${nm(t)}　<b style="color:${crit?"var(--gold)":"#ff8a8a"}">-${d}</b>${crit?" 暴擊！":""}`);
   fx(B,t,(crit?"💥":"")+"-"+d,crit?"crit":"dmg");
+  if(isBossUnit(a))screenShake(crit||d>=t.maxHp*.25);
   crit?SFX.crit():SFX.hit();
   if(a.id==="butcher"&&a.alive)heal(B,a,Math.max(1,Math.round(d*.3)));
   if(a.gx&&a.gx.steal&&a.alive&&a!==t)heal(B,a,Math.max(1,Math.round(d*a.gx.steal/100)));
@@ -2395,6 +2401,15 @@ function handleDeath(B,t,killer){
   if(killer&&killer.id==="assassin"&&killer.alive&&killer.side!==t.side&&!killer.flags.extraUsed){killer.flags.extraPending=1;}
 }
 
+// 魔王出手時的螢幕震動：只有支線八大魔王（有立繪 img:true 的）會震；暴擊或重擊（單次傷害 ≥ 目標最大生命 25%）震得更大
+function isBossUnit(u){const m=MONSTERS[u.id];return !!m&&m.img===true&&m.r==="SSR";}
+function screenShake(big){
+  if(VIEW!=="battle")return;
+  const el=document.getElementById("view");if(!el)return;
+  el.classList.remove("bshake","big");void el.offsetWidth;
+  el.classList.add("bshake");if(big)el.classList.add("big");
+  clearTimeout(screenShake.t);screenShake.t=setTimeout(()=>el.classList.remove("bshake","big"),650);
+}
 function fx(B,u,text,cls){
   if(VIEW!=="battle")return;
   requestAnimationFrame(()=>{

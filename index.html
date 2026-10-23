@@ -1027,6 +1027,7 @@ function validSave(s){
     if(!isInt(o.stars,1,5))return `${CARDS[id].name} 星數異常`;
     if(o.lv!=null&&!isInt(o.lv,1,LV_MAX))return `${CARDS[id].name} 等級異常`;
     if(o.br!=null&&!isInt(o.br,0,BR_MAX))return `${CARDS[id].name} 突破次數異常`;
+    if(o.fruit!=null&&!["atk","def","spd"].every(k=>isInt((o.fruit||{})[k]||0,0,FRUIT_MAX)))return `${CARDS[id].name} 能力果實異常`;
     if(o.exp!=null&&!isInt(o.exp,0,lvNeed(o.lv||1)))return `${CARDS[id].name} 經驗值異常`;
   }
   if(!Array.isArray(s.team)||s.team.length>3||s.team.some(id=>!s.owned[id]))return "隊伍資料異常";
@@ -1040,6 +1041,7 @@ function validSave(s){
     for(const f of fx){const A=AFFIX[f.k];if(!A||!isInt(f.v,1,Math.ceil(affixSpan(f.k,G.q)[1]*1.5)+2))return `${G.name} 詞條數值異常`;}
   }
   for(const k in s.charms)if(!isInt(s.charms[k],0,99999))return "強化道具數量異常";
+  if(s.fruits)for(const k in s.fruits)if(!isInt(s.fruits[k],0,99999))return "能力果實數量異常";
   if(s.shards)for(const k in s.shards)if(!isInt(s.shards[k],0,99999))return "碎片數量異常";
   if(!isInt(s.arenaTier,1,100000))return "競技場層數異常";
   if(s.train&&!isInt(s.train.best,0,TRAIN_MAX))return "練功房進度異常";
@@ -1117,6 +1119,7 @@ function migrate(s){
     g.fx.forEach(f=>{if(!AFFIX[f.k]||!Number.isInteger(f.v))return;const hi=affixSpan(f.k,G.q)[1];if(f.v>hi+1)f.v=hi;});}
   if(!s.stash)s.stash={items:[],food:0};
   if(!s.charms)s.charms={protect:0,luck:0};
+  if(!s.fruits)s.fruits={atk:0,def:0,spd:0};
   if(!s.train)s.train={best:0};
   if(!s.bosses)s.bosses={};
   if(!s.ach)s.ach={};
@@ -1607,6 +1610,7 @@ function showCard(id){
     </div></div>
     ${skillHtml(c)}
     ${c.story?`<div class="sk small"><b>📖 劇情角色</b><br>《名冊》故事線的同伴。通關第 ${c.gachaCh} 章後可以在招募所抽到。<b>無法合成、熔煉、遣散</b>，等級也不能轉給別人（可以接收別人的等級）。</div>`:""}
+    ${o&&fruitVisible(id)?fruitHtml(id):""}
     <div class="row" style="margin-top:12px">
       ${o?(inT?`<button onclick="toggleTeam('${id}')">移出隊伍</button>`:`<button class="pri" onclick="toggleTeam('${id}')" ${SAVE.team.length>=3?"disabled":""}>加入隊伍${SAVE.team.length>=3?"（已滿）":""}</button>`):`<span class="dim">尚未獲得</span>`}
       ${o&&o.stars<5?`<button class="gold" onclick="openShards('${CARDS[id].r}')">🧩 碎片補星（${SHARD_STAR[CARDS[id].r]}）</button>`:""}
@@ -1930,6 +1934,7 @@ function bonusOf(id,eq){
   const s={hp:0,atk:0,def:0,spd:0,crit:0,steal:0,dodge:0,dr:0};
   wornOf(id,eq).forEach(g=>{const t=gearStats(g);for(const k in t)s[k]+=t[k];});
   Object.entries(setCountsOf(id,eq)).forEach(([q,n])=>[2,3].forEach(k=>{if(n>=k)for(const st in SETS[q][k])s[st]+=SETS[q][k][st];}));
+  if(SAVE.owned[id]){const f=fruitOf(id);s.atk+=f.atk;s.def+=f.def;s.spd+=f.spd;} // 能力果實
   return s;
 }
 function wornGear(id){const o=SAVE.owned[id];return o?wornOf(id,o.eq):[];}
@@ -2259,7 +2264,7 @@ const SUPPLY={pill:6,adrenaline:8,wine:4,rope:9,gasmask:7,rocket:12,knife:8,pist
 const STASH_MAX=6,FOOD_PRICE=5,FOOD_MAX=5;
 let SHOP_TAB="gear";
 function viewShop(){
-  const st=SAVE.stash,tabs={gear:"⚔ 裝備",charm:"🔨 強化道具",supply:"🎒 遠征物資"};
+  const st=SAVE.stash,tabs={gear:"⚔ 裝備",charm:"🔨 強化道具",...(FRUIT_OPEN?{fruit:"🍎 能力果實"}:{}),supply:"🎒 遠征物資"};
   let body="";
   if(SHOP_TAB==="gear"){
     body=`<h3>裝備箱</h3><div class="shopsec">${Object.entries(BOXES).map(([k,b])=>`<div class="sitem"><div class="gi">${boxImg(k,"box")}</div><b>${b.name}</b><div class="small dim">${b.desc}</div>
@@ -2275,6 +2280,10 @@ function viewShop(){
       <div class="small">持有 ×${SAVE.charms[k]}</div>
       <div class="row"><button style="flex:1" onclick="buyCharm('${k}',1)" ${SAVE.gold<c.price?"disabled":""}>×1 🪙${c.price}</button>
       <button style="flex:1" onclick="buyCharm('${k}',5)" ${SAVE.gold<c.price*5?"disabled":""}>×5 🪙${c.price*5}</button></div></div>`).join("")}</div>`;
+  }else if(SHOP_TAB==="fruit"&&FRUIT_OPEN){
+    body=`<div class="panel small" style="margin-bottom:10px">吃下去永久 +1，<b>每名角色每種最多吃 ${FRUIT_MAX} 顆</b>。到「隊伍」點角色就能吃。主線首次通關、深淵守門者也會掉。</div>
+      <div class="shopsec">${Object.entries(FRUITS).map(([k,F])=>`<div class="sitem"><div class="gi">${F.icon}</div><b>${F.name}</b><div class="small dim">吃了${F.stat}永久 +1</div>
+        <div class="small">持有 ×${SAVE.fruits[k]}</div><button class="gold" onclick="buyFruit('${k}')" ${SAVE.gold<F.price?"disabled":""}>🪙${F.price}</button></div>`).join("")}</div>`;
   }else{
     body=`<div class="panel small" style="margin-bottom:10px">🎒 行囊（下一次遠征自動帶上）：${st.items.map(id=>ITEMS[id].icon+ITEMS[id].name).join("、")||"<span class='dim'>空</span>"}　🥫 補給 +${st.food}
       <span class="dim">（道具最多 ${STASH_MAX} 件、補給最多 ${FOOD_MAX} 份）</span></div>
@@ -2303,6 +2312,28 @@ function buyBox(k){
     <div class="row"><button class="gold" onclick="buyBox('${k}')" ${SAVE.gold<b.price?"disabled":""}>再開一個（🪙${b.price}）</button>
     <button class="pri" onclick="openGear(${g.uid})">查看／裝備</button><button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
 }
+/* ===== 能力果實：吃下去永久 +1，每名角色每種最多吃 3 顆 ===== */
+const FRUITS={atk:{name:"攻擊果實",icon:"🍎",stat:"攻擊",price:120},def:{name:"防禦果實",icon:"🍇",stat:"防禦",price:120},spd:{name:"速度果實",icon:"🍋",stat:"速度",price:150}};
+const FRUIT_MAX=3;
+const FRUIT_OPEN=false; // 取得方式還沒決定：先不開放（商店、掉落、角色頁的果實區都會隱藏；要開放時改成 true）
+const fruitVisible=id=>FRUIT_OPEN||Object.values(fruitOf(id)).some(v=>v>0)||Object.values(SAVE.fruits||{}).some(v=>v>0);
+function fruitOf(id){const o=SAVE.owned[id],f=(o&&o.fruit)||{};return {atk:f.atk||0,def:f.def||0,spd:f.spd||0};}
+function eatFruit(id,k){
+  const o=SAVE.owned[id],F=FRUITS[k];if(!o||!F)return;
+  if(!SAVE.fruits[k]){toast(`沒有${F.name}了`);return;}
+  const f=fruitOf(id);if(f[k]>=FRUIT_MAX){toast(`${CARDS[id].name} 的${F.stat}果實已經吃滿了`);return;}
+  SAVE.fruits[k]--;o.fruit={...f,[k]:f[k]+1};save();SFX.heal();
+  toast(`${CARDS[id].name} 吃下${F.icon}${F.name}：${F.stat}永久 +1（${o.fruit[k]}/${FRUIT_MAX}）`);showCard(id);render();
+}
+function fruitHtml(id){
+  const f=fruitOf(id);
+  return `<div class="sk"><b>🍎 能力果實</b> <span class="dim small">吃下去永久 +1，每種最多 ${FRUIT_MAX} 顆</span>
+    <div class="row" style="margin-top:6px;gap:6px;flex-wrap:wrap">${Object.entries(FRUITS).map(([k,F])=>{
+      const full=f[k]>=FRUIT_MAX,none=!SAVE.fruits[k];
+      return `<button class="mini ${full?"":"gold"}" onclick="eatFruit('${id}','${k}')" ${full||none?"disabled":""}>${F.icon} ${F.stat} ${f[k]}/${FRUIT_MAX}${full?"（已滿）":`　持有 ×${SAVE.fruits[k]}`}</button>`;}).join("")}</div>
+    <div class="dim small" style="margin-top:4px">果實跟著角色走：遣散、合成、熔煉這名角色時，已吃的果實不會退還。</div></div>`;
+}
+function buyFruit(k){const F=FRUITS[k];if(!FRUIT_OPEN||!pay(F.price))return;SAVE.fruits[k]++;save();SFX.click();toast(`${F.icon}${F.name} +1`);render();}
 function buyCharm(k,n){if(!pay(CHARMS[k].price*n))return;SAVE.charms[k]+=n;save();SFX.click();toast(`${CHARMS[k].icon}${CHARMS[k].name} +${n}`);render();}
 function buySupply(id){
   if(SAVE.stash.items.length>=STASH_MAX){toast("行囊滿了");return;}
@@ -4930,6 +4961,7 @@ function abyssBoss(L){
         if(!win||runLost())return endRun(false,["你們被深淵吞沒了。"]);
         const g=addGold(10+fi*2),t=gainItem(pick(LOOT_TABLE)),l=[`守門者化成一灘黑水。🪙+${g}，還留下了 ${t}。`,runExp(20+fi*2)];
         SAVE.charms.stone++;l.push("💎 撿到突破石 ×1");
+        if(FRUIT_OPEN&&rnd()<.25){const fk=pick(Object.keys(FRUITS));SAVE.fruits[fk]++;l.push(`${FRUITS[fk].icon} 黑水裡還沉著一顆 <b>${FRUITS[fk].name}</b>！`);}
         if(rnd()<.35)l.push(`🎁 黑水裡沉著一件裝備：<b>${dropGear(fi>=20&&rnd()<.05?"UR":fi>=15&&rnd()<.3?"SSR":"SR")}</b>（已放進裝備）`);
         SAVE.prog.abyssBest=Math.max(SAVE.prog.abyssBest,fi);
         persistRun("post");
@@ -4995,6 +5027,7 @@ function endRun(escaped,lines=[]){
       const st=(1+Math.floor(r.ch/2))*dm;SAVE.charms.stone+=st;out.push(`💎 撿到突破石 ×${st}`);
       if(P.cleared<=r.ch){
         P.cleared=r.ch+1;bonus+=FIRST_CLEAR[r.ch];
+        if(FRUIT_OPEN){const fk=pick(Object.keys(FRUITS));SAVE.fruits[fk]++;out.push(`${FRUITS[fk].icon} 撿到 <b>${FRUITS[fk].name}</b> ×1（到「隊伍」點角色就能吃）`);}
         out.push(`🏅 首次通關「${C.name}」！額外 🪙${FIRST_CLEAR[r.ch]}`);
         if(r.ch+1<ABYSS)out.push(`🔓 解鎖新章節：<b>第 ${r.ch+2} 章「${CHAPTERS[r.ch+1].name}」</b>`);
         else if(C.finale)out.push(C.finale);

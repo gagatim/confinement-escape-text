@@ -239,6 +239,10 @@ b.sA{color:var(--sideA)} b.sB{color:var(--sideB)}
 .qtag{display:inline-block;font-size:10px;font-weight:800;line-height:15px;padding:0 5px;margin-right:4px;border-radius:5px;border:1px solid currentColor;vertical-align:middle;letter-spacing:.3px;background:rgba(0,0,0,.35)}
 .rN{color:#a3acb6}.rUR{color:#ff6b95;text-shadow:0 0 8px rgba(255,94,138,.6)}
 .gfx{font-size:11px;color:#7fe3ff}
+.fxrare{color:#e0a8ff;font-weight:bold;text-shadow:0 0 6px #b84dff;animation:fxrareGlow 1.2s ease-in-out infinite alternate}
+@keyframes fxrareGlow{from{color:#e0a8ff;text-shadow:0 0 4px #b84dff}to{color:#8fe9ff;text-shadow:0 0 12px #5ad1ff,0 0 16px #b84dff}}
+.fxmax{color:#ffd54a;font-weight:bold;text-shadow:0 0 6px #ffb300;animation:fxmaxGlow 1.6s ease-in-out infinite alternate}
+@keyframes fxmaxGlow{from{text-shadow:0 0 3px #ffb300}to{text-shadow:0 0 9px #ffd54a,0 0 14px #ff9800}}
 .req{font-size:11px;color:var(--dim)}.req.bad{color:var(--red);font-weight:700}
 .setb{font-size:12px;margin-top:4px}.setb .on{color:var(--green)}.setb .off{color:var(--dim)}
 .gcard .gi{font-size:30px}
@@ -791,8 +795,47 @@ const GQ_NAME={N:"普通",R:"稀有",SR:"精良",SSR:"史詩",UR:"傳說",EX:"�
 const GEAR_REQ={N:1,R:1,SR:5,SSR:10,UR:15,EX:12};
 const GEAR_ROLL={N:[85,115],R:[85,115],SR:[90,115],SSR:[95,120],UR:[100,125],EX:[100,130]};
 const AFFIX={atk:{n:"攻擊",r:[1,2]},hp:{n:"生命",r:[3,8]},def:{n:"防禦",r:[1,1]},spd:{n:"速度",r:[1,1]},
-  crit:{n:"暴擊",r:[3,6],pct:1},steal:{n:"吸血",r:[5,10],pct:1},dodge:{n:"閃避",r:[3,6],pct:1}};
+  crit:{n:"暴擊",r:[3,6],pct:1},steal:{n:"吸血",r:[5,10],pct:1},dodge:{n:"閃避",r:[3,6],pct:1},dr:{n:"減傷",r:[1,2],pct:1}};
 const AFFIX_MULT={N:1,R:1,SR:1.3,SSR:1.6,UR:2,EX:2.2};
+// 指定最終數值範圍的詞條（不吃倍率）；沒列的照「基礎範圍 × 倍率」
+const AFFIX_FIX={R:{dr:[1,2]},SR:{dr:[1,3]},SSR:{def:[1,3],spd:[1,3],dr:[2,4]},UR:{def:[1,4],spd:[1,4],dr:[2,6]},EX:{def:[1,5],spd:[1,5],atk:[2,6],dr:[3,7]}};
+// 稀有詞條：每條詞條有 AFFIX_RARE 的機率，數值直接超過該欄上限 +1（百分比詞條 +1%，數字詞條 +1）
+const AFFIX_RARE=.01;
+// 出現權重（沒列的算 1）：吸血只有一般詞條一半的機會被抽到
+const AFFIX_W={steal:.5};
+// 詞條數值呈鐘形分布：最低 2%／偏低 13%／中間 70%／偏高 13%／最高 2%
+// 偏低＝範圍下 30%、中間＝30%～70%、偏高＝上 30%；範圍只有 2 個值時分不出中間，兩端各約 50%
+function bellRoll(lo,hi){
+  if(hi<=lo)return lo;
+  const r=rnd();if(r<.02)return lo;if(r>=.98)return hi;
+  const [x,y]=r<.15?[0,.3]:r>=.85?[.7,1]:[.3,.7],n=hi-lo,c=[];
+  for(let i=0;i<=n;i++){const t=i/n;if(t>=x-1e-9&&t<=y+1e-9)c.push(lo+i);}
+  return c.length?pick(c):(rnd()<.5?lo:hi);
+}
+function affixRoll(k,q){
+  if(rnd()<AFFIX_RARE)return affixSpan(k,q)[1]+1;
+  const [lo,hi]=affixSpan(k,q);return bellRoll(lo,hi);
+}
+// 依權重不重複地抽 n 種詞條
+function pickAffixKeys(n){
+  const pool=Object.keys(AFFIX).map(k=>[k,AFFIX_W[k]==null?1:AFFIX_W[k]]),out=[];
+  while(out.length<n&&pool.length){
+    let r=rnd()*pool.reduce((t,x)=>t+x[1],0),i=0;
+    while(i<pool.length-1&&r>=pool[i][1]){r-=pool[i][1];i++;}
+    out.push(pool.splice(i,1)[0][0]);
+  }
+  return out;
+}
+// 該詞條在這個稀有度的 [最小值, 最大值]
+function affixSpan(k,q){
+  const f=AFFIX_FIX[q]&&AFFIX_FIX[q][k];if(f)return f;
+  const [a,b]=AFFIX[k].r,m=AFFIX_MULT[q];return [Math.max(1,Math.round(a*m)),Math.max(1,Math.round(b*m))];
+}
+// 該詞條在這個稀有度的最大值；範圍沒有浮動（只有一種值）時回傳 0
+function affixTop(k,q){
+  const f=AFFIX_FIX[q]&&AFFIX_FIX[q][k];if(f)return f[1];
+  const [a,b]=AFFIX[k].r;return b>a?Math.round(b*AFFIX_MULT[q]):0;
+}
 function affixCount(q){return q==="N"?0:q==="R"?(rnd()<.3?1:0):q==="SR"?1:q==="SSR"?1+(rnd()<.5?1:0):q==="EX"?3:2+(rnd()<.3?1:0);}
 // 套裝：同稀有度的裝備穿 2 件、3 件有額外效果（3 件會同時拿到 2 件的效果）
 const SETS={
@@ -815,8 +858,9 @@ function gearImg(base,cls=""){
   const G=GEAR[base];if(!GEAR_IMG.has(base))return G.icon;
   return `<img class="gimg ${cls}" src="images/equipment/${base}.webp" alt="${G.name}" draggable="false" loading="lazy" onerror="this.outerHTML='${G.icon}'">`;
 }
-const ST_LBL={hp:"❤",atk:"⚔",def:"🛡",spd:"💨",crit:"暴擊",steal:"吸血",dodge:"閃避"};
-const ST_PCT={crit:1,steal:1,dodge:1};
+const ST_LBL={hp:"❤",atk:"⚔",def:"🛡",spd:"💨",crit:"暴擊",steal:"吸血",dodge:"閃避",dr:"減傷"};
+const ST_PCT={crit:1,steal:1,dodge:1,dr:1};
+const DR_CAP=30; // 裝備減傷%上限
 const ENH_MAX=10;
 const ENH_RATE=[100,95,90,80,70,60,50,40,32,25]; // 依目前等級：+0→+1 為 100%
 const GEAR_SELL={N:2,R:5,SR:15,SSR:40,UR:100,EX:150};
@@ -829,7 +873,12 @@ function gearStats(g){
   return o;
 }
 function statStr(o){return Object.keys(ST_LBL).filter(k=>o[k]).map(k=>ST_PCT[k]?`${ST_LBL[k]}+${o[k]}%`:`${ST_LBL[k]}+${o[k]}`).join(" ");}
-function fxStr(g){return (g.fx||[]).map(f=>`✦${AFFIX[f.k].n}+${f.v}${AFFIX[f.k].pct?"%":""}`).join(" ");}
+// 詞條滿值（該稀有度能骰到的最大值）會用金色閃光標示
+function fxStr(g){const q=GEAR[g.base].q;return (g.fx||[]).map(f=>{
+  const s=`${AFFIX[f.k].n}+${f.v}${AFFIX[f.k].pct?"%":""}`;
+  const top=affixTop(f.k,q);
+  if(f.v>affixSpan(f.k,q)[1])return `<span class="fxrare" title="稀有詞條：超過上限 +1">💎${s}</span>`;
+  return top&&f.v>=top?`<span class="fxmax" title="滿值詞條">🌟${s}</span>`:`✦${s}`;}).join(" ");}
 // 稀有度標籤：N／R／SR／SSR／UR／EX，放在裝備名稱旁邊
 function qTag(q){return `<span class="qtag r${q}">${q}</span>`;}
 function gearName(g){return `${GEAR[g.base].icon}${GEAR[g.base].name}${g.lv?" +"+g.lv:""}`;}
@@ -917,7 +966,7 @@ function validSave(s){
     if(!isInt(g.lv,0,ENH_MAX))return `${G.name} 強化等級異常`;
     if(g.roll!=null&&!isInt(g.roll,GEAR_ROLL[G.q][0],GEAR_ROLL[G.q][1]))return `${G.name} 品質異常`;
     const fx=g.fx||[];if(fx.length>3||new Set(fx.map(f=>f.k)).size!==fx.length)return `${G.name} 詞條異常`;
-    for(const f of fx){const A=AFFIX[f.k];if(!A||!isInt(f.v,1,Math.max(1,Math.round(A.r[1]*AFFIX_MULT[G.q]))))return `${G.name} 詞條數值異常`;}
+    for(const f of fx){const A=AFFIX[f.k];if(!A||!isInt(f.v,1,affixSpan(f.k,G.q)[1]+1))return `${G.name} 詞條數值異常`;}
   }
   for(const k in s.charms)if(!isInt(s.charms[k],0,99999))return "強化道具數量異常";
   if(s.shards)for(const k in s.shards)if(!isInt(s.shards[k],0,99999))return "碎片數量異常";
@@ -947,6 +996,9 @@ function migrate(s){
   // 第11、12章插在無盡深淵前面：深淵 ch 從 10 改成 12
   if(s.chv<5){if(s.run&&s.run.ch===10)s.run.ch=12;s.chv=5;}
   if(!s.gear){s.gear=[];s.gearUid=0;}
+  // 詞條上限調降（例如吸血 -3）：舊裝備超過「新上限 +1（稀有詞條）」的數值壓回新上限，避免存檔檢查誤判
+  for(const g of s.gear){const G=GEAR[g.base];if(!G||!Array.isArray(g.fx))continue;
+    g.fx.forEach(f=>{if(!AFFIX[f.k]||!Number.isInteger(f.v))return;const hi=affixSpan(f.k,G.q)[1];if(f.v>hi+1)f.v=hi;});}
   if(!s.stash)s.stash={items:[],food:0};
   if(!s.charms)s.charms={protect:0,luck:0};
   if(!s.train)s.train={best:0};
@@ -1356,6 +1408,8 @@ function viewTeam(){
   <button class="mini gold" onclick="openSynth()">🔮 合成</button>
   <button class="mini gold" onclick="openSmelt()">🔥 熔煉</button>
   <button class="mini gold" onclick="openShards()">🧩 碎片兌換</button>
+  <button class="mini gold" onclick="quickSynth('R')">⚡ 一鍵合成 R 卡</button>
+  <button class="mini gold" onclick="quickSynth('SR')">⚡ 一鍵合成 SR 卡</button>
   <button class="mini" onclick="sellAllR()">💰 一鍵遣散 R 卡</button>
   <label class="small"><input type="checkbox" ${SHOW_LOCKED?"checked":""} onchange="SHOW_LOCKED=this.checked;render()"> 顯示未獲得</label></div>
   ${clsFilter(TEAM_CLS,"setTeamCls")}
@@ -1393,7 +1447,7 @@ function showCard(id){
     <div class="small">❤ ${sv("hp",s.maxHp)}　⚔ ${sv("atk",s.atk)}　🛡 ${sv("def",s.def)}　💨 ${sv("spd",s.spd)}</div>
     ${o?`<div class="gslots">${Object.keys(SLOTS).map(sl=>{const g=gearById(o.eq&&o.eq[sl]);
       return `<div class="gslot ${g?"has "+GEAR[g.base].q:""}" onclick="openSlot('${id}','${sl}')"><div class="gi">${g?gearImg(g.base):"＋"}</div>${g?`<b class="r${GEAR[g.base].q}">${qTag(GEAR[g.base].q)}${GEAR[g.base].name}${g.lv?" +"+g.lv:""}</b>${lvOk(id,g.base)?"":`<div class="req bad">⚠ 需 Lv.${GEAR_REQ[GEAR[g.base].q]}，未生效</div>`}`:`<span class="dim">${SLOTS[sl]}</span>`}</div>`;}).join("")}</div>
-    ${setHtml(id)}${e.crit||e.steal||e.dodge?`<div class="gfx">裝備特效：${statStr({crit:e.crit,steal:e.steal,dodge:e.dodge})}</div>`:""}`:""}
+    ${setHtml(id)}${e.crit||e.steal||e.dodge||e.dr?`<div class="gfx">裝備特效：${statStr({crit:e.crit,steal:e.steal,dodge:e.dodge,dr:e.dr})}</div>`:""}`:""}
     </div></div>
     ${skillHtml(c)}
     <div class="row" style="margin-top:12px">
@@ -1515,6 +1569,10 @@ function synthPlan(t){
     plan.push(pk);
   }
   return plan;
+}
+// 隊伍頁的捷徑：不用先開合成視窗，直接跳到該稀有度的一鍵合成確認
+function quickSynth(t){
+  SYN={tier:t,pick:{}};confirmAutoSynth();
 }
 function confirmAutoSynth(){
   const t=SYN.tier,plan=synthPlan(t);
@@ -1696,8 +1754,8 @@ function reqTag(id,base){const r=GEAR_REQ[GEAR[base].q];if(r<=1)return "";return
 // 新裝備：數值在範圍內浮動，並依稀有度抽隨機詞條（同一種詞條不重複）
 function addGear(base,lv=0){
   const q=GEAR[base].q,[lo,hi]=GEAR_ROLL[q],fx=[];
-  const keys=shuffle(Object.keys(AFFIX)).slice(0,affixCount(q));
-  keys.forEach(k=>{const [a,b]=AFFIX[k].r;fx.push({k,v:Math.max(1,Math.round(ri(a,b)*AFFIX_MULT[q]))});});
+  const keys=pickAffixKeys(affixCount(q));
+  keys.forEach(k=>fx.push({k,v:affixRoll(k,q)}));
   const g={uid:++SAVE.gearUid,base,lv,roll:ri(lo,hi),fx};SAVE.gear.push(g);return g;
 }
 function rollGear(q){return pick(Object.keys(GEAR).filter(k=>GEAR[k].q===q));}
@@ -1707,7 +1765,7 @@ function dropGear(q){return gearName(addGear(rollGear(q)))+`（${q}）`;}
 function wornOf(id,eq){return Object.values(eq||{}).map(gearById).filter(g=>g&&lvOk(id,g.base));}
 function setCountsOf(id,eq){const c={};wornOf(id,eq).forEach(g=>{const q=GEAR[g.base].q;c[q]=(c[q]||0)+1;});return c;}
 function bonusOf(id,eq){
-  const s={hp:0,atk:0,def:0,spd:0,crit:0,steal:0,dodge:0};
+  const s={hp:0,atk:0,def:0,spd:0,crit:0,steal:0,dodge:0,dr:0};
   wornOf(id,eq).forEach(g=>{const t=gearStats(g);for(const k in t)s[k]+=t[k];});
   Object.entries(setCountsOf(id,eq)).forEach(([q,n])=>[2,3].forEach(k=>{if(n>=k)for(const st in SETS[q][k])s[st]+=SETS[q][k][st];}));
   return s;
@@ -1743,7 +1801,7 @@ function openSlot(id,sl){
 }
 // 裝備強度（戰力）：把數值（含品質浮動、強化、隨機詞條）加權成一個分數，方便排序比較。
 // 權重：攻擊 3、防禦 3、速度 2.5、生命 0.5、暴擊 1.5、閃避 1.5、吸血 1（每 1% 算 1 點）
-const POWER_W={atk:3,def:3,spd:2.5,hp:.5,crit:1.5,dodge:1.5,steal:1};
+const POWER_W={atk:3,def:3,spd:2.5,hp:.5,crit:1.5,dodge:1.5,steal:1,dr:2};
 function gearPower(g){const t=gearStats(g);let p=0;for(const k in t)p+=(POWER_W[k]||0)*t[k];return Math.round(p);}
 // 排序：強度／稀有度／強化等級／最新獲得；GEAR_ASC 為 true 時由低到高。選擇會記在這台裝置上
 const GEAR_SORTS={power:"強度",rarity:"稀有度",lv:"強化等級",new:"最新獲得"};
@@ -1774,16 +1832,16 @@ function gearCard(g,onclick){
 /* ===== 角色裝備調整區：看倉庫與角色，預覽穿上之後的素質 ===== */
 let GEAR_MODE="bag",FIT_CHAR="",FIT_SLOT="weapon",FIT_PICK=0;
 function modeToggle(){
-  return `<div class="filters" style="margin-top:0"><button class="${GEAR_MODE==="bag"?"on":""}" onclick="GEAR_MODE='bag';render()">📦 倉庫</button>
+  return `<div class="filters" style="margin-top:0"><button class="${GEAR_MODE==="bag"?"on":""}" onclick="GEAR_MODE='bag';render()">📦 倉庫(強化區)</button>
     <button class="${GEAR_MODE==="fit"?"on":""}" onclick="GEAR_MODE='fit';render()">🧍 角色裝備調整</button>
     <button class="${GEAR_MODE==="dex"?"on":""}" onclick="GEAR_MODE='dex';render()">📖 裝備圖鑑</button></div>`;
 }
 // 角色的最終素質（基礎＋等級＋星數＋突破＋裝備＋套裝）；eq 可以傳入假設的裝備組合來預覽
 function fitStats(id,eq){
   const o=SAVE.owned[id],s=cardStats(id,o.stars,lvScale(id),brOf(id)),b=bonusOf(id,eq);
-  return {hp:s.maxHp+b.hp,atk:s.atk+b.atk,def:s.def+b.def,spd:s.spd+b.spd,crit:b.crit,steal:b.steal,dodge:b.dodge};
+  return {hp:s.maxHp+b.hp,atk:s.atk+b.atk,def:s.def+b.def,spd:s.spd+b.spd,crit:b.crit,steal:b.steal,dodge:b.dodge,dr:b.dr};
 }
-const FIT_ROWS=[["hp","❤ 生命"],["atk","⚔ 攻擊"],["def","🛡 防禦"],["spd","💨 速度"],["crit","🎯 暴擊"],["steal","🩸 吸血"],["dodge","🌀 閃避"]];
+const FIT_ROWS=[["hp","❤ 生命"],["atk","⚔ 攻擊"],["def","🛡 防禦"],["spd","💨 速度"],["crit","🎯 暴擊"],["steal","🩸 吸血"],["dodge","🌀 閃避"],["dr","🧱 減傷"]];
 function fitStatHtml(cur,nw){
   return `<div class="statgrid">${FIT_ROWS.map(([k,l])=>{
     const pct=ST_PCT[k]?"%":"",c=cur[k],n=nw?nw[k]:c,d=n-c;
@@ -1802,12 +1860,24 @@ const GET_HOW={
   EX:"只有對應的支線魔王會掉：首次討伐必掉，之後每次 2%"
 };
 function dexOwned(k){const l=SAVE.gear.filter(g=>g.base===k);return {n:l.length,best:l.reduce((a,g)=>Math.max(a,g.lv),-1)};}
+// 隨機詞條數值表：直接讀 affixSpan，數值調整後會自動同步
+function affixTable(){
+  const qs=GQ.filter(q=>q!=="N"),cell="padding:3px 8px;text-align:center;border:1px solid var(--line,#444)";
+  const cnt={R:"0～1",SR:"1",SSR:"1～2",UR:"2～3",EX:"3"};
+  return `<details class="panel"><summary><b>📋 隨機詞條數值表</b></summary>
+    <div style="overflow-x:auto;margin-top:8px"><table class="small" style="border-collapse:collapse;width:100%">
+    <tr><th style="${cell}">詞條</th>${qs.map(q=>`<th style="${cell}" class="r${q}">${q}</th>`).join("")}</tr>
+    ${Object.keys(AFFIX).map(k=>`<tr><td style="${cell}">${AFFIX[k].n}</td>${qs.map(q=>{const [a,b]=affixSpan(k,q),p=AFFIX[k].pct?"%":"";return `<td style="${cell}">${a===b?a:a+"～"+b}${p}</td>`;}).join("")}</tr>`).join("")}
+    <tr><td style="${cell}">詞條數量</td>${qs.map(q=>`<td style="${cell}">${cnt[q]} 條</td>`).join("")}</tr></table></div>
+    <p class="dim small" style="margin:6px 0 0">數值是固定加值，不吃強化。普通（N）裝備沒有詞條。骰到該欄最大值會顯示 🌟 發光；另有 ${Math.round(AFFIX_RARE*100)}% 機率出現 💎 稀有詞條，數值為該欄最大值 +1（百分比 +1%、數字 +1）。</p></details>`;
+}
 function viewDex(){
   const keys=Object.keys(GEAR).sort((a,b)=>GQ.indexOf(GEAR[a].q)-GQ.indexOf(GEAR[b].q)||["weapon","armor","acc"].indexOf(GEAR[a].slot)-["weapon","armor","acc"].indexOf(GEAR[b].slot));
   const have=keys.filter(k=>dexOwned(k).n).length,show=keys.filter(k=>!DEX_Q||GEAR[k].q===DEX_Q);
   return `<h2>裝備</h2>${modeToggle()}
   <div class="panel"><b>圖鑑收集 ${have}／${keys.length} 種</b><div class="ratebar"><i style="width:${have/keys.length*100}%"></i></div>
     <span class="dim small">倉庫裡有的會亮起來，沒有的顯示成暗色，點開可以看詳細資料和取得方式。</span></div>
+  ${affixTable()}
   <div class="filters"><button class="${DEX_Q?"":"on"}" onclick="DEX_Q='';render()">全部（${keys.length}）</button>${GQ.map(q=>`<button class="${DEX_Q===q?"on":""}" onclick="DEX_Q='${q}';render()">${q}（${keys.filter(k=>GEAR[k].q===q).length}）</button>`).join("")}</div>
   <div class="ggrid">${show.map(k=>{const G=GEAR[k],o=dexOwned(k);
     return `<div class="gcard ${G.q} ${o.n?"":"dexlock"}" onclick="openDex('${k}')">${o.n?`<span class="lv" style="color:var(--green)">×${o.n}</span>`:""}
@@ -1822,7 +1892,7 @@ function openDex(k){
   const rng=Object.keys(G.st).map(s=>{const a=Math.max(1,Math.round(G.st[s]*lo/100)),b=Math.max(1,Math.round(G.st[s]*hi/100));return `${ST_LBL[s]}${a===b?a:a+"～"+b}`;}).join(" ");
   const max=Object.keys(G.st).map(s=>`${ST_LBL[s]}${Math.max(1,Math.round(G.st[s]*(1+.08*ENH_MAX)))}`).join(" ");
   const cnt={N:"0 條",R:"0～1 條",SR:"1 條",SSR:"1～2 條",UR:"2～3 條",EX:"3 條"}[G.q];
-  const aff=Object.entries(AFFIX).map(([a,A])=>`${A.n} +${Math.max(1,Math.round(A.r[0]*m))}～${Math.max(1,Math.round(A.r[1]*m))}${A.pct?"%":""}`).join("、");
+  const aff=Object.entries(AFFIX).map(([a,A])=>{const [x,y]=affixSpan(a,G.q);return `${A.n} +${x===y?x:x+"～"+y}${A.pct?"%":""}`;}).join("、");
   const boss=Object.keys(BOSS_DROP).find(b=>BOSS_DROP[b]===k);
   openModal(`<div class="detail"><div class="bigicon fx-${G.q}">${gearImg(k)}</div><div style="flex:1">
     <div class="r${G.q}">${G.q}（${GQ_NAME[G.q]}）・${SLOTS[G.slot]}</div><h2 style="margin:2px 0">${qTag(G.q)}${G.name}</h2>
@@ -1889,7 +1959,8 @@ function viewBag(){
   return `<h2>裝備</h2>${modeToggle()}
   <p class="dim small">點裝備可以「強化」或「分解」；要穿到角色身上，到「隊伍」點角色→點裝備欄。武器有職業限制，防具、飾品全職業可用。<br>
   強化：+1～+4 失敗沒有損失；+5～+10 失敗會掉 1 級（裝備不會碎）。🧿保護符可以防止掉級。</p>
-  <div class="row small"><span>💎 突破石 ×${SAVE.charms.stone}</span><span>🧿 保護符 ×${SAVE.charms.protect}</span><span>🍀 幸運符 ×${SAVE.charms.luck}</span><button class="mini gold" style="margin-left:auto" onclick="go('shop')">🛒 去商店</button></div>
+  <div class="row small"><span>💎 突破石 ×${SAVE.charms.stone}</span><span>🧿 保護符 ×${SAVE.charms.protect}</span><span>🍀 幸運符 ×${SAVE.charms.luck}</span><button class="mini gold" style="margin-left:auto" onclick="go('shop')">🛒 去商店</button><button class="mini gold" onclick="openGearSwap()">🔄 換裝</button>
+    <button class="mini" onclick="sellAllGear('R')">💰 一鍵售出 R 裝</button><button class="mini" onclick="sellAllGear('SR')">💰 一鍵售出 SR 裝</button></div>
   <div class="filters"><button class="${GEAR_TAB?"":"on"}" onclick="GEAR_TAB='';render()">全部（${SAVE.gear.length}）</button>${Object.keys(SLOTS).map(k=>`<button class="${GEAR_TAB===k?"on":""}" onclick="GEAR_TAB='${k}';render()">${SLOTS[k]}</button>`).join("")}</div>
   ${sortBar()}
   <div class="ggrid">${list.map(g=>gearCard(g,`openGear(${g.uid})`)).join("")||`<span class="dim">還沒有裝備。去「商店」買一件，或在遠征、競技場打倒敵人掉落。</span>`}</div>`;
@@ -1921,6 +1992,48 @@ function confirmGearSell(uid){
 function sellGear(uid){
   const g=gearById(uid);if(!g)return;const p=GEAR_SELL[GEAR[g.base].q]+g.lv*4;
   unequip(uid);SAVE.gear=SAVE.gear.filter(x=>x!==g);SAVE.gold+=p;save();closeModal();toast(`分解完成，🪙+${p}`);render();
+}
+// 一鍵售出：同品質、沒穿在角色身上、沒強化過（+0）的裝備全部分解
+function sellAllGear(q,go){
+  const list=SAVE.gear.filter(g=>GEAR[g.base].q===q&&!g.lv&&!gearOwner(g.uid)),p=list.length*GEAR_SELL[q];
+  if(!list.length){toast(`沒有可以售出的 ${q} 裝備`);return;}
+  if(!go)return openModal(`<h3>一鍵售出 ${q} 裝備？</h3><p class="dim">會分解 ${list.length} 件沒穿在角色身上、沒強化過的 ${q} 裝備，共換得 🪙${p}。</p>
+    <div class="row"><button class="pri" onclick="sellAllGear('${q}',true)">售出</button><button onclick="closeModal()">取消</button></div>`);
+  const ids=new Set(list.map(g=>g.uid));
+  SAVE.gear=SAVE.gear.filter(g=>!ids.has(g.uid));SAVE.gold+=p;save();closeModal();toast(`售出 ${list.length} 件，🪙+${p}`);render();
+}
+// 換裝：投入同品質的裝備，換 1 件同品質的隨機裝備（不能指定、不含 EX）。強化等級不會保留
+const GSWAP_COST={N:2,R:2,SR:2,SSR:3,UR:5};
+let GSW={q:"N",pick:[]};
+function openGearSwap(q){
+  if(q&&q!==GSW.q)GSW={q,pick:[]};
+  const t=GSW.q,need=GSWAP_COST[t];
+  GSW.pick=GSW.pick.filter(u=>gearById(u));
+  const list=SAVE.gear.filter(g=>GEAR[g.base].q===t).sort(gearSort);
+  openModal(`<h3>🔄 換裝</h3>
+    <div class="row" style="margin-bottom:8px">${Object.keys(GSWAP_COST).map(k=>`<button class="mini ${k===t?"pri":""}" onclick="openGearSwap('${k}')">${k} ×${GSWAP_COST[k]}</button>`).join("")}</div>
+    <p class="dim small">投入 ${need} 件 ${t} 裝備，換 1 件隨機 ${t} 裝備（完全隨機、不能指定，也可能換到同款）。投入的裝備會消失，強化等級不保留，新裝備從 +0 開始。穿在角色身上的要先卸下。</p>
+    <div class="ggrid">${list.map(g=>{const w=gearOwner(g.uid),on=GSW.pick.includes(g.uid);
+      return `<div class="${on?"fitgear sel":""}">${gearCard(g,w?`toast('穿在角色身上，先卸下才能換')`:`gswapPick(${g.uid})`)}</div>`;}).join("")||`<span class="dim">沒有 ${t} 裝備</span>`}</div>
+    <div class="row" style="margin-top:10px"><b style="margin-right:auto;color:${GSW.pick.length===need?"var(--gold)":"inherit"}">已選 ${GSW.pick.length}/${need}</b>
+      <button onclick="GSW.pick=[];openGearSwap()">清除</button>
+      <button class="pri" onclick="doGearSwap()" ${GSW.pick.length===need?"":"disabled"}>換裝</button><button onclick="closeModal()">關閉</button></div>`);
+}
+function gswapPick(uid){
+  const i=GSW.pick.indexOf(uid);
+  if(i>=0)GSW.pick.splice(i,1);
+  else if(GSW.pick.length>=GSWAP_COST[GSW.q]){toast(`已經選滿 ${GSWAP_COST[GSW.q]} 件了`);return;}
+  else GSW.pick.push(uid);
+  SFX.click();openGearSwap();
+}
+function doGearSwap(){
+  const t=GSW.q,gs=GSW.pick.map(gearById).filter(Boolean);
+  if(gs.length!==GSWAP_COST[t]||gs.some(g=>GEAR[g.base].q!==t||gearOwner(g.uid)))return;
+  const g=addGear(rollGear(t));
+  SAVE.gear=SAVE.gear.filter(x=>!GSW.pick.includes(x.uid)||x===g);GSW.pick=[];
+  save();SFX.click();render();
+  openModal(`<h3>🔄 換裝完成</h3><div class="ggrid">${gearCard(g,`openGear(${g.uid})`)}</div>
+    <div class="row" style="margin-top:12px"><button class="pri" onclick="openGearSwap()">繼續換裝</button><button onclick="closeModal()">關閉</button></div>`);
 }
 // 強化：成功率依目前等級遞減；幸運符 +10%；保護符防止失敗時掉級。裝備不會因強化失敗而損毀
 let ENH={uid:0,protect:false,luck:false,res:null};
@@ -1971,7 +2084,7 @@ const GEAR_HELP=`<div class="sk small"><b>📖 裝備說明</b><ul style="paddin
   <li><b>稀有度</b>：N 普通 ＜ R 稀有 ＜ SR 精良 ＜ SSR 史詩 ＜ UR 傳說。</li>
   <li><b>穿戴等級</b>：普通、稀有不限；精良要角色 Lv.5、史詩 Lv.10、傳說 Lv.15。等級不足穿不上（之前穿著的會失效）。</li>
   <li><b>數值浮動</b>：每件裝備有自己的「品質 %」，同一種裝備數值會有高低。</li>
-  <li><b>隨機詞條</b>：稀有度越高詞條越多（稀有 0～1、精良 1、史詩 1～2、傳說 2～3），可能是攻擊、生命、防禦、速度、暴擊、吸血、閃避。詞條不吃強化。</li>
+  <li><b>隨機詞條</b>：稀有度越高詞條越多（稀有 0～1、精良 1、史詩 1～2、傳說 2～3），可能是攻擊、生命、防禦、速度、暴擊、吸血、閃避、減傷（總減傷上限 30%）。詞條不吃強化。骰到該欄最大值會顯示 🌟 發光；另有 1% 機率出現 💎 <b>稀有詞條</b>，數值為最大值再 +1（百分比 +1%、數字 +1）。完整範圍見「裝備圖鑑」的詞條數值表。</li>
   <li><b>套裝</b>：同一稀有度的武器／防具／飾品穿 2 件、3 件會有額外效果（例如史詩 3 件：暴擊+5%、吸血+10%）。</li>
   <li><b>EX 魔王專屬</b>：只會從「魔王討伐（支線）」的 8 位魔王掉落，每位一件，需 Lv.12，固定 3 條詞條，有自己的「魔王套裝」。</li></ul></div>`;
 const CHARMS={stone:{name:"突破石",icon:"💎",price:15,desc:"角色 5★ 突破用的材料（成功率 30% 起遞減，失敗會消失）"},protect:{name:"保護符",icon:"🧿",price:20,desc:"強化失敗時不掉級（失敗才消耗）"},luck:{name:"幸運符",icon:"🍀",price:12,desc:"強化成功率 +10%（每次強化消耗）"}};
@@ -2032,7 +2145,7 @@ function buyFood(){if(SAVE.stash.food>=FOOD_MAX){toast("補給包已達上限");
 // 我方隊伍成員（含等級與永久裝備加成），競技場、練功房用
 function teamUnit(id){
   const o=SAVE.owned[id],e=equipBonus(id),sc=lvScale(id),br=brOf(id),s=cardStats(id,o.stars,sc,br);
-  return {id,stars:o.stars,scale:sc,br,maxHp:s.maxHp+e.hp,atk:e.atk,def:e.def,spd:e.spd,gx:{crit:e.crit,steal:e.steal,dodge:e.dodge}};
+  return {id,stars:o.stars,scale:sc,br,maxHp:s.maxHp+e.hp,atk:e.atk,def:e.def,spd:e.spd,gx:{crit:e.crit,steal:e.steal,dodge:e.dodge,dr:e.dr}};
 }
 
 /* ===================== LEVEL ===================== */
@@ -2197,6 +2310,7 @@ function hit(B,a,t,mult,o={}){
   if(["ghost","warden","zero","guard","chief","host"].includes(t.id))d-=1;
   if(DEF(t.id).dr)d-=DEF(t.id).dr;
   if(DEF(t.id).drp)d*=1-DEF(t.id).drp;
+  if(!o.pierce&&t.gx&&t.gx.dr)d*=1-Math.min(DR_CAP,t.gx.dr)/100;
   if(t.id==="veteran"&&t.hp<=t.maxHp*.35)d-=4;
   d=Math.max(1,Math.round(d));
   if(t.id==="bomb"&&!o.counter&&rnd()<.25){
@@ -2799,7 +2913,7 @@ function sanOwn(arr){
     const base=cardStats(x.id,stars,scale,br);
     out.push({id:x.id,stars,scale,br,maxHp:Math.round(cl(x.maxHp,base.maxHp,base.maxHp+2000)),
       atk:Math.round(cl(x.atk,0,300)),def:Math.round(cl(x.def,0,200)),spd:Math.round(cl(x.spd,0,60)),
-      gx:{crit:cl(g.crit,0,100),steal:cl(g.steal,0,100),dodge:cl(g.dodge,0,100)}});
+      gx:{crit:cl(g.crit,0,100),steal:cl(g.steal,0,100),dodge:cl(g.dodge,0,100),dr:cl(g.dr,0,DR_CAP)}});
   });
   return out;
 }
@@ -3813,7 +3927,7 @@ function mkMember(id,stars,extra={}){
 }
 function memberToUnit(m){
   const g=m.gear||{};
-  return {id:m.id,stars:m.stars,scale:m.scale,br:m.br||0,name:m.name,hp:m.hp,maxHp:m.maxHp,atk:memberAtk(m),def:(m.bonus.def||0)+(g.def||0),spd:(m.bonus.spd||0)+(g.spd||0),ally:m.ally,ref:m,gx:{crit:g.crit||0,steal:g.steal||0,dodge:g.dodge||0}};
+  return {id:m.id,stars:m.stars,scale:m.scale,br:m.br||0,name:m.name,hp:m.hp,maxHp:m.maxHp,atk:memberAtk(m),def:(m.bonus.def||0)+(g.def||0),spd:(m.bonus.spd||0)+(g.spd||0),ally:m.ally,ref:m,gx:{crit:g.crit||0,steal:g.steal||0,dodge:g.dodge||0,dr:g.dr||0}};
 }
 function gasIdx(){return Math.floor((RUN.time-1)*.9)-1;}
 function addGold(n){n=Math.round(n*(hasRun("rich")?1.3:1)*dMul());RUN.gold+=n;return n;}

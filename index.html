@@ -238,6 +238,7 @@ b.sA{color:var(--sideA)} b.sB{color:var(--sideB)}
 .bosscard .bav img{width:100%;height:100%;object-fit:cover}
 .bosscard .bn{font-weight:800;margin-top:4px}
 .ucard.bossu{width:170px;border-color:#7a2a3a}
+.ucard.frenzy{border-color:#ff7a3d;box-shadow:0 0 18px rgba(255,122,61,.75)}
 .ucard.bossu.p2{border-color:var(--red);box-shadow:0 0 22px rgba(229,72,77,.7);animation:rage 1.2s infinite}
 @keyframes rage{50%{box-shadow:0 0 34px rgba(229,72,77,.95)}}
 .qtag{display:inline-block;font-size:10px;font-weight:800;line-height:15px;padding:0 5px;margin-right:4px;border-radius:5px;border:1px solid currentColor;vertical-align:middle;letter-spacing:.3px;background:rgba(0,0,0,.35)}
@@ -641,7 +642,16 @@ const CARDS={
     passive:{name:"清理現場",desc:"每有敵人倒下，恢復3生命。"}},
   detective:{name:"私家偵探",r:"R",hp:24,atk:5,def:1,spd:4,run:"reveal",
     skill:{name:"推理",cd:3,t:"enemy",kind:"dmg",desc:"造成0.8倍傷害並標記目標2回合：受到的傷害+50%。",use(B,u,t){hit(B,u,t,.8);if(t.alive){t.st.mark=2;fx(B,t,"標記","sk");}}},
-    passive:{name:"洞察",desc:"遠征中可看見未知房間的事件；對標記目標暴擊率+30%。"}}
+    passive:{name:"洞察",desc:"遠征中可看見未知房間的事件；對標記目標暴擊率+30%。"}},
+  // 劇情角色（story:true）：通關第 gachaCh 章後才會進招募池；不能合成、熔煉、遣散，也不能當等級轉移的來源；故事線裡以劇情隊友的身分加入遠征
+  ashen:{name:"阿燼",r:"SSR",story:true,gachaCh:15,hp:36,atk:7,def:1,spd:4,
+    skill:{name:"撿回來的刀",cd:3,t:"enemy",kind:"dmg",desc:"冷卻3回合。選擇一名敵人，造成2.0倍攻擊傷害（會受對方防禦影響）；自己生命低於50%時，改為2.6倍。",
+      use(B,u,t){const low=u.hp<u.maxHp*.5;if(low)blog(B,`${nm(u)} 握緊了劍：「……還沒結束。」`);hit(B,u,t,low?2.6:2.0);}},
+    passive:{name:"我不會丟下你",desc:"有隊友生命低於35%時，該隊友被攻擊有40%機率改由阿燼代受，代受的傷害只算原本的70%；每代受一次，阿燼的攻擊永久+6%（至少+1），本場最多疊3次。羈絆「名冊合照」：與晴同時在場時，阿燼的攻擊+4%。"}},
+  qing:{name:"晴",r:"SSR",story:true,gachaCh:15,hp:28,atk:4,def:1,spd:4,
+    skill:{name:"唸出名字",cd:4,t:"none",kind:"heal",desc:"冷卻4回合。全隊活著的成員各恢復10%最大生命（至少5），並解除身上所有減益與中毒。",
+      use(B,u){blog(B,`${nm(u)} 輕聲唸出每一個名字。`);mates(B,u).forEach(m=>{heal(B,m,Math.max(5,Math.round(m.maxHp*.1)));cleanse(m);});}},
+    passive:{name:"我記得你",desc:"每當有隊友倒下，全隊攻擊永久+4%（至少+1），本場最多疊3次。羈絆「名冊合照」：與阿燼同時在場時，晴的治療量+7.5%。"}}
 };
 const MONSTERS={
   ghost:{name:"暗影",emoji:"👻",r:"R",hp:18,atk:6,def:0,spd:5,
@@ -731,12 +741,42 @@ const MONSTERS={
     skill:{name:"冠軍的記憶",cd:3,t:"none",kind:"dmg",desc:"用你們會的每一招反打回來：全體敵人1.3倍傷害，自身恢復8%生命。",
       use(B,u){blog(B,"🏆 「這一招，我上一季就用過了。」","bad");foes(B,u).forEach(t=>hit(B,u,t,1.3));heal(B,u,Math.round(u.maxHp*.08));}},
     passive:{name:"衛冕者",desc:"受到的傷害-3；被攻擊時15%機率閃避；第一次倒下時以50%生命重新站起。"}}
+  ,
+  // 第13章《名冊》：回收場
+  scrapbot:{name:"廢鐵拾荒機",emoji:"🦾",r:"R",hp:36,atk:12,def:5,spd:6,dr:1,
+    skill:{name:"拆解",cd:2,t:"enemy",kind:"dmg",desc:"造成1.6倍傷害，目標防禦-2（2回合）。",use(B,u,t){hit(B,u,t,1.6);if(t.alive)buff(B,t,"def",-2,2);}},
+    passive:{name:"廢鐵裝甲",desc:"受到的傷害-1。"}},
+  // 第14章《名冊》：檔案館
+  eraser:{name:"抹除者",emoji:"🫥",r:"R",hp:38,atk:13,def:5,spd:7,dr:1,
+    skill:{name:"抹除",cd:2,t:"enemy",kind:"dmg",desc:"造成1.5倍傷害，目標攻擊-2（2回合）。",use(B,u,t){hit(B,u,t,1.5);if(t.alive)buff(B,t,"atk",-2,2);}},
+    passive:{name:"空白之軀",desc:"受到的傷害-1。"}},
+  editor:{name:"剪輯師",emoji:"✂️",r:"SSR",hp:150,atk:18,def:7,spd:7,dr:2,
+    skill:{name:"剪掉",cd:3,t:"enemy",kind:"dmg",desc:"造成1.8倍傷害，並把目標的名字剪掉：標記2回合，受到的傷害+50%。",
+      use(B,u,t){blog(B,"✂️ 「這個人，不需要出現。」","bad");hit(B,u,t,1.8);if(t.alive){t.st.mark=2;fx(B,t,"被剪掉","sk");}}},
+    passive:{name:"無情剪輯",desc:"受到的傷害-2；對被標記的目標，造成的傷害+25%。擴散攻擊：單體攻擊造成傷害時，其餘敵人各受到該傷害的20%（固定傷害，不吃防禦）。"}},
+  // 第15章《名冊》：第三十七個座位
+  shadowling:{name:"失名之影",emoji:"👥",r:"R",hp:40,atk:14,def:5,spd:6,dr:1,
+    skill:{name:"低語",cd:2,t:"enemy",kind:"dmg",desc:"造成1.5倍傷害並恢復傷害一半的生命。",use(B,u,t){const d=hit(B,u,t,1.5);if(d)heal(B,u,Math.ceil(d/2));}},
+    passive:{name:"失名",desc:"受到的傷害-1。"}},
+  nameless:{name:"無名者",emoji:"🫂",r:"SSR",hp:160,atk:20,def:7,spd:7,dr:2,
+    skill:{name:"失名之潮",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.8倍傷害，每人30%機率暈眩1回合。",
+      use(B,u){blog(B,"🫂 無數個聲音同時開口：「有人，記得我嗎？」","bad");foes(B,u).forEach(t=>{hit(B,u,t,.8,{noSpread:true});if(t.alive&&rnd()<.3)stun(B,t,1);});}},
+    passive:{name:"千人之聲",desc:"受到的傷害-2；每回合開始攻擊永久+3%（最多疊10次）；每當敵方有人倒下，攻擊永久+10%。擴散攻擊：單體攻擊造成傷害時，其餘敵人各受到該傷害的20%（固定傷害，不吃防禦）。"}},
+  reclaimer:{name:"回收者",emoji:"🦾",r:"SSR",hp:140,atk:16,def:6,spd:6,dr:2,
+    skill:{name:"回收",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.9倍傷害，生命最低的敵人再被追加1.3倍傷害，並使其防禦-3（2回合）。",
+      use(B,u){blog(B,"🦾 「不合格的物品，需要回收。」鐵籠的門打開了。","bad");foes(B,u).forEach(t=>hit(B,u,t,.9,{noSpread:true}));const f=foes(B,u).sort((a,b)=>a.hp-b.hp)[0];if(f){hit(B,u,f,1.3);if(f.alive)buff(B,f,"def",-3,2);}}},
+    passive:{name:"過載運轉",desc:"受到的傷害-2；每回合開始攻擊永久+3%（最多疊10次）；生命低於一半時攻擊額外+12%。擴散攻擊：單體攻擊造成傷害時，其餘敵人各受到該傷害的20%（固定傷害，不吃防禦）。"}}
 };
 const DEF=id=>CARDS[id]||MONSTERS[id];
 // 有插圖的主線小怪與魔王（images/monsters/{代號}.webp）；沒有圖的小怪、或圖片載入失敗時，退回用表情符號
 ["ghost","guard","drone","mutant","doppel","echo","deepone","mirror","cameraman","fanatic","rookie","guardian","warden","zero","chief","host","kraken","judge","loopkeeper","origin","producer","audience","castingdir","pastchamp"].forEach(k=>{if(MONSTERS[k])MONSTERS[k].pic=true;});
 const POOL={SSR:[],SR:[],R:[]};
-Object.keys(CARDS).forEach(id=>POOL[CARDS[id].r].push(id));
+Object.keys(CARDS).forEach(id=>{if(!CARDS[id].story)POOL[CARDS[id].r].push(id);});
+const storyOn=id=>!!CARDS[id].story;
+// 抽卡實際用的池子：一般角色＋已解鎖（通關到 gachaCh 章）的劇情角色。合成、熔煉的結果池不含劇情角色
+function gachaPool(r){return POOL[r].concat(Object.keys(CARDS).filter(id=>CARDS[id].story&&CARDS[id].r===r&&SAVE.prog.cleared>=CARDS[id].gachaCh));}
+const CARD_IDS=Object.keys(CARDS).filter(id=>!CARDS[id].story); // 招募池內的角色（不含劇情角色）
+const ownedCount=()=>CARD_IDS.filter(id=>SAVE.owned[id]).length;
 const R_ORDER={SSR:0,SR:1,R:2};
 
 /* ===================== DATA: CLASSES ===================== */
@@ -755,7 +795,8 @@ const CARD_CLS={
   paramedic:"support",tamer:"mage",geneFreak:"warrior",chemist:"mage",bodyguard:"tank",leader:"support",witch:"mage",
   gambler:"warrior",scavenger:"ranger",trucker:"tank",bartender:"support",herbalist:"support",runner:"assassin",chef:"support",
   survivor:"tank",diver:"assassin",miner:"warrior",mediocre:"warrior",courier:"support",gourmet:"tank",climber:"assassin",
-  hacker:"mage",tycoon:"mage",lucky:"ranger",arsonist:"mage",sentinel:"tank",janitor:"support",detective:"ranger"
+  hacker:"mage",tycoon:"mage",lucky:"ranger",arsonist:"mage",sentinel:"tank",janitor:"support",detective:"ranger",
+  ashen:"warrior",qing:"support"
 };
 Object.keys(CARDS).forEach(id=>CARDS[id].cls=CARD_CLS[id]||"warrior");
 const clsOf=u=>CARDS[u.id]?CARDS[u.id].cls:null;
@@ -931,7 +972,7 @@ function cardStats(id,stars=1,scale=1,br=0){
 const SAVE_KEY="jbts_textgame_v1";
 // 遊戲版本（存檔格式有新增內容、舊頁面可能誤判時加 1）。存檔會記錄是哪個版本寫的；
 // 舊頁面讀到比自己新的存檔時，不做作弊檢查、不清空、也不寫回，只提示玩家重新整理頁面
-const APP_V=2;
+const APP_V=4;
 let STALE=false;
 const isNewerSave=s=>!!s&&(s.appv||0)>APP_V;
 function staleNotice(){
@@ -1066,6 +1107,10 @@ function migrate(s){
   if(s.chv<4){if(s.run&&s.run.ch===8)s.run.ch=10;s.chv=4;}
   // 第11、12章插在無盡深淵前面：深淵 ch 從 10 改成 12
   if(s.chv<5){if(s.run&&s.run.ch===10)s.run.ch=12;s.chv=5;}
+  // 第13章《名冊》插在無盡深淵前面：深淵 ch 從 12 改成 13
+  if(s.chv<6){if(s.run&&s.run.ch===12)s.run.ch=13;if(s.runCk&&s.runCk.ch===12)s.runCk.ch=13;s.chv=6;}
+  // 第14、15章《名冊》插在無盡深淵前面：深淵 ch 從 13 改成 15
+  if(s.chv<7){if(s.run&&s.run.ch===13)s.run.ch=15;if(s.runCk&&s.runCk.ch===13)s.runCk.ch=15;s.chv=7;}
   if(!s.gear){s.gear=[];s.gearUid=0;}
   // 詞條上限調降（例如吸血 -3）：舊裝備超過「新上限 +1（稀有詞條）」的數值壓回新上限，避免存檔檢查誤判
   for(const g of s.gear){const G=GEAR[g.base];if(!G||!Array.isArray(g.fx))continue;
@@ -1320,7 +1365,7 @@ function viewHome(){
   ${(h=>`<div class="nexthint"><span>👉 ${h[0]}</span><button class="pri mini" style="margin-left:auto" onclick="go('${h[1]}')">${h[2]}</button></div>`)(nextHint())}
   <div class="modes">
     <div class="mode" onclick="go('gacha')"><div class="ic">🎴</div><b>招募所</b><p>花金條抽取職業卡。SSR 3%・十連保底 SR・60 抽保底 SSR</p></div>
-    <div class="mode" onclick="go('team')"><div class="ic">👥</div><b>隊伍</b><p>已收集 ${own}/${Object.keys(CARDS).length} 名職業，挑 3 人出戰</p></div>
+    <div class="mode" onclick="go('team')"><div class="ic">👥</div><b>隊伍</b><p>已收集 ${ownedCount()}/${CARD_IDS.length} 名職業，挑 3 人出戰</p></div>
     <div class="mode" onclick="go('shop')"><div class="ic">🛒</div><b>商店・裝備</b><p>買裝備、強化到 +10（可能失敗！），還能買遠征物資帶上路</p></div>
     <div class="mode" onclick="go('run')"><div class="ic">🪜</div><b>逃殺遠征</b><p>文字冒險主線 ${CHAPTERS.length-1} 章＋無盡深淵：選房間、搜物資、躲毒氣、結盟或背叛。目前進度：${progText()}</p></div>
     <div class="mode" onclick="go('train')"><div class="ic">🏋</div><b>練功房</b><p>重複打怪物練等級（每級全能力+2%），已解鎖到第 ${Math.min(TRAIN_MAX,trainBest()+1)} 關</p></div>
@@ -1350,7 +1395,7 @@ function resetSave(){
 /* ===================== GACHA ===================== */
 const PULL_COST=10,TEN_COST=90;
 function viewGacha(){
-  const feat=POOL.SSR;
+  const feat=gachaPool("SSR");
   return `<h2>招募所</h2>
   <div class="banner">
     <h2>🩸 鐵櫃招募・常駐</h2>
@@ -1365,9 +1410,9 @@ function viewGacha(){
   <div class="panel small dim" style="margin-top:10px">🧩 5★ 後重複抽到的角色會變成碎片，到「隊伍」頁按「🧩 碎片兌換」可以指定換角色或補星。</div>
   <h3>機率</h3>
   <div class="panel small">
-    <span class="rSSR">SSR 3%</span>（${POOL.SSR.map(i=>CARDS[i].name).join("、")}）<br>
-    <span class="rSR">SR 17%</span>（${POOL.SR.map(i=>CARDS[i].name).join("、")}）<br>
-    <span class="rR">R 80%</span>（其他 ${POOL.R.length} 名）<br>
+    <span class="rSSR">SSR 3%</span>（${gachaPool("SSR").map(i=>CARDS[i].name).join("、")}）<br>
+    <span class="rSR">SR 17%</span>（${gachaPool("SR").map(i=>CARDS[i].name).join("、")}）<br>
+    <span class="rR">R 80%</span>（其他 ${gachaPool("R").length} 名）<br>
     <span class="dim">重複抽到會升星（每星全能力+10%，3星起防禦+1），滿5星後每張退還🪙5。</span>
   </div>
   <h3>賺金條</h3>
@@ -1384,7 +1429,7 @@ function shardPanel(){
 let SHARD_TAB="SSR";
 function openShards(t){
   if(t)SHARD_TAB=t;const r=SHARD_TAB,have=SAVE.shards[r];
-  const ids=Object.keys(CARDS).filter(id=>CARDS[id].r===r);
+  const ids=CARD_IDS.filter(id=>CARDS[id].r===r).concat(Object.keys(CARDS).filter(id=>CARDS[id].story&&CARDS[id].r===r&&SAVE.owned[id]));
   openModal(`<h3>🧩 碎片兌換</h3>
     <div class="filters">${["R","SR","SSR"].map(k=>`<button class="${k===r?"on":""}" onclick="openShards('${k}')">${k} ×${SAVE.shards[k]}</button>`).join("")}</div>
     <p class="dim small">沒有的角色 🧩${SHARD_NEW[r]} 換 1★；已擁有但未滿 5★ 的角色 🧩${SHARD_STAR[r]} 補 1★。</p>
@@ -1459,7 +1504,7 @@ function doPull(n){
   const rs=[];for(let i=0;i<n;i++)rs.push(rollRarity());
   if(n===10&&SAVE.firstTen){SAVE.firstTen=false;if(!rs.includes("SSR")){rs[9]="SSR";SAVE.pity=0;}}
   if(n===10&&!rs.some(r=>r!=="R"))rs[9]="SR";
-  const res=rs.map(r=>grant(pick(POOL[r])));
+  const res=rs.map(r=>grant(pick(gachaPool(r))));
   save();renderHeader();
   showGacha(res);
 }
@@ -1496,7 +1541,7 @@ function closeGacha(){$("#gacha").classList.remove("show");render();}
 
 /* ===================== TEAM ===================== */
 let SHOW_LOCKED=false;
-function sortedIds(){return Object.keys(CARDS).sort((a,b)=>R_ORDER[CARDS[a].r]-R_ORDER[CARDS[b].r]||a.localeCompare(b));}
+function sortedIds(){return Object.keys(CARDS).filter(id=>!CARDS[id].story||SAVE.owned[id]).sort((a,b)=>R_ORDER[CARDS[a].r]-R_ORDER[CARDS[b].r]||a.localeCompare(b));}
 function cardTile(id,onclick,extraCls=""){
   const c=CARDS[id],o=SAVE.owned[id];
   return `<div class="ccard ${c.r} ${o?"":"locked"} ${o&&o.br?"brkc":""} ${SAVE.team.includes(id)?"inteam":""} ${extraCls}" onclick="${onclick}">
@@ -1514,7 +1559,7 @@ function viewTeam(){
   <div class="teamslots">${[0,1,2].map(i=>{const id=SAVE.team[i];return id?cardTile(id,`showCard('${id}')`):`<div class="slot">空位</div>`;}).join("")}</div>
   <p class="dim small">點卡片查看技能、加入或移出隊伍。遠征與競技場都使用這支隊伍。不要的角色可以在卡片裡「遣散」換金條（R 🪙3／SR 🪙10／SSR 🪙30，每星計算），或用「合成」把 6★ 份的 R 換成 1 名 SR、6★ 份的 SR 換成 1 名 SSR，或用「熔煉」把 2 名同稀有度角色熔成 1 名同稀有度的其他角色（等級、星數、突破取較低的）。</p>
   ${shardPanel()}
-  <div class="row"><h3 style="margin-right:auto">收藏（${Object.keys(SAVE.owned).length}/${Object.keys(CARDS).length}）</h3>
+  <div class="row"><h3 style="margin-right:auto">收藏（${ownedCount()}/${CARD_IDS.length}）</h3>
   <button class="mini gold" onclick="openSynth()">🔮 合成</button>
   <button class="mini gold" onclick="openSmelt()">🔥 熔煉</button>
   <button class="mini gold" onclick="openShards()">🧩 碎片兌換</button>
@@ -1560,6 +1605,7 @@ function showCard(id){
     ${setHtml(id)}${e.crit||e.steal||e.dodge||e.dr?`<div class="gfx">裝備特效：${statStr({crit:e.crit,steal:e.steal,dodge:e.dodge,dr:e.dr})}</div>`:""}`:""}
     </div></div>
     ${skillHtml(c)}
+    ${c.story?`<div class="sk small"><b>📖 劇情角色</b><br>《名冊》故事線的同伴。通關第 ${c.gachaCh} 章後可以在招募所抽到。<b>無法合成、熔煉、遣散</b>，等級也不能轉給別人（可以接收別人的等級）。</div>`:""}
     <div class="row" style="margin-top:12px">
       ${o?(inT?`<button onclick="toggleTeam('${id}')">移出隊伍</button>`:`<button class="pri" onclick="toggleTeam('${id}')" ${SAVE.team.length>=3?"disabled":""}>加入隊伍${SAVE.team.length>=3?"（已滿）":""}</button>`):`<span class="dim">尚未獲得</span>`}
       ${o&&o.stars<5?`<button class="gold" onclick="openShards('${CARDS[id].r}')">🧩 碎片補星（${SHARD_STAR[CARDS[id].r]}）</button>`:""}
@@ -1575,6 +1621,7 @@ const SHARD_DUP={R:1,SR:3,SSR:10},SHARD_SELL={R:0,SR:1,SSR:3};
 const SHARD_NEW={R:25,SR:80,SSR:200},SHARD_STAR={R:8,SR:25,SSR:70};
 const SHARD_NAME={R:"R 碎片",SR:"SR 碎片",SSR:"SSR 碎片"};
 function sellBlock(id){
+  if(storyOn(id))return "劇情角色，無法遣散";
   if(SAVE.team.includes(id))return "在出戰隊伍中，先移出隊伍才能遣散";
   if(SAVE.run&&SAVE.run.party.some(m=>!m.ally&&m.id===id))return "正在遠征中，結束後才能遣散";
   if(Object.keys(SAVE.owned).length<=3)return "至少要保留 3 名角色";
@@ -1618,6 +1665,7 @@ function sellAllR(go){
 const SYN_COST=6,SYN_UP={R:"SR",SR:"SSR"};
 let SYN={tier:"R",pick:{}};
 function synBlock(id){
+  if(storyOn(id))return "劇情角色";
   if(SAVE.team.includes(id))return "隊伍中";
   if(SAVE.run&&SAVE.run.party.some(m=>!m.ally&&m.id===id))return "遠征中";
   if(brOf(id))return "已突破";
@@ -1716,6 +1764,7 @@ const SMELT_HELP=`<div class="sk small"><b>📖 熔煉說明</b><ul style="paddi
   <li>放進去的兩名角色會 <b>整張消失</b>（包含所有星數），身上的裝備自動卸下回到倉庫。</li>
   <li>隊伍中、遠征中的角色不能熔煉；熔煉後至少要保留 3 名角色。</li></ul></div>`;
 function smeltBlock(id){
+  if(storyOn(id))return "劇情角色";
   if(SAVE.team.includes(id))return "隊伍中";
   if(SAVE.run&&SAVE.run.party.some(m=>!m.ally&&m.id===id))return "遠征中";
   return "";
@@ -1794,6 +1843,7 @@ function openXfer(step){
   const sl=src?lvOf(src):0,cost=xferCost(sl),ok=!!(src&&dst&&sl>lvOf(dst)&&SAVE.gold>=cost);
   const tile=(id,mode)=>{
     const o=SAVE.owned[id],b=xferBlock(id);let why=b;
+    if(mode==="src"&&!why&&storyOn(id))why="劇情角色，等級不能轉出";
     if(mode==="src"&&!why&&lvOf(id)<=1)why="已經是 Lv.1";
     if(mode==="dst"&&!why){if(id===src)why="就是來源角色";else if(lvOf(id)>=sl)why="等級不低於來源";}
     const on=(mode==="src"&&id===src)||(mode==="dst"&&id===dst);
@@ -1835,6 +1885,7 @@ function doXfer(){
   const s=SAVE.owned[XFER.src],d=SAVE.owned[XFER.dst];if(!s||!d)return;
   const sl=lvOf(XFER.src),cost=xferCost(sl);
   if(xferBlock(XFER.src)||xferBlock(XFER.dst)){toast("遠征中的角色不能轉移");return;}
+  if(storyOn(XFER.src)){toast("劇情角色的等級不能轉出");return;}
   if(sl<=lvOf(XFER.dst)){toast("目標的等級必須比來源低");return;}
   if(SAVE.gold<cost){toast("金條不足");return;}
   SAVE.gold-=cost;
@@ -2365,9 +2416,13 @@ function stat(u,k){
   u.buffs.forEach(b=>{if(b.k===k)v+=b.v;});
   if(k==="atk"&&u.id==="berserker"&&u.hp<u.maxHp/2)v+=Math.round(u.atk*.04);
   if(k==="atk"&&u.id==="warden"&&u.hp<u.maxHp/2)v+=3;
+  if(k==="atk"&&u.id==="reclaimer"&&u.hp<u.maxHp/2)v+=Math.max(2,Math.round(u.atk*.12));
+  if(k==="atk"&&u.id==="ashen"&&hasBond(u,"qing"))v+=Math.max(1,Math.round(u.atk*.04)); // 羈絆「名冊合照」
   if(k==="def"&&u.id==="chief"&&u.hp<u.maxHp/2)v+=2;
   return Math.max(k==="atk"?1:0,v);
 }
+// 同一陣營裡有沒有另一名活著的指定角色（羈絆判定用）
+function hasBond(u,id){return !!CUR_B&&CUR_B.units.some(x=>x.side===u.side&&x.alive&&x.id===id);}
 function blog(B,html,cls=""){B.log.push({html,cls});if(B.log.length>120)B.log.shift();}
 // 對自己施加的增益多算1，因為回合結束時就會先扣1次
 function buff(B,u,k,v,t){u.buffs.push({k,v,t:t+(B.active===u?1:0)});}
@@ -2382,19 +2437,34 @@ function stun(B,t,n){t.st.stun=Math.max(t.st.stun||0,n);blog(B,`${nm(t)} 被暈�
 function cleanse(u){delete u.st.poison;u.buffs=u.buffs.filter(b=>b.v>0);}
 function heal(B,u,n){
   if(!u.alive||n<=0)return 0;
-  if(B.active&&clsOf(B.active)==="support"&&B.active.side===u.side)n=Math.round(n*1.3);
+  if(B.active&&B.active.side===u.side){
+    let f=1;if(clsOf(B.active)==="support")f+=.3;
+    if(B.active.id==="qing"&&hasBond(B.active,"ashen"))f+=.075; // 羈絆「名冊合照」
+    if(f!==1)n=Math.round(n*f);
+  }
   const h=Math.min(n,u.maxHp-u.hp);
   if(h>0){u.hp+=h;fx(B,u,"+"+h,"heal");SFX.heal();}
   return h;
 }
 function revive(B,u,pct){u.alive=true;u.hp=Math.max(1,Math.ceil(u.maxHp*pct));u.st={};u.buffs=[];fx(B,u,"復活","heal");}
 
+const SPLASH_IDS=["reclaimer","editor","nameless"];
+// 支線魔王「激動模式」：這幾位魔王面對 5 人以上的隊伍時啟動（開戰時判斷）：單體攻擊擴散 20%、技能與普通攻擊傷害 +10%
+const FRENZY_IDS=["doomhunter","voidlord","fatejudge","reaper","abyssking","nightemperor","overlord","endwalker"];
 function hit(B,a,t,mult,o={}){
   if(!t||!t.alive)return 0;
   if(!o.counter){
     if(t.id==="boss"&&rnd()<.35){
       const m=mates(B,t).filter(x=>x!==t);
       if(m.length){const n=pick(m);blog(B,`「你們先上！」${nm(t)} 把 ${nm(n)} 推了出去。`);t=n;mult*=.6;}
+    }
+    if(t.id!=="ashen"&&t.hp<t.maxHp*.35){ // 阿燼「我不會丟下你」
+      const g=mates(B,t).find(x=>x.id==="ashen"&&x!==t);
+      if(g&&rnd()<.4){
+        blog(B,`🛡 ${nm(g)}：「站我後面。」——替 ${nm(t)} 擋下了這一擊。`);
+        t=g;mult*=.7;
+        if((g.flags.ashenN||0)<3){g.flags.ashenN=(g.flags.ashenN||0)+1;g.perm.atk=(g.perm.atk||0)+Math.max(1,Math.round(g.atk*.06));fx(B,g,"攻擊↑","sk");}
+      }
     }
     if(t.id!=="bodyguard"&&t.hp<t.maxHp*.5){
       const g=mates(B,t).find(x=>x.id==="bodyguard");
@@ -2418,7 +2488,9 @@ function hit(B,a,t,mult,o={}){
     if(o.crit||rnd()<cc){crit=true;d*=1.5;}
     if(a.id==="arsonist"&&t.st.poison)d+=2;
   }
+  if(a.flags&&a.flags.frenzy)d*=1.1; // 激動模式
   if(t.st.mark)d*=1.5;
+  if(a.id==="editor"&&t.st.mark)d*=1.25; // 剪輯師「無情剪輯」
   if(t.st.guard&&!o.pierce)d*=.5;
   if(B.wall[t.side]){const w=B.units.find(x=>x.uid===B.wall[t.side]);if(w&&w.alive)d*=.5;}
   if(t.id==="fatty")d-=2;
@@ -2439,6 +2511,11 @@ function hit(B,a,t,mult,o={}){
   crit?SFX.crit():SFX.hit();
   if(a.id==="butcher"&&a.alive)heal(B,a,Math.max(1,Math.round(d*.3)));
   if(a.gx&&a.gx.steal&&a.alive&&a!==t)heal(B,a,Math.max(1,Math.round(d*a.gx.steal/100)));
+  if((SPLASH_IDS.includes(a.id)||(a.flags&&a.flags.frenzy))&&!o.noSpread&&!o.counter&&d>0){ // 第13～15章魔王「擴散攻擊」：其餘敵人各受到該傷害的 20%
+    const sp=Math.max(1,Math.round(d*.2)),others=foes(B,a).filter(x=>x!==t);
+    if(others.length){blog(B,`💥 ${nm(a)} 的攻擊擴散開來，其餘敵人各受到 ${sp} 點傷害。`);
+      others.forEach(x=>{x.hp-=sp;fx(B,x,"擴散-"+sp,"dmg");if(x.hp<=0)handleDeath(B,x,a);});}
+  }
   if(t.hp<=0)handleDeath(B,t,a);
   else if(!o.counter&&a.alive&&a!==t){
     if(t.id==="tamer"&&rnd()<.25){blog(B,`🐕 獵犬撲向 ${nm(a)}！`);hit(B,t,a,1,{fixed:3,counter:true});}
@@ -2464,6 +2541,12 @@ function handleDeath(B,t,killer){
     if(x.id==="shade"){heal(B,x,Math.max(1,Math.round(x.maxHp*.05)));x.perm.atk=(x.perm.atk||0)+Math.max(1,Math.round(x.atk*.03));}
     if(x.id==="mediocre"&&x.side===t.side){x.perm.atk=(x.perm.atk||0)+2;fx(B,x,"+2攻","sk");}
     if(x.id==="janitor"&&x.side!==t.side)heal(B,x,3);
+    if(x.id==="nameless"&&x.side!==t.side){x.perm.atk=(x.perm.atk||0)+Math.max(1,Math.round(x.atk*.1));} // 無名者「千人之聲」
+    if(x.id==="qing"&&x.side===t.side&&(x.flags.qingN||0)<3){ // 晴「我記得你」
+      x.flags.qingN=(x.flags.qingN||0)+1;
+      B.units.filter(m=>m.side===x.side&&m.alive).forEach(m=>{m.perm.atk=(m.perm.atk||0)+Math.max(1,Math.round(m.atk*.04));});
+      blog(B,`✨ ${nm(x)} 輕聲說：「我記得你。」——全隊攻擊提高了。`);
+    }
   });
   if(killer&&killer.id==="assassin"&&killer.alive&&killer.side!==t.side&&!killer.flags.extraUsed){killer.flags.extraPending=1;}
 }
@@ -2533,6 +2616,7 @@ function startBattle(cfg){
     wall:{},flags:{},auto:false,fast:false,wait:null,done:false,over:null,cfg,labels:cfg.labels||{A:"我方",B:"敵方"},
     online:cfg.online||null,rseq:0,mySide:"A"};
   B.units=cfg.A.map(o=>mkUnit({...o,side:"A"})).concat(cfg.B.map(o=>mkUnit({...o,side:"B"})));
+  B.units.forEach(u=>{if(FRENZY_IDS.includes(u.id)&&B.units.filter(x=>x.side!==u.side).length>=5){u.flags.frenzy=1;blog(B,`🔥 ${nm(u)} 面對五人的隊伍，進入了激動模式！`,"bad");}});
   CUR_B=B;BATTLE_HOME=cfg.home||"arena";VIEW="battle";
   if(cfg.intro)blog(B,cfg.intro,"big");
   render();
@@ -2604,6 +2688,7 @@ async function takeTurn(B,u){
   if(u.id==="runner")heal(B,u,1);
   if(u.id==="mutant")heal(B,u,2);
   if(u.id==="zero")heal(B,u,4);
+  if((u.id==="reclaimer"||u.id==="nameless")&&(u.flags.oc||0)<10){u.flags.oc=(u.flags.oc||0)+1;u.perm.atk=(u.perm.atk||0)+Math.max(1,Math.round(u.atk*.03));}
   if(DEF(u.id).regen)heal(B,u,DEF(u.id).regen);
   if(DEF(u.id).regenp)heal(B,u,Math.round(u.maxHp*DEF(u.id).regenp));
   if(u.id==="medic"){const h=mates(B,u).filter(m=>m.hp<m.maxHp).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0];if(h)heal(B,h,2);}
@@ -2701,7 +2786,7 @@ function unitCard(B,u){
   if(u.buffs.some(b=>b.v>0))st.push("▲");
   if(u.buffs.some(b=>b.v<0))st.push("▼");
   const d=DEF(u.id),cl=CARDS[u.id]?CLASSES[CARDS[u.id].cls]:null;
-  return `<div class="ucard s${u.side} ${CARDS[u.id]?"q-"+CARDS[u.id].r:""} ${d.boss2?"bossu":""} ${u.flags&&u.flags.p2?"p2":""} ${u.alive?"":"dead"} ${B.active===u&&!B.over?"active":""} ${tg?"targetable":""}" id="u${u.uid}" onclick="onUnitClick(${u.uid})" title="${d.skill.name}：${d.skill.desc}\n${d.passive.name}：${d.passive.desc}">
+  return `<div class="ucard s${u.side} ${CARDS[u.id]?"q-"+CARDS[u.id].r:""} ${d.boss2?"bossu":""} ${u.flags&&u.flags.p2?"p2":""} ${u.flags&&u.flags.frenzy?"frenzy":""} ${u.alive?"":"dead"} ${B.active===u&&!B.over?"active":""} ${tg?"targetable":""}" id="u${u.uid}" onclick="onUnitClick(${u.uid})" title="${d.skill.name}：${d.skill.desc}\n${d.passive.name}：${d.passive.desc}">
     <div class="uav">${avatar(u.id,u.flags&&u.flags.p2)}</div>
     ${u.cd>0&&u.alive?`<div class="cdbadge">✦${u.cd}</div>`:""}
     <div class="uname">${cl?`<span title="${cl.name}：${cl.desc}">${cl.icon}</span>`:""}${u.ally?"🤝":""}${u.name}</div>
@@ -2893,7 +2978,7 @@ function finishBattle(){
 let ARENA_FOES=null;
 function genArenaFoes(){
   const t=SAVE.arenaTier,stars=clamp(1+Math.floor(t/3),1,5);
-  const pool=t<4?POOL.R:t<8?POOL.R.concat(POOL.SR):Object.keys(CARDS);
+  const pool=t<4?POOL.R:t<8?POOL.R.concat(POOL.SR):CARD_IDS;
   ARENA_FOES=shuffle(pool).slice(0,3).map(id=>({id,stars,scale:.82+.06*t}));
 }
 function arenaReward(){return 8+SAVE.arenaTier*2;}
@@ -3225,49 +3310,74 @@ Object.assign(MONSTERS,{
     quote:"追蹤、狩獵，直到目標消失。",
     skill:{name:"鎖定狙殺",cd:3,t:"none",kind:"dmg",desc:"狙擊生命最低的敵人（2.4倍、無視防禦）。爆氣後改為3倍，並對其他敵人掃射0.6倍。",
       use(B,u){const f=foes(B,u).sort((a,b)=>a.hp-b.hp);if(!f.length)return;blog(B,"🎯 紅色雷射點停在了獵物的眉心。","bad");
-        hit(B,u,f[0],u.flags.p2?3:2.4,{pierce:true});if(u.flags.p2)foes(B,u).filter(x=>x!==f[0]).forEach(t=>hit(B,u,t,.6));}},
-    passive:{name:"獵殺本能",desc:"暴擊率+25%。"}},
+        hit(B,u,f[0],u.flags.p2?3:2.4,{pierce:true});if(u.flags.p2)foes(B,u).filter(x=>x!==f[0]).forEach(t=>hit(B,u,t,.6,{noSpread:true}));}},
+    passive:{name:"獵殺本能",desc:"暴擊率+25%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
   voidlord:{name:"虛空主宰",img:true,r:"SSR",hp:667,atk:63,def:18,spd:21,boss2:{hp:.7,atk:.35,spd:2},gx:{dodge:15},
     quote:"我掌控的不只是數據，而是整個禁閉區的規則。",
     skill:{name:"系統覆寫",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.8倍傷害，每人40%機率暈眩1回合。爆氣後再清除敵人所有增益，並使其攻擊降低25%（2回合）。",
-      use(B,u){blog(B,"💠 所有螢幕同時跳出同一行字：「權限已轉移」。","bad");foes(B,u).forEach(t=>{hit(B,u,t,.8);if(t.alive&&rnd()<.4)stun(B,t,1);
+      use(B,u){blog(B,"💠 所有螢幕同時跳出同一行字：「權限已轉移」。","bad");foes(B,u).forEach(t=>{hit(B,u,t,.8,{noSpread:true});if(t.alive&&rnd()<.4)stun(B,t,1);
         if(u.flags.p2&&t.alive){t.buffs=t.buffs.filter(b=>b.v<0);buff(B,t,"atk",-Math.max(1,Math.round(stat(t,"atk")*.25)),2);}});}},
-    passive:{name:"虛體",desc:"閃避率+15%。"}},
+    passive:{name:"虛體",desc:"閃避率+15%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
   fatejudge:{name:"命運裁決者",img:true,r:"SSR",hp:1666,atk:138,def:42,spd:36,drp:.15,boss2:{hp:.7,atk:.35,spd:2},
     quote:"你的命運，由我來決定。",
     skill:{name:"命運之輪",cd:3,t:"none",kind:"dmg",desc:"轉動命運之輪，隨機：全體1倍傷害／自身恢復8%生命／單體2.5倍傷害。爆氣後一次轉兩格。",
       use(B,u){for(let n=0;n<(u.flags.p2?2:1);n++){const k=ri(1,3),f=foes(B,u);if(!f.length)break;
-        if(k===1){blog(B,"☸ 命運之輪停在「審判」。","bad");f.forEach(t=>hit(B,u,t,1));}
+        if(k===1){blog(B,"☸ 命運之輪停在「審判」。","bad");f.forEach(t=>hit(B,u,t,1,{noSpread:true}));}
         else if(k===2){blog(B,"☸ 命運之輪停在「延命」。","bad");heal(B,u,Math.round(u.maxHp*.08));}
         else{blog(B,"☸ 命運之輪停在「處刑」。","bad");hit(B,u,pick(f),2.5);}}}},
-    passive:{name:"定數",desc:"受到的傷害降低15%。"}},
+    passive:{name:"定數",desc:"受到的傷害降低15%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
   reaper:{name:"死神代行者",img:true,r:"SSR",hp:2000,atk:156,def:42,spd:42,boss2:{hp:.7,atk:.35,spd:2},gx:{steal:20},
     quote:"死亡不是終點，而是我的任務。",
     skill:{name:"收割",cd:3,t:"none",kind:"dmg",desc:"對生命最低的敵人揮下鐮刀（1.8倍）。爆氣後全體敵人再中毒（每回合受到自身攻擊20%的傷害，3回合）。",
       use(B,u){const f=foes(B,u).sort((a,b)=>a.hp-b.hp);if(!f.length)return;blog(B,"⚰ 鎖鏈嘩啦作響，鐮刀落下。","bad");hit(B,u,f[0],1.8);
         if(u.flags.p2)foes(B,u).forEach(t=>poison(B,t,Math.max(1,Math.round(stat(u,"atk")*.2)),3));}},
-    passive:{name:"魂之收割",desc:"造成傷害時恢復傷害20%的生命。"}},
+    passive:{name:"魂之收割",desc:"造成傷害時恢復傷害20%的生命。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
   abyssking:{name:"深淵君王",img:true,r:"SSR",hp:2400,atk:168,def:54,spd:30,drp:.2,regenp:.03,boss2:{hp:.7,atk:.35,spd:2},
     quote:"這片禁閉區，現在由我來支配。",
     skill:{name:"王權壓制",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.9倍傷害，並使其攻擊降低25%（2回合）。爆氣後傷害提高到1.2倍。",
-      use(B,u){blog(B,"👑 「跪下。」整個房間的空氣沉了下來。","bad");foes(B,u).forEach(t=>{hit(B,u,t,u.flags.p2?1.2:.9);if(t.alive)buff(B,t,"atk",-Math.max(1,Math.round(stat(t,"atk")*.25)),2);});}},
-    passive:{name:"王之軀",desc:"受到的傷害降低20%；每回合恢復3%最大生命。"}},
+      use(B,u){blog(B,"👑 「跪下。」整個房間的空氣沉了下來。","bad");foes(B,u).forEach(t=>{hit(B,u,t,u.flags.p2?1.2:.9,{noSpread:true});if(t.alive)buff(B,t,"atk",-Math.max(1,Math.round(stat(t,"atk")*.25)),2);});}},
+    passive:{name:"王之軀",desc:"受到的傷害降低20%；每回合恢復3%最大生命。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
   nightemperor:{name:"永夜帝王",img:true,r:"SSR",hp:4299,atk:270,def:81,spd:54,regenp:.04,boss2:{hp:.7,atk:.35,spd:2},gx:{dodge:10},
     quote:"黑夜，是我的王座。",
     skill:{name:"永夜降臨",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.7倍傷害並中毒（每回合受到自身攻擊20%的傷害，3回合），自身恢復5%生命。爆氣後中毒加重為30%。",
-      use(B,u){blog(B,"🌑 燈全滅了。黑暗裡只剩下那雙紫色的眼睛。","bad");foes(B,u).forEach(t=>{hit(B,u,t,.7);if(t.alive)poison(B,t,Math.max(1,Math.round(stat(u,"atk")*(u.flags.p2?.3:.2))),3);});heal(B,u,Math.round(u.maxHp*.05));}},
-    passive:{name:"夜之主",desc:"每回合恢復4%最大生命；閃避率+10%。"}},
+      use(B,u){blog(B,"🌑 燈全滅了。黑暗裡只剩下那雙紫色的眼睛。","bad");foes(B,u).forEach(t=>{hit(B,u,t,.7,{noSpread:true});if(t.alive)poison(B,t,Math.max(1,Math.round(stat(u,"atk")*(u.flags.p2?.3:.2))),3);});heal(B,u,Math.round(u.maxHp*.05));}},
+    passive:{name:"夜之主",desc:"每回合恢復4%最大生命；閃避率+10%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
   overlord:{name:"天命霸主",img:true,r:"SSR",hp:17000,atk:990,def:300,spd:180,drp:.25,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:15},
     quote:"命運？由我來定義！",
     skill:{name:"天命審判",cd:3,t:"none",kind:"dmg",desc:"對單一敵人造成2倍傷害、其他敵人0.8倍，自身攻擊提高20%（3回合）。",
-      use(B,u){const f=foes(B,u);if(!f.length)return;const t=pick(f);blog(B,"🌟 金色的光球從天而降。","bad");hit(B,u,t,2);foes(B,u).filter(x=>x!==t).forEach(x=>hit(B,u,x,.8));buff(B,u,"atk",Math.max(1,Math.round(stat(u,"atk")*.2)),3);}},
-    passive:{name:"霸者之威",desc:"受到的傷害降低25%；暴擊率+15%。"}},
+      use(B,u){const f=foes(B,u);if(!f.length)return;const t=pick(f);blog(B,"🌟 金色的光球從天而降。","bad");hit(B,u,t,2);foes(B,u).filter(x=>x!==t).forEach(x=>hit(B,u,x,.8,{noSpread:true}));buff(B,u,"atk",Math.max(1,Math.round(stat(u,"atk")*.2)),3);}},
+    passive:{name:"霸者之威",desc:"受到的傷害降低25%；暴擊率+15%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
   endwalker:{name:"終焉行者",img:true,r:"SSR",hp:20000,atk:1080,def:330,spd:240,drp:.25,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:15,steal:15},
     quote:"最後一個活著的，才是真正的勝者",
     skill:{name:"終焉",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成1.2倍傷害。爆氣後改為1.6倍，每人30%機率暈眩。",
-      use(B,u){blog(B,"⛓ 「遊戲結束。」","bad");foes(B,u).forEach(t=>{hit(B,u,t,u.flags.p2?1.6:1.2);if(u.flags.p2&&t.alive&&rnd()<.3)stun(B,t,1);});}},
-    passive:{name:"最後的勝者",desc:"受到的傷害降低25%；暴擊率+15%、吸血15%。"}}
+      use(B,u){blog(B,"⛓ 「遊戲結束。」","bad");foes(B,u).forEach(t=>{hit(B,u,t,u.flags.p2?1.6:1.2,{noSpread:true});if(u.flags.p2&&t.alive&&rnd()<.3)stun(B,t,1);});}},
+    passive:{name:"最後的勝者",desc:"受到的傷害降低25%；暴擊率+15%、吸血15%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}}
 });
+// 支線魔王的小弟：命運裁決者、死神代行者、深淵君王、永夜帝王、天命霸主、終焉行者各帶兩名；生命、攻擊、防禦、速度都是魔王的 1/3
+const BOSS_MINION={
+  fatejudge:{name:"命運書記",emoji:"📜",drp:.1,
+    skill:{name:"判決書",cd:3,t:"enemy",kind:"dmg",desc:"造成1.3倍傷害，目標防禦降低20%（2回合）。",use(B,u,t){hit(B,u,t,1.3);if(t.alive)buff(B,t,"def",-Math.max(1,Math.round(stat(t,"def")*.2)),2);}},
+    passive:{name:"旁聽席",desc:"受到的傷害降低10%。"}},
+  reaper:{name:"死神使徒",emoji:"💀",gx:{steal:10},
+    skill:{name:"勾魂",cd:3,t:"enemy",kind:"dmg",desc:"造成1.2倍傷害，並使目標中毒（每回合受到自身攻擊15%的傷害，2回合）。",use(B,u,t){hit(B,u,t,1.2);if(t.alive)poison(B,t,Math.max(1,Math.round(stat(u,"atk")*.15)),2);}},
+    passive:{name:"靈魂汲取",desc:"造成傷害時恢復傷害10%的生命。"}},
+  abyssking:{name:"深淵侍衛",emoji:"🗿",drp:.15,
+    skill:{name:"王前壓制",cd:3,t:"enemy",kind:"dmg",desc:"造成1.4倍傷害，目標攻擊降低15%（2回合）。",use(B,u,t){hit(B,u,t,1.4);if(t.alive)buff(B,t,"atk",-Math.max(1,Math.round(stat(t,"atk")*.15)),2);}},
+    passive:{name:"王之盾",desc:"受到的傷害降低15%。"}},
+  nightemperor:{name:"夜行者",emoji:"🦇",evade:.15,
+    skill:{name:"暗襲",cd:3,t:"enemy",kind:"dmg",desc:"造成1.5倍傷害，無視對方的防禦與格擋；施放後自己獲得1次閃避。",use(B,u,t){hit(B,u,t,1.5,{pierce:true});u.st.evade=(u.st.evade||0)+1;}},
+    passive:{name:"夜行",desc:"被攻擊時15%機率閃避。"}},
+  overlord:{name:"天命近衛",emoji:"⚔️",gx:{crit:15},
+    skill:{name:"天命一擊",cd:3,t:"enemy",kind:"dmg",desc:"造成2.0倍傷害。",use(B,u,t){blog(B,"⚔️ 近衛高舉長劍：「奉天命！」","bad");hit(B,u,t,2.0);}},
+    passive:{name:"近衛之威",desc:"暴擊率+15%。"}},
+  endwalker:{name:"終焉信徒",emoji:"🕯️",regenp:.03,
+    skill:{name:"終焉低語",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.6倍傷害，每人20%機率暈眩1回合。",use(B,u){blog(B,"🕯️ 信徒們低聲吟誦：「終焉將至。」","bad");foes(B,u).forEach(t=>{hit(B,u,t,.6);if(t.alive&&rnd()<.2)stun(B,t,1);});}},
+    passive:{name:"殉道者",desc:"每回合開始恢復3%最大生命。"}}
+};
+Object.keys(BOSS_MINION).forEach(k=>{const M=MONSTERS[k];
+  MONSTERS[k+"_m"]={...BOSS_MINION[k],r:"R",pic:true, // 圖放在 images/monsters/{魔王代號}_m.webp，沒有圖會自動退回表情符號
+    hp:Math.max(1,Math.round(M.hp/3)),atk:Math.max(1,Math.round(M.atk/3)),def:Math.round(M.def/3),spd:Math.max(1,Math.round(M.spd/3)),minionOf:k};});
+const bossMinions=id=>BOSS_MINION[id]?[0,1].map(()=>({id:id+"_m",stars:1,gx:BOSS_MINION[id].gx||{}})):[];
 // 魔王的個人故事
 const BOSS_STORY={
   doomhunter:["他原本是禁閉逃殺第一屆的冠軍——唯一一個靠自己爬上直升機的人。","主辦方沒有放他走，而是給了他一把狙擊槍和一份新合約：「每抓回一個逃跑者，你就離自由近一步。」",
@@ -3312,6 +3422,7 @@ function openBoss(id){
     <div class="small">❤${M.hp}（爆氣後再 ${Math.round(M.hp*M.boss2.hp)}）　⚔${M.atk}　🛡${M.def}　💨${M.spd}</div></div></div>
     <div class="sk"><b>📜 ${M.name}的故事</b>${BOSS_STORY[id].map(p=>`<p style="margin:6px 0">${p}</p>`).join("")}</div>
     ${skillHtml(M)}
+    ${BOSS_MINION[id]?`<div class="sk"><b>🧑‍🤝‍🧑 隨從：${BOSS_MINION[id].name} ×2</b> <span class="dim small">（生命、攻擊、防禦、速度都是魔王的 1/3，開戰時一起出場）</span></div>${skillHtml(MONSTERS[id+"_m"])}`:""}
     <div class="sk"><b>💢 爆氣（第二階段）</b><br>第一條命打完後立刻爆氣：生命回復到 ${Math.round(M.boss2.hp*100)}%、攻擊+${Math.round(M.boss2.atk*100)}%、速度+${M.boss2.spd}、解除身上的減益與中毒、技能冷卻 -1。</div>
     <div class="sk"><b>🎁 獎勵</b><br>每次討伐：🪙${r.gold}、經驗 +${r.exp}${n?"":`<br>首次討伐：額外 🪙${r.first}、💎突破石 ×${r.stone}`}<br>
       專屬裝備 <b class="rEX">${GEAR_IMG.has(BOSS_DROP[id])?gearImg(BOSS_DROP[id],"inl"):G.icon}${G.name}</b>（${statStr(G.st)}）：${n?"2% 機率掉落":"首次討伐必定掉落"}</div>
@@ -3339,8 +3450,8 @@ function beginBoss(id){
   if(!SAVE.team.length)return;
   stopBossVoice();closeModal();
   const i=BOSS_LIST.indexOf(id),M=MONSTERS[id],r=bossReward(i),ids=SAVE.team.slice();
-  startBattle({title:`魔王討伐・${M.name}`,home:"run",maxRound:200,A:ids.map(teamUnit),B:[{id,stars:1,gx:M.gx}],bgm:BOSS_BGM[id],
-    intro:`「${M.quote}」`,
+  startBattle({title:`魔王討伐・${M.name}`,home:"run",maxRound:200,A:ids.map(teamUnit),B:[{id,stars:1,gx:M.gx}].concat(bossMinions(id)),bgm:BOSS_BGM[id],
+    intro:`「${M.quote}」${BOSS_MINION[id]?`（${BOSS_MINION[id].name} ×2 站到了他的身後）`:""}`,
     resultNote:B=>B.over==="A"?`${M.name} 倒下了。`:"魔王太強了……升級、升星、換裝備後再來。",
     onEnd(win,B){
       const notes=[];
@@ -3430,7 +3541,7 @@ const ACH=[
   {g:"招募",id:"pull500",n:"抽卡狂人",d:"累計抽卡 500 次",v:s=>s.pulls,t:500,r:{stone:10}},
   {g:"招募",id:"ssr1",n:"金光閃閃",d:"擁有 1 名 SSR 角色",v:s=>Object.keys(s.owned).filter(id=>CARDS[id].r==="SSR").length,t:1,r:{gold:30}},
   {g:"招募",id:"col20",n:"收藏家",d:"收集 20 名角色",v:s=>Object.keys(s.owned).length,t:20,r:{gold:50}},
-  {g:"招募",id:"colall",n:"全員到齊",d:"收集全部角色",v:s=>Object.keys(s.owned).length,t:Object.keys(CARDS).length,r:{stone:15}},
+  {g:"招募",id:"colall",n:"全員到齊",d:"收集全部角色",v:s=>CARD_IDS.filter(id=>s.owned[id]).length,t:CARD_IDS.length,r:{stone:15}},
   {g:"養成",id:"star5",n:"滿星",d:"任一角色升到 5★",v:s=>maxOf(ownedVals(s,o=>o.stars)),t:5,r:{stone:2}},
   {g:"養成",id:"br1",n:"突破極限",d:"任一角色突破 1 次",v:s=>maxOf(ownedVals(s,o=>o.br||0)),t:1,r:{stone:3}},
   {g:"養成",id:"br5",n:"超越自我",d:"任一角色突破 5 次",v:s=>maxOf(ownedVals(s,o=>o.br||0)),t:5,r:{stone:10}},
@@ -3440,7 +3551,10 @@ const ACH=[
   {g:"遠征",id:"esc1",n:"逃出生天",d:"第一次成功逃出",v:s=>s.stats.escapes,t:1,r:{gold:30}},
   {g:"遠征",id:"ch4",n:"黑塔崩塌",d:"通關第 4 章",v:s=>s.prog.cleared,t:4,r:{stone:3}},
   {g:"遠征",id:"ch8",n:"回到原點",d:"通關第 8 章",v:s=>s.prog.cleared,t:8,r:{stone:6}},
-  {g:"遠征",id:"ch12",n:"衛冕冠軍",d:"通關第 12 章（主線全破）",v:s=>s.prog.cleared,t:12,r:{stone:15}},
+  {g:"遠征",id:"ch12",n:"衛冕冠軍",d:"通關第 12 章",v:s=>s.prog.cleared,t:12,r:{stone:15}},
+  {g:"遠征",id:"ch13",n:"守夜人",d:"通關第 13 章（遇見阿燼）",v:s=>s.prog.cleared,t:13,r:{stone:8}},
+  {g:"遠征",id:"ch14",n:"我記得你",d:"通關第 14 章（遇見晴）",v:s=>s.prog.cleared,t:14,r:{stone:9}},
+  {g:"遠征",id:"ch15",n:"第三十七個座位",d:"通關第 15 章（阿燼、晴進入招募池）",v:s=>s.prog.cleared,t:15,r:{stone:12}},
   {g:"遠征",id:"hard1",n:"自找麻煩",d:"以困難難度逃出任一章",v:s=>Object.values(s.prog.dclears||{}).some(d=>d[3])?1:0,t:1,r:{stone:5}},
   {g:"遠征",id:"abyss10",n:"深淵行者",d:"無盡深淵到達 D10",v:s=>s.prog.abyssBest||0,t:10,r:{gold:80}},
   {g:"遠征",id:"lore",n:"傾聽者",d:"聽完老國王在 12 章說的全部 36 段話",v:s=>Object.keys(s.lore||{}).filter(k=>/^[ibe]\d+$/.test(k)).length,t:36,r:{stone:10}},
@@ -3767,14 +3881,37 @@ Object.assign(ROOM_NAME,{
 });
 Object.assign(ROOM_EV,{報到處:"morgue",新人休息區:"shade",通緝海報牆:"shade",排練室:"respec",候場室:"gene",試鏡廳:"helipad",
   入場通道:"morgue",觀眾席:"warehouse",冠軍走廊:"shade",重播室:"control",選手休息室:"gene",冠軍擂台:"helipad"});
-const ABYSS=12;
+// 第13章《名冊》故事線：回收場（第7層是只有一個房間的劇情房「營火邊」，阿燼在這裡加入）
+const FLOORS_RECYCLE=mkFloors("Y",[1,4,5,6,5,6,1,5,6,5,6,4,2]);
+Object.assign(ROOM_NAME,{
+  Y101:"墜落處",Y201:"廢鐵山",Y203:"配給站",Y301:"藥房",Y303:"傾倒的貨櫃",Y401:"武器庫",Y403:"黑市",Y501:"樂透房",Y503:"冷凍艙",
+  Y601:"手術室",Y603:"報廢機器堆",Y701:"營火邊",Y801:"水塔",Y803:"金庫",Y901:"強化艙",Y903:"雷射走廊",Y1001:"配給站",Y1003:"禮拜堂",
+  Y1101:"黑市",Y1201:"手術室",Y1301:"營火邊的補給",Y1302:"回收者的巢"
+});
+Object.assign(ROOM_EV,{墜落處:"morgue",廢鐵山:"warehouse",傾倒的貨櫃:"shade",報廢機器堆:"shade",營火邊:"ashen",營火邊的補給:"gene",回收者的巢:"helipad",
+  強化艙:"respec",雷射走廊:"laser"});
+// 第14章《名冊》：檔案館（第8層：封存的牢房，晴加入；第11層：最後一頁）
+const FLOORS_ARCHIVE=mkFloors("K",[1,4,5,6,5,6,5,1,6,5,1,5,4,2]);
+// 第15章《名冊》：第三十七個座位（第7層：無名的低語；第11層：第三十七個座位）
+const FLOORS_SEAT=mkFloors("N",[1,4,5,6,5,6,1,6,5,6,1,5,6,4,2]);
+Object.assign(ROOM_NAME,{
+  K101:"升降梯口",K201:"書架迷宮",K203:"配給站",K301:"藥房",K303:"借閱室",K401:"武器庫",K403:"黑市",K501:"冷凍艙",K503:"禮拜堂",
+  K601:"手術室",K603:"抹除走廊",K701:"水塔",K801:"封存的牢房",K901:"金庫",K903:"樂透房",K1001:"配給站",K1101:"最後一頁",K1201:"黑市",K1301:"手術室",
+  K1401:"名冊室外的小桌",K1402:"剪輯室",
+  N101:"沉默的階梯",N201:"椅子堆",N203:"配給站",N301:"藥房",N303:"低語走廊",N401:"武器庫",N403:"黑市",N501:"冷凍艙",N503:"座位迷宮",
+  N601:"手術室",N603:"水塔",N701:"無名的低語",N801:"金庫",N803:"樂透房",N901:"禮拜堂",N903:"低語走廊",N1001:"配給站",N1101:"第三十七個座位",
+  N1201:"黑市",N1301:"手術室",N1501:"舞台後方的小桌",N1502:"舞台"
+});
+Object.assign(ROOM_EV,{升降梯口:"morgue",書架迷宮:"shade",借閱室:"warehouse",抹除走廊:"shade",封存的牢房:"qing",最後一頁:"qing2",名冊室外的小桌:"gene",剪輯室:"helipad",
+  沉默的階梯:"morgue",椅子堆:"warehouse",低語走廊:"shade",座位迷宮:"shade",無名的低語:"whisper",第三十七個座位:"seat37",舞台後方的小桌:"gene",舞台:"helipad"});
+const ABYSS=15;
 // 深淵的特殊房間（不放傳送、基因庫這類依賴固定樓層的事件）
 const ABYSS_ROOMS={ration:"配給站",pharmacy:"藥房",armory:"武器庫",blackmarket:"黑市",casino:"賭場",surgery:"手術室",cryo:"冷凍艙",
   lotto:"樂透房",control:"控制室",respec:"操作室",water:"水塔",chapel:"禮拜堂",laser:"激光室",vault:"金庫",warehouse:"大倉庫",
   granary:"糧倉",prisoncell:"牢房",wine:"酒窖"};
 // 平衡：主線全破約需 40 次遠征（機器人模擬）。金條收入刻意壓低，抽卡要省著用
-const FIRST_CLEAR=[40,50,60,70,80,90,100,120,150,200,250,300];
-const CH_POW=[1,1.3,1.5,1.6,1.65,1.45,1.8,1.6,1.95,2.0,2.45,1.75]; // 第6、8章魔王會復活，倍數稍低以免變成高牆；第9、10章刻意偏難
+const FIRST_CLEAR=[40,50,60,70,80,90,100,120,150,200,250,300,350,400,450];
+const CH_POW=[1,1.3,1.5,1.6,1.65,1.45,1.8,1.6,1.95,2.0,2.45,1.75,1.85,1.95,2.05]; // 第6、8章魔王會復活，倍數稍低以免變成高牆；第9、10章刻意偏難
 function chPow(){return RUN&&RUN.ch!==ABYSS?CH_POW[RUN.ch]:1;}
 const CHAPTERS=[
   {name:"禁閉室",sub:"B7 停屍間 → 2F 停機坪",icon:"⛓",floors:FLOORS,minion:"ghost",boss:"warden",bossScale:1,bossHp:n=>48+n*12,
@@ -3922,6 +4059,63 @@ const CHAPTERS=[
       "他說他才是真的，你只是備份。可是一路爬上來的是你們，一起扛過毒氣、背叛和三個座位的，也是你們。證明給他看。"],
     bossIntro:"上一季的你擺出跟你一模一樣的架勢：「那就看看誰比較像冠軍。」",lose:"上一季的你舉起獎盃。觀眾歡呼——歡呼的是同一個名字。",
     fall:"上一季的你單膝跪地，身影像訊號不良的畫面一樣閃爍、散開。",escape:"上一季的你單膝跪地，身影像訊號不良的畫面一樣閃爍、散開。最後他笑了一下：「……原來冠軍不是一個人。」你們三個人一起舉起獎盃。<b>第二季，冠軍衛冕。</b>"},
+  {name:"回收場",sub:"Y1 墜落處 → Y13 回收者的巢",icon:"♻️",floors:FLOORS_RECYCLE,minion:"scrapbot",boss:"reclaimer",bossScale:2.0,bossHp:n=>170+n*38,noSeats:true,
+    veh:"升降梯",vehIcon:"🛗",bossLoc:"Y13 · Y1302 回收者的巢",bossRoom:"回收者的巢",prepLoc:"Y13 · Y1301 營火邊的補給",
+    startLoc:"Y101 · 墜落處",startTitle:"🕳️ 墜落",
+    intro:it=>["冠軍擂台的地板無聲無息地裂開了。你們往下墜，墜了很久，久到你以為自己還在被觀眾看著。",
+      "落地的地方堆滿了廢鐵、斷掉的鐵鍊，和一座座用舊道具堆成的山。空氣裡全是機油與鐵鏽的味道。",
+      "遠處的喇叭沙沙作響：<b>「回收程序啟動。被丟棄的物品，將依序處理。」</b>",
+      `你們在一堆報廢的道具裡摸到了 ${it}。`,
+      "老國王說過，深淵是被這場試煉丟下的人待的地方。這裡是入口。要出去，只有頂端那座升降梯——往上爬吧，路上，也許還有人在等你們。"],
+    shade:["廢鐵堆裡有東西在動，一隻獨眼的小機器爬了出來。","遠處有金屬刮擦的聲音，像是什麼東西正沿著牆邊靠近。","一堆報廢的機械忽然站了起來，眼睛亮著紅光。"],
+    prep:"營火邊留下的補給。有人在這裡守過夜，把能用的東西都整整齊齊地擺好了，只夠用一次。",
+    bossTitle:"🛗 回收者的巢",bossLines:["升降梯就在眼前，但通道被一堵由廢鐵焊成的牆擋住。牆後走出一台巨大的機器，背上的鐵籠裡掛滿了舊日的號碼牌，隨著腳步叮噹作響。",
+      "<b style='color:var(--red)'>回收者</b>。它的喇叭低低地重複：「不合格的物品，需要回收。」"],
+    story:["回收者最初只是一台清潔機器，每一季結束後，負責把擂台上的殘骸清走。",
+      "後來它學會了一條規則：被丟棄的，就是該被回收的。於是它開始把深淵裡的人，也當成殘骸，一個一個收進背上的鐵籠。",
+      "籠子上掛的每一塊號碼牌，都是一個被帶走的人。它不恨誰，也不懂什麼是人。它只是在執行，被交代過的、最後的一條命令。",
+      "阿燼說：它帶走的人，一個都沒有回來過。這一次，把籠子打開。"],
+    recap:["你們掉進深淵的最上層——回收場，這裡堆滿了被節目丟棄的一切。","在營火邊，你們遇見了守夜的阿燼。他在這裡守著一群被丟下的人，一守就是三年。","你們一起打倒了回收者，鐵籠裡的號碼牌散了一地。阿燼彎腰，一塊一塊撿了起來。"],
+    bossIntro:"「回收程序，開始。」",lose:"回收者把你們一個個掛上了鐵籠。",
+    fall:"回收者的外殼一片片剝落，背上的鐵籠門被震開了。",escape:"回收者倒下，鐵籠的門被震開，號碼牌叮叮噹噹散了一地。阿燼彎下腰，一塊一塊撿起來。升降梯的燈亮了——這條路，通往你們還沒走過的地方。"},
+  {name:"名冊",sub:"K1 升降梯口 → K14 剪輯室",icon:"📖",floors:FLOORS_ARCHIVE,minion:"eraser",boss:"editor",bossScale:2.05,bossHp:n=>180+n*40,noSeats:true,mates:["ashen"],
+    veh:"升降梯",vehIcon:"🛗",bossLoc:"K14 · K1402 剪輯室",bossRoom:"剪輯室",prepLoc:"K14 · K1401 名冊室外的小桌",
+    startLoc:"K101 · 升降梯口",startTitle:"🛗 停靠",
+    intro:it=>["升降梯在半途停了下來。燈一閃一閃，像是在猶豫要不要再往上。","門打開的時候，一股舊紙和墨水的味道撲了出來。",
+      "眼前是一座看不到邊的檔案館。書架高得看不見頂，每一格都塞滿了名字——被寫下的、被劃掉的、被撕掉一半的。",
+      "喇叭低聲念著：<b>「紀錄整理中。不合格的名字，將被刪除。」</b>",
+      `你們在書架底下摸到了 ${it}。`,
+      "阿燼把重劍握在手裡，走在最前面。他沒說話，但腳步比平常更慢——這裡的每一頁，都可能寫著他認識的人。"],
+    shade:["書架之間有東西在動，一個沒有五官的白色人形，正把一頁紙從牆上抹掉。","整排的名牌被一隻白色的手撫過，字跡像被橡皮擦過一樣，一個一個消失了。","空白的人影從書架後面走出來。它們手裡什麼也沒拿，卻讓人覺得，有什麼東西正在被拿走。"],
+    prep:"最後一張小桌。有人在這裡留下了乾淨的繃帶、半杯涼掉的茶，和一張字條：「受傷的人，先坐下。」只夠用一次。",
+    bossTitle:"✂️ 剪輯室",bossLines:["最深處的剪輯室裡，數不清的底片從天花板垂下來，像一片白色的簾幕。簾幕後面，一個拿著巨大剪刀的身影慢慢轉過身。",
+      "<b style='color:var(--red)'>剪輯師</b>。「這一段，不合格。」剪刀合上的聲音，像是什麼東西被剪斷了。"],
+    story:["剪輯師最初只是節目的後製人員，負責把每一季的畫面剪成好看的版本。","製作人給了他一條規則：觀眾不想看的，就不用留下。於是失敗的人、哭泣的人、被丟下的人，一個一個被剪掉了。",
+      "剪得多了，他自己也忘了，那些人曾經存在過。他不是壞人，他只是太習慣把人當成多餘的畫面。","晴說：他剪掉的每一個，我都還記得。這一次，換我們讓他想起來。"],
+    recap:["升降梯停在檔案館，這裡存放著節目裡所有被寫下、也被刪掉的名字。","在封存的牢房裡，你們遇見了晴。她抱著一本名冊，用羽毛筆，一個一個寫下被刪除的人。",
+      "在剪輯室，剪輯師最後一剪，剪向的是阿燼。他的名字差點從名冊上消失，晴一筆一畫，把它寫了回去。"],
+    bossIntro:"「這一段，不合格。」剪刀合上。",lose:"剪輯師把你們一個個剪出了畫面。",
+    fall:"剪輯師手裡的剪刀斷成兩截，垂下的底片全部掉落，露出牆後那些被塗掉的名字。",
+    escape:"剪輯師倒下的前一刻，他最後一剪，剪向的是阿燼。一道白光掠過，阿燼的名字，從名冊上消失了半個字。<br>晴握緊羽毛筆，一筆一畫，把那個字寫了回去。「我記得你。」她說。<br>阿燼站在原地，很久沒有動。最後，他低聲說：「……我以為，沒有人會再寫了。」<br>晴笑了笑，把名冊貼在胸口。「從今以後，由我寫。」<br>升降梯的燈再度亮起。名冊翻到了新的一頁，上面已經寫好了下一個地方的名字：<b>第三十七個座位</b>。"},
+  {name:"第三十七個座位",sub:"N1 沉默的階梯 → N15 舞台",icon:"🪑",floors:FLOORS_SEAT,minion:"shadowling",boss:"nameless",bossScale:2.1,bossHp:n=>190+n*42,noSeats:true,mates:["ashen","qing"],
+    veh:"升降梯",vehIcon:"🛗",bossLoc:"N15 · N1502 舞台",bossRoom:"舞台",prepLoc:"N15 · N1501 舞台後方的小桌",
+    startLoc:"N101 · 沉默的階梯",startTitle:"🪑 最深處",
+    intro:it=>["升降梯慢慢降到最深的地方，停住了。門打開，是一座望不到邊的大廳。",
+      "數不清的椅子排成整齊的列，每一把都面向同一個方向——一座空蕩蕩的舞台。椅子上坐著一個個模糊的影子，沒有臉，也沒有名字。",
+      "喇叭靜靜地響著，只有一句話，反覆：<b>「第三十七個座位，尚未入座。」</b>",
+      `你們在椅腳邊摸到了 ${it}。`,
+      "晴翻開名冊，手在微微發抖。「……他們都在這裡。每一個，我都寫過。」<br>阿燼走到她前面，把重劍橫在身側。「我在。」他說。"],
+    shade:["一排影子同時轉過頭來。它們沒有嘴，聲音卻從四面八方傳來：「……我是誰？」","椅子之間有東西在爬。影子沒有臉，卻朝你們伸出了手。","低語疊成了一片海：「……有人，記得我嗎？」"],
+    prep:"舞台後方的小桌上，擺著一排乾淨的羽毛筆，和一本還沒有寫滿的名冊。晴說，這些是她留給「之後的人」的。只夠用一次。",
+    bossTitle:"🪑 舞台",bossLines:["椅子上的影子一個一個站了起來。它們沒有臉，卻同時看向你們。",
+      "它們的聲音疊在一起，像無數個人在同一時間開口——<b style='color:var(--red)'>無名者</b>。「……有人，記得我嗎？」"],
+    story:["無名者不是一個魔王，而是很多很多人。","每一季，被丟下的人都會被帶到這裡。時間久了，他們不再有名字，也不再有臉，只剩下一個念頭：有人記得嗎。",
+      "他們的聲音疊在一起，變成了一個巨大的、悲傷的東西。它不想傷害你們，它只是太久，沒有被聽見了。","晴說：不要讓他們安靜。讓他們，被聽見。"],
+    recap:["升降梯降到最深的地方——一座坐滿無名影子的大廳。","在「第三十七個座位」前，晴把你們五個人的名字，一個一個寫在名冊的最後一頁。","你們打倒了無名者。晴把名冊上每一個名字都唸了出來，影子一個一個，變回了人的樣子。"],
+    finale:"📖 <b>《名冊》第一部完。</b>……但名冊的最後一頁，還沒有寫完。<br>💖 阿燼和晴出現在招募所了！",
+    bossIntro:"「……有人，記得我嗎？」",lose:"影子們安靜地圍了上來，把你們也變成了其中一把空椅子。",
+    fall:"無名者的身影一個一個散開。每散開一個，晴就輕聲唸出一個名字。",
+    escape:"晴翻開名冊，把最後一個名字也唸了出來。大廳裡，影子一個一個，變回了人的樣子。有人哭了，有人沒有說話，有人只是站在原地，像是第一次聽見自己的名字。<br>阿燼站在晴的身邊，一直沒有放下劍，直到最後一個人也被唸完。<br>升降梯的門打開了。這一次，往上的燈，是亮著的。<br>往上升的時候，有人輕聲問：「外面……有天亮嗎？」阿燼看著樓層的數字，一格一格往上跳。「……會有的。」<br>數字停在了最後一格之前。螢幕閃了一下，跳出一行字：<b>【第三季・參賽名單更新中——新成員：你們。】</b><br>晴合上名冊。「……故事，還沒有結束。」"},
   {name:"無盡深淵",sub:"沒有出口。每 5 層一個守門者，打倒後可以選擇撤離",icon:"🕳",abyss:true,
     startLoc:"D0 · 深淵入口",startTitle:"🕳 深淵",
     intro:it=>["禁閉室的停屍間底下還有一道暗門。門後的樓梯一直往下，看不到盡頭。",
@@ -4004,8 +4198,9 @@ function kingSay(kind,ch){
   glog("👑KING",`${kind} ${ch}`);
 }
 function npcBox(n){
-  return `<div class="npcbox"><div class="npcav"><img class="avimg" src="images/npc/${n.id}.webp" alt="" draggable="false" onerror="this.outerHTML='<span class=emo>👑</span>'"></div>
-    <div class="npcsay"><div class="npcname">👑 ${n.name}</div>${n.lines.map((p,i)=>`<p style="animation-delay:${.4+i*.25}s">${p}</p>`).join("")}</div></div>`;
+  const ic=n.icon||"👑";
+  return `<div class="npcbox"><div class="npcav"><img class="avimg" src="${n.img||`images/npc/${n.id}.webp`}" alt="" draggable="false" onerror="this.outerHTML='<span class=emo>${ic}</span>'"></div>
+    <div class="npcsay"><div class="npcname">${ic} ${n.name}</div>${n.lines.map((p,i)=>`<p style="animation-delay:${.4+i*.25}s">${p}</p>`).join("")}</div></div>`;
 }
 
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
@@ -4028,6 +4223,14 @@ function viewStory(){
       <div class="ratebar"><i style="width:${heard/36*100}%"></i></div></div></div>
   <p class="dim small">12 章是一條連續的故事。每一章的內容，通關後或聽過就會記在這裡；也可以回頭重看魔王的背景。</p>
   ${chs}
+  ${ABYSS>12?`<h3 style="margin-top:18px">📖 《名冊》</h3>
+  ${seen.s_ashen?`<img src="images/story/ashen_qing.webp" alt="" style="width:100%;max-width:520px;border-radius:12px;display:block;margin:6px 0 10px" onerror="this.remove()">`:""}
+  <p class="dim small">通關第 12 章後，往深淵去「接被丟下的人」的故事線。每一章通關後，劇情會記在這裡。</p>
+  ${CHAPTERS.slice(12,ABYSS).map((C,k)=>{const i=12+k,done=cl>i;
+    return `<details class="lorech"><summary><b>第 ${i+1} 章　${C.icon} ${C.name}</b> <span class="small dim">${done?"・📜":"🔒"}</span></summary>
+      ${done?`${(C.recap||[]).length?`<div class="kingrow"><div class="small dim">📖 這一章發生的事</div>${C.recap.map(p=>`<p>${p}</p>`).join("")}</div>`:""}
+      ${C.story?`<div class="kingrow bossst"><div class="small dim">📜 ${MONSTERS[C.boss].name}的故事</div>${C.story.map(p=>`<p>${p}</p>`).join("")}</div>`:""}`:`<div class="kingrow dim small">🔒 通關這一章後解鎖</div>`}
+    </details>`;}).join("")}`:""}
   <details class="lorech"><summary><b>🕳 無盡深淵</b> <span class="small dim">${seen.a0?"1/1":"0/1"}</span></summary>
     ${seen.a0?`<div class="kingrow">${KING_TALK.abyss[0].map(p=>`<p>${p}</p>`).join("")}</div>`:`<div class="kingrow dim small">🔒 進入無盡深淵後解鎖</div>`}</details>`;
 }
@@ -4042,7 +4245,7 @@ function progText(){const c=SAVE.prog.cleared;return c>=ABYSS?"全破":`第 ${c+
 const EV_ICON={rival:"👤",shade:"👻",loot:"📦",empty:"🕸️",gasleak:"☣️",stash:"💰",
   wine:"🍷",ration:"🥫",junk:"🗑️",granary:"🌾",warehouse:"🏭",teleport:"🌀",lotto:"🎰",pharmacy:"💊",respec:"🧬",surgery:"🏥",
   canteen:"🍽️",vault:"🏦",control:"🖥️",recycle:"♻️",armory:"🔫",water:"💧",laser:"🔴",gene:"🧪",helipad:"🚁",morgue:"⚰️",
-  cryo:"🧊",prisoncell:"🔒",blackmarket:"🕶️",casino:"🃏",chapel:"🕯️",abyssboss:"💀"};
+  cryo:"🧊",prisoncell:"🔒",blackmarket:"🕶️",casino:"🃏",chapel:"🕯️",abyssboss:"💀",ashen:"🔥",qing:"📖",qing2:"📖",whisper:"👥",seat37:"🪑"};
 const SHOP={pill:4,adrenaline:5,wine:3,rope:6,gasmask:5,knife:5,pistol:8,shotgun:12,rocket:9};
 const EV_HINT={rival:"有人的氣息",shade:"陰冷的低語",loot:"散落的物資",empty:"空蕩蕩",gasleak:"管線嘶嘶作響",stash:"金屬反光"};
 const ITEMS={
@@ -4062,7 +4265,7 @@ function pillHeal(){return 8+(hasRun("herb")?4:0);}
 /* ===================== RUN: STATE ===================== */
 let RUN=null;
 function hasRun(tag){return !!RUN&&RUN.party.some(m=>m.alive&&!m.ally&&CARDS[m.id].run===tag);}
-function own(){return RUN.party.filter(m=>!m.ally);}
+function own(){return RUN.party.filter(m=>!m.ally&&!m.story);} // 劇情隊友不算自己的角色（不吃經驗、不算覆沒）
 function aliveMembers(){return RUN.party.filter(m=>m.alive);}
 function allyMember(){return RUN.party.find(m=>m.ally&&m.alive);}
 function memberAtk(m){const w=m.weapon?ITEMS[m.weapon].weapon*(m.id==="merc"?2:1):0;return (m.bonus.atk||0)+w+(m.gear?m.gear.atk:0);}
@@ -4103,6 +4306,7 @@ function startRun(c=0,diff=1){
   glog("🚩RUN",`開始：${C.name}（${diffName(diff)}）`);
   RUN={active:true,ch:c,diff,fi:0,time:0,food:3,gold:0,items:[],party:team.map(id=>mkMember(id,SAVE.owned[id].stars,{gear:equipBonus(id),scale:lvScale(id),br:brOf(id)})),
     visited:{},choices:null,scene:null,sel:null,log:[],floors:C.abyss?[{label:"D0"}]:C.floors.map(f=>({label:f.label,rooms:f.rooms}))};
+  (C.mates||[]).forEach(id=>RUN.party.push(storyMate(id))); // 這條故事線已經加入的同伴
   const st=SAVE.stash,packed=st.items.map(gainItem);RUN.food+=st.food;
   const intro=[];if(packed.length||st.food)intro.push(`🎒 你們帶上了從商店買的行囊：${packed.join("、")}${st.food?`${packed.length?"、":""}🥫補給+${st.food}`:""}。`);
   SAVE.stash={items:[],food:0};
@@ -4128,6 +4332,8 @@ function resumeRun(){
   if(stage==="post")return abyssPost([]);
   const l=["記憶斷斷續續……你們在一陣混亂中回過神來。"];
   if(isBossFloor(RUN.fi))return RUN.ch===ABYSS?abyssBoss(l):helipad(l);
+  if(RUN.visited[RUN.fi]==="封存的牢房"&&!hasStory("qing"))return qingCamp({id:FL()[RUN.fi].rooms[0],name:"封存的牢房",ev:"qing"},["記憶斷斷續續……你們回到了牢房前。"]);
+  if(RUN.visited[RUN.fi]==="營火邊"&&!hasStory("ashen"))return ashenCamp({id:FL()[RUN.fi].rooms[0],name:"營火邊",ev:"ashen"},["記憶斷斷續續……你們回到了營火邊。"]);
   aliveMembers().forEach(m=>m.hp=Math.max(1,m.hp-Math.ceil(m.maxHp*.15)));
   l.push("<span class='dim'>（遠征中途離開：這個房間的事件已經錯過，全員受到少量傷害。）</span>");
   setScene(FL()[RUN.fi].label+" · "+(RUN.visited[RUN.fi]||""),"🔄 繼續遠征",l,cont());render();
@@ -4305,6 +4511,11 @@ function runEvent(ch,pre){
       {label:`🧪 ${m.name}：防禦+2`,act(){m.bonus.def+=2;geneDone(m,"防禦+2");}}
     ]).concat([{label:`${CH().vehIcon} 不拿了，直接前往${CH().bossRoom}`,cls:"pri",act:goHelipad}]));
   case "helipad":return helipad(L);
+  case "ashen":return ashenCamp(ch,L);
+  case "qing":return qingCamp(ch,L);
+  case "qing2":return qingLastPage(ch,L);
+  case "whisper":return whisperRoom(ch,L);
+  case "seat37":return seat37Room(ch,L);
   case "abyssboss":return abyssBoss(L);
   case "cryo":{
     const dead=own().filter(m=>!m.alive);
@@ -4363,9 +4574,9 @@ function blackMarket(ch,L,stock){
 const PRISONER_NO=()=>"#"+String(ri(1,999)).padStart(3,"0");
 function rivalUnit(fi){
   const c=RUN.ch;let pool,stars,scale;
-  if(c===0){pool=fi<3?POOL.R:fi<6?POOL.R.concat(POOL.SR,POOL.SR):Object.keys(CARDS);stars=clamp(1+Math.floor(fi/3)+(rnd()<.3?1:0),1,5);scale=.78+fi*.06;}
-  else if(c===ABYSS){pool=Object.keys(CARDS);stars=clamp(2+Math.floor(fi/8)+(rnd()<.3?1:0),1,5);scale=1+fi*.035;}
-  else{pool=fi<3?POOL.R.concat(POOL.SR):Object.keys(CARDS);stars=clamp(1+Math.floor((fi+c*3)/4)+(rnd()<.3?1:0),1,5);scale=.78+fi*.05+c*.07;}
+  if(c===0){pool=fi<3?POOL.R:fi<6?POOL.R.concat(POOL.SR,POOL.SR):CARD_IDS;stars=clamp(1+Math.floor(fi/3)+(rnd()<.3?1:0),1,5);scale=.78+fi*.06;}
+  else if(c===ABYSS){pool=CARD_IDS;stars=clamp(2+Math.floor(fi/8)+(rnd()<.3?1:0),1,5);scale=1+fi*.035;}
+  else{pool=fi<3?POOL.R.concat(POOL.SR):CARD_IDS;stars=clamp(1+Math.floor((fi+c*3)/4)+(rnd()<.3?1:0),1,5);scale=.78+fi*.05+c*.07;}
   const id=pick(pool);
   return {id,stars,scale,name:CARDS[id].name+PRISONER_NO()};
 }
@@ -4455,6 +4666,179 @@ function runBattle(ch,group,ambush,intro,after){
     }});
 }
 
+/* ===== 劇情隊友（《名冊》故事線）：能力跟著自己隊伍的平均值走，不吃養成 ===== */
+const hasStory=id=>!!RUN&&RUN.party.some(m=>m.story&&m.id===id);
+function storyMate(id){
+  const t=RUN.party.filter(m=>!m.ally&&!m.story),n=Math.max(1,t.length);
+  const avg=f=>t.reduce((a,x)=>a+f(x),0)/n;
+  const gear={};["hp","atk","def","spd","crit","steal","dodge","dr"].forEach(k=>gear[k]=Math.round(avg(x=>(x.gear&&x.gear[k])||0)));
+  const m=mkMember(id,clamp(Math.round(avg(x=>x.stars)),1,5),{scale:avg(x=>x.scale||1),br:Math.round(avg(x=>x.br||0)),gear});
+  m.story=true;m.trust=100;return m;
+}
+// 依隊伍裡的職業觸發不同的對白（隨機挑一個在場的職業）
+const BANTER={
+  ashen_meet:{
+    tank:n=>`阿燼看了 <b>${n}</b> 的盾一眼，微微點頭。「……站得穩。」`,
+    warrior:n=>`阿燼打量著 <b>${n}</b> 的武器。「別衝太前面。」`,
+    assassin:n=>`阿燼瞥了 <b>${n}</b> 一眼。「不要消失太久。」`,
+    ranger:n=>`阿燼朝 <b>${n}</b> 點點頭，把自己的位置往前挪了一步。「你在後面，我在前面。」`,
+    mage:n=>`阿燼看著 <b>${n}</b> 手裡的東西，沉默了一下。「……小心，別傷到自己人。」`,
+    support:n=>`阿燼的視線在 <b>${n}</b> 身上停了一下。「……別累倒。保護你們，是我的事。」`},
+  ashen_after:{
+    tank:n=>`<b>${n}</b> 把盾放下。阿燼走過去，用手背敲了敲盾面，什麼也沒說。`,
+    warrior:n=>`<b>${n}</b> 甩了甩手腕。阿燼看了一眼，微微點頭：「……不錯。」`,
+    assassin:n=>`<b>${n}</b> 擦著刀從陰影裡走出來。阿燼瞥了一眼：「下次，先說一聲。」`,
+    ranger:n=>`<b>${n}</b> 收起武器。阿燼回頭看了一眼：「你的位置，很好。」`,
+    mage:n=>`<b>${n}</b> 手上的光還沒散。阿燼問：「……累嗎？」語氣很輕，像怕驚動什麼。`,
+    support:n=>`<b>${n}</b> 替大家處理傷口。阿燼低頭看著手臂上被包好的繃帶，沉默了一下：「……謝謝。」`}
+};
+function banter(key){
+  const T=BANTER[key],ms=own().filter(m=>m.alive);if(!T||!ms.length)return "";
+  const m=pick(ms),f=T[CARDS[m.id].cls];return f?f(m.name):"";
+}
+BANTER.qing_meet={
+  tank:n=>`晴看著 <b>${n}</b> 身上的傷痕，輕輕皺眉。「你一直擋在最前面，對嗎。……辛苦了。」`,
+  warrior:n=>`晴注意到 <b>${n}</b> 握武器的手在微微發抖。「讓我看看你的手。」`,
+  assassin:n=>`晴看著 <b>${n}</b> 腰間的刀，輕聲說：「走在暗處的人，也需要被記得。」`,
+  ranger:n=>`晴朝 <b>${n}</b> 微微點頭。「你看得很遠。……謝謝你，替大家看路。」`,
+  mage:n=>`晴看見 <b>${n}</b> 手上殘留的光，眼睛亮了一下。「你的光，跟我的有點像。」`,
+  support:n=>`晴看著 <b>${n}</b> 腰間的藥袋，露出今天第一個笑容。「我們是同行呢。」`};
+BANTER.qing_after={
+  tank:n=>`<b>${n}</b> 擋在最前面。晴把手掌覆在他的肩甲上，淡綠色的光緩緩滲了進去。「辛苦了。」`,
+  warrior:n=>`晴替 <b>${n}</b> 包紮手上的傷口。「下次，先顧自己，好嗎。」`,
+  assassin:n=>`<b>${n}</b> 從陰影裡走出來，晴遞過去一塊乾淨的布。「臉上有血。」`,
+  ranger:n=>`晴蹲下，替 <b>${n}</b> 把散落的東西整理好。「謝謝你，一直在後面守著我們。」`,
+  mage:n=>`<b>${n}</b> 手上的光漸漸暗下去。晴輕聲說：「別硬撐，光會回來的。」`,
+  support:n=>`晴和 <b>${n}</b> 對看了一眼，同時伸手去拿同一卷繃帶，然後兩個人都笑了。`};
+const QING_NPC=lines=>({id:"qing",name:"晴",img:"images/avatars/qing.webp",icon:"✨",lines});
+function qingCamp(ch,L){
+  const where=loc(ch);
+  if(hasStory("qing")){setScene(where,"📖 封存的牢房",L.concat(["牢房的門開著。晴坐在門口，一邊翻著名冊，一邊輕聲唸著什麼。"]),cont([restOpt(ch)]));return render();}
+  setScene(where,"📖 封存的牢房",L.concat([
+    "走廊盡頭，是一間用鐵欄封起來的牢房。牆上貼滿了被撕下來的名牌。",
+    "牢房中央，一個長髮的女孩坐在地上，膝蓋上攤著一本厚得誇張的冊子。她手裡的羽毛筆沒有停，一邊寫，一邊用很輕的聲音唸著什麼。",
+    "她身邊飄著幾根白色的羽毛。每寫完一個名字，就有一根亮起來，然後慢慢升到天花板上，消失。",
+    "阿燼走到鐵欄前，站住了。他沒有說話，但擋在了你們和牢房之間——像是在確認，裡面的人有沒有危險。"]),[
+    {label:"🗣 「你是誰？為什麼被關在這裡？」",cls:"pri",act:()=>qingTalk(ch)},
+    {label:"🔓 「阿燼，打開它。」",act:()=>qingFree(ch,["阿燼看了你們一眼，點點頭。"])}]);
+  render();
+}
+function qingTalk(ch){
+  setScene(loc(ch),"📖 封存的牢房",["女孩停下了筆，抬起頭。"],[
+    {label:"🔓 「我們帶你出去。」",cls:"pri",act:()=>qingFree(ch,["你們對她伸出手。"])}]);
+  RUN.scene.npc=QING_NPC(["……你們受傷了。","（她抬起頭，第一句話，卻是這個。）","我叫晴。以前，是替被淘汰的人祈福、記下名字的人。","他們要我把名字刪掉。我沒有答應。","所以我被關在這裡。……不過沒關係，他們關得住我，關不住名字。"]);
+  render();
+}
+function qingFree(ch,pre){
+  setScene(loc(ch),"📖 封存的牢房",pre.concat([
+    "阿燼上前一步，重劍落下，鐵鎖應聲斷開。",
+    "晴站起來，抱著名冊，朝你們輕輕鞠了一個躬。",banter("qing_meet"),
+    "她看了阿燼一眼，視線停在他的盔甲和重劍上。「你一直在守著別人，對不對。」<br>阿燼沒有回答，只是把頭轉開了半寸。",
+    "走廊另一頭傳來沙沙聲——白色的人影開始靠近，一頁一頁，抹掉牆上的名字。晴把名冊抱得更緊。「他們來刪名字了。」"].filter(Boolean)),[
+    {label:"🛡 「站我們後面。」",cls:"pri",act:()=>qingJoin(ch)}]);
+  RUN.scene.npc=ASHEN_NPC(["……站我後面。","（他對晴說。聲音很輕，是這一路上，他第一次主動開口。）"]);
+  render();
+}
+function qingJoin(ch){
+  RUN.party.push(storyMate("qing"));SAVE.lore=SAVE.lore||{};SAVE.lore.s_qing=1;save();SFX.sr();
+  aliveMembers().forEach(m=>m.hp=Math.min(m.maxHp,m.hp+Math.ceil(m.maxHp*.3)));
+  const g=Array.from({length:2+(RUN.party.length>=5?1:0)},()=>({id:CH().minion,stars:1,scale:.8+RUN.fi*.05+RUN.ch*.08}));
+  setScene(loc(ch),"✨ 名字不會消失",["晴把羽毛筆插回髮間，翻開名冊。「我跟你們走。……我也想看看，外面有沒有天亮。」","她替每個人包紮了傷口，動作很輕。全隊恢復了一些體力。","白色的人影圍了上來，沒有五官，卻有一雙很大的、空白的手。"],[
+    {label:"⚔️ 迎戰",cls:"pri",act:()=>runBattle(ch,g,null,"「站我後面。」——阿燼橫劍擋在晴的前面。",()=>qingAfter(ch))}]);
+  RUN.scene.npc=QING_NPC(["治愈之光，與你同在。","……請多指教。"]);
+  render();
+}
+function qingAfter(ch){
+  setScene(loc(ch),"📖 名字不會消失",["最後一個白色的人影倒下，原本被它抹掉的牆面，慢慢浮現出了字跡。",banter("qing_after"),
+    "戰鬥一結束，晴第一件事不是看敵人，而是蹲到阿燼面前。「你的手臂。」「……沒事。」「讓我看。」",
+    "淡綠色的光從她掌心浮起。阿燼沒有再說話，只是把視線移向旁邊，耳尖有一點點紅。",
+    "「我會守住你，直到黎明。」他低聲說。晴愣了一下，笑著點頭。「嗯。我記得。」",
+    "<span class='dim'>（晴加入了隊伍。羈絆「名冊合照」生效：阿燼和晴同時在場時，阿燼攻擊+4%、晴的治療量+7.5%。）</span>"].filter(Boolean),cont([restOpt(ch)]));
+  render();
+}
+function qingLastPage(ch,L){
+  const where=loc(ch);
+  setScene(where,"📖 最後一頁",L.concat([
+    "剪輯室就在前面。走廊盡頭有一張被燈照亮的小桌，桌上攤開著名冊。",
+    "晴翻到某一頁，停了下來。那一頁上寫著一個名字：<b>阿燼</b>。名字下面，有一行小字：<span class='dim'>第二季・留下斷後・未歸。</span>",
+    "阿燼低頭看著那一行字。很久，什麼也沒說。",
+    "「他們把你寫成『未歸』。」晴輕聲說。「但我知道，你有回來。」"]),[
+    {label:"🕯️ 安靜地陪著他們（全隊恢復 25% 生命）",cls:"pri",act(){
+      aliveMembers().forEach(m=>m.hp=Math.min(m.maxHp,m.hp+Math.ceil(m.maxHp*.25)));SFX.heal();
+      setScene(where,"📖 最後一頁",["沒有人說話。燈下，晴一筆一畫，把「未歸」兩個字輕輕劃掉，在旁邊寫上：<b>歸來</b>。","阿燼轉過身，背對著大家，肩膀很輕地動了一下。全隊恢復了一些體力。"],cont([restOpt(ch)]));render();}},
+    {label:"🛡 「剪輯師就在前面。我們替你把名字守住。」（本次遠征全隊攻擊 +2）",act(){
+      aliveMembers().forEach(m=>m.bonus.atk=(m.bonus.atk||0)+2);SFX.sr();
+      setScene(where,"📖 最後一頁",["阿燼抬起頭，看向走廊盡頭的剪輯室，手慢慢握緊了劍柄。","「……好。」他說。這是他第一次，把『好』說得這麼用力。本次遠征全隊攻擊 +2。"],cont([restOpt(ch)]));render();}}]);
+  RUN.scene.npc=ASHEN_NPC(["……那一頁，是怎麼來的。","我在深淵喊過很多次。沒有人回答。","後來，我就不喊了。","……原來，有人聽見。"]);
+  render();
+}
+function whisperRoom(ch,L){
+  const where=loc(ch),g=Array.from({length:3},()=>({id:CH().minion,stars:1,scale:.8+RUN.fi*.05+RUN.ch*.08}));
+  setScene(where,"👥 無名的低語",L.concat([
+    "一排影子轉過頭來。它們沒有嘴，聲音卻從四面八方傳來：「……我是誰？」",
+    "晴往前一步，翻開名冊。她看著其中一個影子，一個字一個字，念出了一個名字。影子停住了，肩膀輕輕顫了一下。",
+    "阿燼站在她的斜前方，重劍橫在身側。他沒有看影子，只是看著晴的背影。"]),[
+    {label:"🕯️ 讓晴一個一個唸出名字（全隊恢復 30% 生命）",cls:"pri",act(){
+      aliveMembers().forEach(m=>m.hp=Math.min(m.maxHp,m.hp+Math.ceil(m.maxHp*.3)));SFX.heal();
+      setScene(where,"👥 被唸出名字的人",["晴一個一個唸下去。每唸出一個名字，就有一個影子慢慢站直了身體，朝她點點頭，然後安靜地退回黑暗裡。","阿燼始終守在她前面，沒有放下劍。全隊恢復了一些體力。"],cont([restOpt(ch)]));render();}},
+    {label:"⚔️ 這些影子不會讓我們過",act:()=>runBattle(ch,g,null,"影子們伸出了手——",null)}]);
+  render();
+}
+function seat37Room(ch,L){
+  const where=loc(ch);
+  setScene(where,"🪑 第三十七個座位",L.concat([
+    "舞台正中央，擺著一把椅子。它是整座大廳裡，唯一乾淨的一把。椅背上刻著一個數字：<b>37</b>。",
+    "晴把名冊翻到最後一頁。那一頁是空白的，只有最上面一行小字：<span class='dim'>為前來接人的人，保留。</span>",
+    "「這個座位，」晴輕聲說，「一直在等人。……不是被丟下的人，是來接他們的人。」",
+    "阿燼看著那把椅子，很久。最後，他搖了搖頭。「……我不坐。我守著。」"]),[
+    {label:"✍️ 晴把你們的名字，一個一個寫在最後一頁（全隊攻擊 +2、恢復 25% 生命）",cls:"pri",act(){
+      aliveMembers().forEach(m=>{m.bonus.atk=(m.bonus.atk||0)+2;m.hp=Math.min(m.maxHp,m.hp+Math.ceil(m.maxHp*.25));});SFX.ssr();
+      setScene(where,"🪑 第三十七個座位",["羽毛筆在紙上沙沙地走。一個、兩個、三個……每寫完一個名字，就有一根白羽毛亮起來，繞著你們轉了一圈。","「寫好了。」晴合上名冊，輕聲說。「以後，沒有人會被忘記。」本次遠征全隊攻擊 +2，並恢復了一些體力。"],cont([restOpt(ch)]));render();}},
+    {label:"🛡 阿燼：「我守著。」（全隊防禦 +10）",act(){
+      aliveMembers().forEach(m=>m.bonus.def=(m.bonus.def||0)+10);SFX.sr();
+      setScene(where,"🪑 第三十七個座位",["阿燼走到椅子後面，站定，重劍立在身前。像一座沉默的牆。","「……不管來什麼，」他說，「都得先過我這裡。」本次遠征全隊防禦 +10。"],cont([restOpt(ch)]));render();}}]);
+  RUN.scene.npc=QING_NPC(["我一直在想，這個座位是留給誰的。","現在我知道了。","——是留給，願意回頭的人。"]);
+  render();
+}
+const ASHEN_NPC=lines=>({id:"ashen",name:"阿燼",img:"images/avatars/ashen.webp",icon:"🗡",lines});
+function ashenCamp(ch,L){
+  const where=loc(ch);
+  if(hasStory("ashen")){setScene(where,"🔥 營火邊",L.concat(["營火還亮著。阿燼靠在重劍旁，閉著眼睛，卻沒有睡。"]),cont([restOpt(ch)]));return render();}
+  const talk=pre=>ashenTalk(ch,pre);
+  setScene(where,"🔥 營火邊",L.concat([
+    "一堆快燒完的火。幾個倖存者縮在火堆後面，抱著膝蓋，沒有人說話。",
+    "路中央站著一個穿黑紫色重甲的人。一把幾乎和他一樣高的重劍插在地上，他兩手按著劍柄，一動也不動。",
+    "他看著你們。不是敵意——是在掂量，你們會不會傷到他身後的人。"]),[
+    {label:"🗣 「我們只是路過，不會動他們。」",cls:"pri",act:()=>talk(["你們把手放在看得見的地方，慢慢開口。","他沒有回答。目光越過你們，掃了一眼身後的黑暗，確認沒有別的東西跟來。"])},
+    {label:"🤝 放下武器，慢慢靠近",act:()=>talk(["你們放下武器，掌心朝上，一步一步走近營火。","他的手指在劍柄上收緊了一下，又慢慢鬆開。"])},
+    {label:"⚔️ 硬闖過去",act(){
+      runBattle(ch,[{id:"ashen",stars:3,scale:1.2,name:"阿燼"}],null,"重劍拔出地面，擦出一串火星——他一句話也沒說，擋在了路中央。",
+        ()=>talk(["阿燼單膝跪地，用劍撐著身體。他沒有倒下，只是抬頭看著你們。","「……你們很強。」他喘著氣。「但你們，沒有傷害他們。」"]));}}
+  ]);render();
+}
+function ashenTalk(ch,pre){
+  setScene(loc(ch),"🔥 營火邊",pre.concat(["他沉默了很久。最後，往旁邊讓開了半步。",banter("ashen_meet")].filter(Boolean)),[
+    {label:"🛡 「我們幫你守。也帶他們一起走。」",cls:"pri",act:()=>ashenJoin(ch)}]);
+  RUN.scene.npc=ASHEN_NPC(["……往上的路，被回收者堵住了。","它抓走很多人。我守著這裡，沒讓它進來。","（他回頭看了一眼火堆旁的人。）……能不能，讓他們也跟著走。"]);
+  render();
+}
+function ashenJoin(ch){
+  RUN.party.push(storyMate("ashen"));SAVE.lore=SAVE.lore||{};SAVE.lore.s_ashen=1;save();SFX.sr();
+  const g=Array.from({length:2},()=>({id:CH().minion,stars:1,scale:.8+RUN.fi*.05+RUN.ch*.08}));
+  aliveMembers().forEach(m=>m.hp=Math.min(m.maxHp,m.hp+Math.ceil(m.maxHp*.3))); // 營火的暖意：先恢復一些體力
+  setScene(loc(ch),"🛡 守夜",["他點了一下頭。很輕，但你們看見了。","營火的暖意讓大家恢復了一些體力。","遠處傳來履帶碾過廢鐵的聲音，越來越近。火堆後的人開始發抖。","阿燼把重劍從地上拔起來，走到所有人的最前面。"],[
+    {label:"⚔️ 迎戰",cls:"pri",act:()=>runBattle(ch,g,null,"「站我後面。」——阿燼橫劍擋在最前面。",()=>ashenAfter(ch))}]);
+  RUN.scene.npc=ASHEN_NPC(["……阿燼。","我的名字。","站我後面。"]);
+  render();
+}
+function ashenAfter(ch){
+  setScene(loc(ch),"🔥 天亮之前",["最後一台機器倒在火堆旁，冒著黑煙。營地安靜了下來。",banter("ashen_after"),
+    "倖存者從火堆後面探出頭，有人哭了。阿燼把劍插回地上，背對著大家，站了很久。",
+    "「我會守住你們，直到黎明。」他說。像是對所有人說，又像是只對自己說。",
+    "<span class='dim'>（阿燼加入了隊伍。他的能力會跟著你們的平均水準成長。）</span>"].filter(Boolean),cont([restOpt(ch)]));
+  render();
+}
+
 /* ---- 停機坪 ---- */
 function helipad(L){
   const C=CH();RUN.fi=LAST();RUN.visited[RUN.fi]=C.bossRoom;
@@ -4503,7 +4887,7 @@ function abyssPost(L){
 }
 function seats(){
   const alive=aliveMembers(),C=CH();
-  if(alive.length<=3)return endRun(true,[C.escape]);
+  if(C.noSeats||alive.length<=3)return endRun(true,[C.escape]);
   const where=C.bossLoc;
   setScene(where,"💺 三個座位",[
     `${C.fall}你們衝向${C.veh}——`,
@@ -4555,7 +4939,8 @@ function endRun(escaped,lines=[]){
         P.cleared=r.ch+1;bonus+=FIRST_CLEAR[r.ch];
         out.push(`🏅 首次通關「${C.name}」！額外 🪙${FIRST_CLEAR[r.ch]}`);
         if(r.ch+1<ABYSS)out.push(`🔓 解鎖新章節：<b>第 ${r.ch+2} 章「${CHAPTERS[r.ch+1].name}」</b>`);
-        else out.push("🎬 <b>主線完結。</b>謝謝你陪他們走到最後。……不過深淵還在等你。");
+        else if(C.finale)out.push(C.finale);
+        (C.unlockCards||[]).forEach(id=>{const gr=grant(id);out.push(`💖 <b>${CARDS[id].name}</b> 加入了你的收藏！${gr.isNew?"（NEW!）":""}`);SFX.ssr();});
         if(r.ch===0)out.push(`🔓 解鎖：<b>🕳 無盡深淵</b>（沒有出口，每 5 層一個守門者）`);
       }
     }

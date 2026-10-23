@@ -1,0 +1,4 @@
+支線魔王台詞配音：以 Kokoro-82M 生成（hexgrad，Apache-2.0）
+- 模型  https://huggingface.co/hexgrad/Kokoro-82M
+- 程式  https://github.com/hexgrad/kokoro
+- 聲音  zm_yunjian／zm_yunyang（中文男聲），僅調整語速

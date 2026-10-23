@@ -1268,6 +1268,7 @@ let VIEW="home";
 const NAV=[["home","主頁"],["gacha","招募"],["team","隊伍"],["gear","裝備"],["shop","商店"],["run","遠征"],["train","練功房"],["arena","競技場"],["duel","雙人對決"],["ach","成就"],["story","故事"]];
 function locked(){return (RUN&&RUN.active)||(CUR_B&&!CUR_B.done)||(DUEL&&DUEL.phase==="battle")||!!NET;}
 function go(v){
+  stopEndVoice();
   if(locked()&&v!==VIEW){toast("進行中無法離開（遠征中可按「放棄遠征」）");return;}
   SFX.click();VIEW=v;NAV_OPEN=false;render();window.scrollTo(0,0);
 }
@@ -3380,19 +3381,19 @@ function viewOnline(){
 // img:true 的怪物頭像在 images/bosses/{id}_1.webp（一般）與 {id}_2.webp（爆氣）
 const BOSS_LIST=["doomhunter","voidlord","fatejudge","reaper","abyssking","nightemperor","overlord","endwalker"];
 Object.assign(MONSTERS,{
-  doomhunter:{name:"滅世獵手",img:true,r:"SSR",leechRed:0.1,hp:267,atk:30,def:8,spd:12,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:25},
+  doomhunter:{name:"滅世獵手",img:true,r:"SSR",leechRed:0.1,hp:267,atk:30,def:0,spd:12,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:25},
     quote:"追蹤、狩獵，直到目標消失。",
     skill:{name:"鎖定狙殺",cd:3,t:"none",kind:"dmg",desc:"狙擊生命最低的敵人（2.4倍、無視防禦）。爆氣後改為3倍，並對其他敵人掃射0.6倍。",
       use(B,u){const f=foes(B,u).sort((a,b)=>a.hp-b.hp);if(!f.length)return;blog(B,"🎯 紅色雷射點停在了獵物的眉心。","bad");
         hit(B,u,f[0],u.flags.p2?3:2.4,{pierce:true});if(u.flags.p2)foes(B,u).filter(x=>x!==f[0]).forEach(t=>hit(B,u,t,.6,{noSpread:true}));}},
     passive:{name:"獵殺本能",desc:"暴擊率+25%。｜吸血減免：玩家對自己造成傷害時，吸血效果減少 10%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
-  voidlord:{name:"虛空主宰",img:true,r:"SSR",leechRed:0.1,hp:667,atk:63,def:18,spd:21,boss2:{hp:.7,atk:.35,spd:2},gx:{dodge:15},
+  voidlord:{name:"虛空主宰",img:true,r:"SSR",leechRed:0.1,hp:667,atk:63,def:8,spd:21,boss2:{hp:.7,atk:.35,spd:2},gx:{dodge:15},
     quote:"我掌控的不只是數據，而是整個禁閉區的規則。",
     skill:{name:"系統覆寫",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.8倍傷害，每人40%機率暈眩1回合。爆氣後再清除敵人所有增益，並使其攻擊降低25%（2回合）。",
       use(B,u){blog(B,"💠 所有螢幕同時跳出同一行字：「權限已轉移」。","bad");foes(B,u).forEach(t=>{hit(B,u,t,.8,{noSpread:true});if(t.alive&&rnd()<.4)stun(B,t,1);
         if(u.flags.p2&&t.alive){t.buffs=t.buffs.filter(b=>b.v<0);buff(B,t,"atk",-Math.max(1,Math.round(stat(t,"atk")*.25)),2);}});}},
     passive:{name:"虛體",desc:"閃避率+15%。｜吸血減免：玩家對自己造成傷害時，吸血效果減少 10%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
-  fatejudge:{name:"命運裁決者",img:true,r:"SSR",leechRed:0.3,hp:1666,atk:138,def:42,spd:36,drp:.15,boss2:{hp:.7,atk:.35,spd:2},
+  fatejudge:{name:"命運裁決者",img:true,r:"SSR",leechRed:0.3,hp:1666,atk:138,def:32,spd:36,drp:.15,boss2:{hp:.7,atk:.35,spd:2},
     quote:"你的命運，由我來決定。",
     skill:{name:"命運之輪",cd:3,t:"none",kind:"dmg",desc:"轉動命運之輪，隨機：全體1倍傷害／自身恢復8%生命／單體2.5倍傷害。爆氣後一次轉兩格。",
       use(B,u){for(let n=0;n<(u.flags.p2?2:1);n++){const k=ri(1,3),f=foes(B,u);if(!f.length)break;
@@ -3400,28 +3401,28 @@ Object.assign(MONSTERS,{
         else if(k===2){blog(B,"☸ 命運之輪停在「延命」。","bad");heal(B,u,Math.round(u.maxHp*.08));}
         else{blog(B,"☸ 命運之輪停在「處刑」。","bad");hit(B,u,pick(f),2.5);}}}},
     passive:{name:"定數",desc:"受到的傷害降低15%。｜吸血減免：玩家對自己造成傷害時，吸血效果減少 30%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
-  reaper:{name:"死神代行者",img:true,r:"SSR",leechRed:0.3,hp:2000,atk:156,def:42,spd:42,boss2:{hp:.7,atk:.35,spd:2},gx:{steal:20},
+  reaper:{name:"死神代行者",img:true,r:"SSR",leechRed:0.3,hp:2000,atk:156,def:32,spd:42,boss2:{hp:.7,atk:.35,spd:2},gx:{steal:20},
     quote:"死亡不是終點，而是我的任務。",
     skill:{name:"收割",cd:3,t:"none",kind:"dmg",desc:"對生命最低的敵人揮下鐮刀（1.8倍）。爆氣後全體敵人再中毒（每回合受到自身攻擊20%的傷害，3回合）。",
       use(B,u){const f=foes(B,u).sort((a,b)=>a.hp-b.hp);if(!f.length)return;blog(B,"⚰ 鎖鏈嘩啦作響，鐮刀落下。","bad");hit(B,u,f[0],1.8);
         if(u.flags.p2)foes(B,u).forEach(t=>poison(B,t,Math.max(1,Math.round(stat(u,"atk")*.2)),3));}},
     passive:{name:"魂之收割",desc:"造成傷害時恢復傷害20%的生命。｜吸血減免：玩家對自己造成傷害時，吸血效果減少 30%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
-  abyssking:{name:"深淵君王",img:true,r:"SSR",leechRed:0.4,hp:2400,atk:168,def:54,spd:30,drp:.2,regenp:.03,boss2:{hp:.7,atk:.35,spd:2},
+  abyssking:{name:"深淵君王",img:true,r:"SSR",leechRed:0.4,hp:2400,atk:168,def:44,spd:30,drp:.2,regenp:.03,boss2:{hp:.7,atk:.35,spd:2},
     quote:"這片禁閉區，現在由我來支配。",
     skill:{name:"王權壓制",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.9倍傷害，並使其攻擊降低25%（2回合）。爆氣後傷害提高到1.2倍。",
       use(B,u){blog(B,"👑 「跪下。」整個房間的空氣沉了下來。","bad");foes(B,u).forEach(t=>{hit(B,u,t,u.flags.p2?1.2:.9,{noSpread:true});if(t.alive)buff(B,t,"atk",-Math.max(1,Math.round(stat(t,"atk")*.25)),2);});}},
     passive:{name:"王之軀",desc:"受到的傷害降低20%；每回合恢復3%最大生命。｜吸血減免：玩家對自己造成傷害時，吸血效果減少 40%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
-  nightemperor:{name:"永夜帝王",img:true,r:"SSR",leechRed:0.4,hp:4299,atk:270,def:81,spd:54,regenp:.04,boss2:{hp:.7,atk:.35,spd:2},gx:{dodge:10},
+  nightemperor:{name:"永夜帝王",img:true,r:"SSR",leechRed:0.4,hp:4299,atk:270,def:71,spd:54,regenp:.04,boss2:{hp:.7,atk:.35,spd:2},gx:{dodge:10},
     quote:"黑夜，是我的王座。",
     skill:{name:"永夜降臨",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.7倍傷害並中毒（每回合受到自身攻擊20%的傷害，3回合），自身恢復5%生命。爆氣後中毒加重為30%。",
       use(B,u){blog(B,"🌑 燈全滅了。黑暗裡只剩下那雙紫色的眼睛。","bad");foes(B,u).forEach(t=>{hit(B,u,t,.7,{noSpread:true});if(t.alive)poison(B,t,Math.max(1,Math.round(stat(u,"atk")*(u.flags.p2?.3:.2))),3);});heal(B,u,Math.round(u.maxHp*.05));}},
     passive:{name:"夜之主",desc:"每回合恢復4%最大生命；閃避率+10%。｜吸血減免：玩家對自己造成傷害時，吸血效果減少 40%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
-  overlord:{name:"天命霸主",img:true,r:"SSR",leechRed:0.5,hp:17000,atk:990,def:300,spd:180,drp:.25,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:15},
+  overlord:{name:"天命霸主",img:true,r:"SSR",leechRed:0.5,hp:17000,atk:990,def:290,spd:180,drp:.25,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:15},
     quote:"命運？由我來定義！",
     skill:{name:"天命審判",cd:3,t:"none",kind:"dmg",desc:"對單一敵人造成2倍傷害、其他敵人0.8倍，自身攻擊提高20%（3回合）。",
       use(B,u){const f=foes(B,u);if(!f.length)return;const t=pick(f);blog(B,"🌟 金色的光球從天而降。","bad");hit(B,u,t,2);foes(B,u).filter(x=>x!==t).forEach(x=>hit(B,u,x,.8,{noSpread:true}));buff(B,u,"atk",Math.max(1,Math.round(stat(u,"atk")*.2)),3);}},
     passive:{name:"霸者之威",desc:"受到的傷害降低25%；暴擊率+15%。｜吸血減免：玩家對自己造成傷害時，吸血效果減少 50%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}},
-  endwalker:{name:"終焉行者",img:true,r:"SSR",leechRed:0.7,hp:20000,atk:1080,def:330,spd:240,drp:.25,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:15,steal:15},
+  endwalker:{name:"終焉行者",img:true,r:"SSR",leechRed:0.7,hp:20000,atk:1080,def:320,spd:240,drp:.25,boss2:{hp:.7,atk:.35,spd:2},gx:{crit:15,steal:15},
     quote:"最後一個活著的，才是真正的勝者",
     skill:{name:"終焉",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成1.2倍傷害。爆氣後改為1.6倍，每人30%機率暈眩。",
       use(B,u){blog(B,"⛓ 「遊戲結束。」","bad");foes(B,u).forEach(t=>{hit(B,u,t,u.flags.p2?1.6:1.2,{noSpread:true});if(u.flags.p2&&t.alive&&rnd()<.3)stun(B,t,1);});}},
@@ -4372,6 +4373,7 @@ function openDiff(c){
     <div class="row" style="margin-top:10px"><button onclick="closeModal()">取消</button></div>`);
 }
 function startRun(c=0,diff=1){
+  stopEndVoice();
   const team=SAVE.team.filter(id=>SAVE.owned[id]);
   if(!team.length){toast("先去「隊伍」編隊吧");return;}
   if(!unlocked(c)){toast("尚未解鎖");return;}
@@ -4898,6 +4900,28 @@ const STORY_VOX={
  "現在我知道了。": "qing_08",
  "——是留給，願意回頭的人。": "qing_09"
 };
+// 第 13～15 章的結局配音（key＝章節索引 12、13、14）：旁白用一個聲音，阿燼、晴的台詞用各自的聲音，依序播放；不鎖按鈕，可隨時離開或按「重聽結局」
+const END_VOX={"12": ["end13_01"], "13": ["end14_01", "end14_02", "end14_03", "end14_04", "end14_05", "end14_06", "end14_07"], "14": ["end15_01", "end15_02", "end15_03", "end15_04", "end15_05", "end15_06"]};
+let ENDV={audio:null,id:0};
+function stopEndVoice(){ENDV.id++;if(ENDV.audio){try{ENDV.audio.pause();}catch(e){}ENDV.audio=null;}}
+function playEndVoice(ch){
+  stopEndVoice();
+  const q=(END_VOX[ch]||[]).slice();if(!q.length||SAVE.muted)return;
+  const my=ENDV.id;
+  const next=()=>{
+    if(ENDV.id!==my)return;
+    const f=q.shift();if(!f)return;
+    let adv=false,tm=0;
+    const go=()=>{if(adv)return;adv=true;clearTimeout(tm);setTimeout(next,300);};
+    try{
+      const a=new Audio(`voice/story/${f}.mp3`);ENDV.audio=a;a.volume=.95;
+      a.addEventListener("ended",go);a.addEventListener("error",go);
+      tm=setTimeout(go,30000);                     // 保險：單段最久等 30 秒
+      const pr=a.play();if(pr&&pr.catch)pr.catch(go);
+    }catch(e){go();}
+  };
+  next();
+}
 let NPCV={scene:null,audio:null,done:true,q:[]};
 function npcVoiceLocked(){return !!RUN&&!!RUN.scene&&NPCV.scene===RUN.scene&&!NPCV.done;}
 function stopNpcVoice(){if(NPCV.audio){try{NPCV.audio.pause();}catch(e){}NPCV.audio=null;}NPCV.done=true;}
@@ -5050,7 +5074,7 @@ function seats(){
 
 /* ---- 結算 ---- */
 function endRun(escaped,lines=[]){
-  stopNpcVoice();
+  stopNpcVoice();stopEndVoice();
   const r=RUN;r.active=false;r.escaped=escaped;SAVE.run=null;SAVE.runCk=null;
   glog("🏁RUN",`${CHAPTERS[r.ch].name}（${diffName(r.diff)}）結束：${escaped?"逃出":"失敗"}，到達 ${r.fi}`);
   const reached=r.fi,C=CHAPTERS[r.ch],abyss=r.ch===ABYSS,P=SAVE.prog;
@@ -5091,8 +5115,10 @@ function endRun(escaped,lines=[]){
   if(abyss){P.abyssBest=Math.max(P.abyssBest,reached);out.push(`<span class="dim">本次到達 D${reached}，最深紀錄 D${P.abyssBest}。</span>`);}
   SAVE.gold+=gain;if(r.ch===0)SAVE.stats.best=Math.max(SAVE.stats.best,reached);save();
   r.scene={loc:escaped?"夜空":"黑暗",title:escaped?(abyss?"🪜 撤離深淵":`${C.vehIcon} 逃出生天`):"✝ 遠征失敗",lines:out,opts:[{label:"回到主頁",cls:"pri",act(){RUN=null;go("home");}},{label:"再來一次",act(){RUN=null;startRun(r.ch,r.diff);}},
+    ...(escaped&&!abyss&&END_VOX[r.ch]?[{label:"🔊 重聽結局",act(){playEndVoice(r.ch);}}]:[]),
     ...(escaped&&!abyss&&CHAPTERS[r.ch+1]&&r.ch+1<ABYSS?[{label:`➡ 前往第 ${r.ch+2} 章`,act(){RUN=null;startRun(r.ch+1,r.diff);}}]:[])]};
   r.choices=null;if(escaped&&!abyss)kingSay("end",r.ch);VIEW="run";render();
+  if(escaped&&!abyss)playEndVoice(r.ch);
 }
 
 /* ---- 遠征介面 ---- */

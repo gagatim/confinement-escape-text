@@ -3324,11 +3324,20 @@ function startBoss(id){
   openModal(`<div style="text-align:center"><img src="images/bosses/${id}_1.webp" alt="" style="max-width:220px;width:60%;filter:drop-shadow(0 0 18px rgba(255,60,60,.55))">
     <div class="rEX" style="margin-top:6px">支線魔王</div><h2 style="margin:2px 0">${M.name}</h2>
     <p style="font-size:18px;font-style:italic;margin:14px 8px;line-height:1.6;text-shadow:0 0 12px rgba(229,72,77,.6)">「${M.quote}」</p>
-    <div class="row" style="justify-content:center"><button class="pri" onclick="beginBoss('${id}')">⚔ 開戰</button><button onclick="closeModal()">撤退</button></div></div>`);
+    <div class="row" style="justify-content:center"><button class="pri" onclick="beginBoss('${id}')">⚔ 開戰</button><button onclick="bossVoice('${id}')" title="再聽一次">🔊</button><button onclick="stopBossVoice();closeModal()">撤退</button></div></div>`);
+  bossVoice(id);
+}
+// 魔王台詞配音（voice/{魔王代號}.mp3，edge-tts 生成）；音效關閉時不播，檔案載入失敗就靜音略過
+let BOSS_VOICE=null;
+function stopBossVoice(){if(BOSS_VOICE){try{BOSS_VOICE.pause();}catch(e){}BOSS_VOICE=null;}}
+function bossVoice(id){
+  stopBossVoice();
+  if(SAVE.muted)return;
+  try{BOSS_VOICE=new Audio(`voice/${id}.mp3`);BOSS_VOICE.volume=.9;BOSS_VOICE.play().catch(()=>{});}catch(e){}
 }
 function beginBoss(id){
   if(!SAVE.team.length)return;
-  closeModal();
+  stopBossVoice();closeModal();
   const i=BOSS_LIST.indexOf(id),M=MONSTERS[id],r=bossReward(i),ids=SAVE.team.slice();
   startBattle({title:`魔王討伐・${M.name}`,home:"run",maxRound:200,A:ids.map(teamUnit),B:[{id,stars:1,gx:M.gx}],bgm:BOSS_BGM[id],
     intro:`「${M.quote}」`,

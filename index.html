@@ -2406,15 +2406,24 @@ function lvBar(id){
 
 /* ===================== TRAINING ===================== */
 // 練功房：可以無限重打的怪物關，難度自選（打贏才解鎖下一關），主要給經驗
-const TRAIN_MAX=30;
-const TRAIN_MOBS=["ghost","mutant","guard","drone","deepone","mirror"];
+const TRAIN_MAX=45;
+// 第 1～30 關用前 6 種；第 31～45 關陸續加入第 7～12 章的小怪（時間殘響、另一個你、攝影無人機、狂熱粉絲、第二季參賽者、冠軍親衛隊）
+const TRAIN_MOBS=["ghost","mutant","guard","drone","deepone","mirror","echo","doppel","cameraman","fanatic","rookie","guardian"];
 let TRAIN_SEL=1;
 function trainBest(){return SAVE.train.best||0;}
 function trainFoes(s){
-  const pool=TRAIN_MOBS.slice(0,Math.min(TRAIN_MOBS.length,2+Math.floor(s/5))),n=s<3?2:3;
+  const pool=TRAIN_MOBS.slice(0,s<=30?Math.min(6,2+Math.floor(s/5)):Math.min(TRAIN_MOBS.length,6+Math.ceil((s-30)/2.5))),n=s<3?2:3;
   return Array.from({length:n},()=>({id:pick(pool),stars:1,scale:.55+s*.07}));
 }
-function trainReward(s){return {exp:6+s*3,gold:1+Math.floor(s/4)};}
+// 經驗：6+3×關卡（第 45 關 141），沿用原本的公式
+// 金條：第 1～30 關 1+關卡/4；第 30、35、40、45 關分別是 8、9、12、14，中間的關卡依比例推算（四捨五入）
+const TRAIN_GOLD_PTS=[[30,8],[35,9],[40,12],[45,14]];
+function trainGold(s){
+  if(s<=30)return 1+Math.floor(s/4);
+  for(let i=1;i<TRAIN_GOLD_PTS.length;i++){const [a,ga]=TRAIN_GOLD_PTS[i-1],[b,gb]=TRAIN_GOLD_PTS[i];if(s<=b)return Math.round(ga+(gb-ga)*(s-a)/(b-a));}
+  return TRAIN_GOLD_PTS[TRAIN_GOLD_PTS.length-1][1];
+}
+function trainReward(s){return {exp:6+s*3,gold:trainGold(s)};}
 function viewTrain(){
   const best=trainBest(),top=Math.min(TRAIN_MAX,best+1);TRAIN_SEL=clamp(TRAIN_SEL,1,top);
   const r=trainReward(TRAIN_SEL),sample=trainFoes(TRAIN_SEL)[0],ss=cardStats(sample.id,1,sample.scale);

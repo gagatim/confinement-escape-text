@@ -1028,6 +1028,7 @@ function validSave(s){
     if(o.lv!=null&&!isInt(o.lv,1,LV_MAX))return `${CARDS[id].name} 等級異常`;
     if(o.br!=null&&!isInt(o.br,0,BR_MAX))return `${CARDS[id].name} 突破次數異常`;
     if(o.fruit!=null&&!["atk","def","spd"].every(k=>isInt((o.fruit||{})[k]||0,0,FRUIT_MAX)))return `${CARDS[id].name} 能力果實異常`;
+    if(o.gfruit!=null&&!["atk","def","spd"].every(k=>isInt((o.gfruit||{})[k]||0,0,GFRUIT_MAX)))return `${CARDS[id].name} 金色果實異常`;
     if(o.exp!=null&&!isInt(o.exp,0,lvNeed(o.lv||1)))return `${CARDS[id].name} 經驗值異常`;
   }
   if(!Array.isArray(s.team)||s.team.length>3||s.team.some(id=>!s.owned[id]))return "隊伍資料異常";
@@ -1042,6 +1043,7 @@ function validSave(s){
   }
   for(const k in s.charms)if(!isInt(s.charms[k],0,99999))return "強化道具數量異常";
   if(s.fruits)for(const k in s.fruits)if(!isInt(s.fruits[k],0,99999))return "能力果實數量異常";
+  if(s.gfruits)for(const k in s.gfruits)if(!isInt(s.gfruits[k],0,99999))return "金色果實數量異常";
   if(s.shards)for(const k in s.shards)if(!isInt(s.shards[k],0,99999))return "碎片數量異常";
   if(!isInt(s.arenaTier,1,100000))return "競技場層數異常";
   if(s.train&&!isInt(s.train.best,0,TRAIN_MAX))return "練功房進度異常";
@@ -1120,6 +1122,7 @@ function migrate(s){
   if(!s.stash)s.stash={items:[],food:0};
   if(!s.charms)s.charms={protect:0,luck:0};
   if(!s.fruits)s.fruits={atk:0,def:0,spd:0};
+  if(!s.gfruits)s.gfruits={atk:0,def:0,spd:0};
   if(!s.train)s.train={best:0};
   if(!s.bosses)s.bosses={};
   if(!s.ach)s.ach={};
@@ -1934,7 +1937,7 @@ function bonusOf(id,eq){
   const s={hp:0,atk:0,def:0,spd:0,crit:0,steal:0,dodge:0,dr:0};
   wornOf(id,eq).forEach(g=>{const t=gearStats(g);for(const k in t)s[k]+=t[k];});
   Object.entries(setCountsOf(id,eq)).forEach(([q,n])=>[2,3].forEach(k=>{if(n>=k)for(const st in SETS[q][k])s[st]+=SETS[q][k][st];}));
-  if(SAVE.owned[id]){const f=fruitOf(id);s.atk+=f.atk;s.def+=f.def;s.spd+=f.spd;} // 能力果實
+  if(SAVE.owned[id]){const f=fruitOf(id),g=gfruitOf(id);s.atk+=f.atk+g.atk*GFRUIT_GAIN;s.def+=f.def+g.def*GFRUIT_GAIN;s.spd+=f.spd+g.spd*GFRUIT_GAIN;} // 能力果實（含金色）
   return s;
 }
 function wornGear(id){const o=SAVE.owned[id];return o?wornOf(id,o.eq):[];}
@@ -2315,9 +2318,19 @@ function buyBox(k){
 /* ===== 能力果實：吃下去永久 +1，每名角色每種最多吃 3 顆 ===== */
 const FRUITS={atk:{name:"攻擊果實",icon:"🍎",stat:"攻擊",price:120},def:{name:"防禦果實",icon:"🍇",stat:"防禦",price:120},spd:{name:"速度果實",icon:"🍋",stat:"速度",price:150}};
 const FRUIT_MAX=3;
+const GFRUITS={atk:{name:"金色攻擊果實",icon:"🌟",stat:"攻擊"},def:{name:"金色防禦果實",icon:"🌟",stat:"防禦"},spd:{name:"金色速度果實",icon:"🌟",stat:"速度"}};
+const GFRUIT_GAIN=2,GFRUIT_MAX=2;
 const FRUIT_OPEN=false; // 取得方式還沒決定：先不開放（商店、掉落、角色頁的果實區都會隱藏；要開放時改成 true）
-const fruitVisible=id=>FRUIT_OPEN||Object.values(fruitOf(id)).some(v=>v>0)||Object.values(SAVE.fruits||{}).some(v=>v>0);
+const fruitVisible=id=>FRUIT_OPEN||[fruitOf(id),gfruitOf(id),SAVE.fruits||{},SAVE.gfruits||{}].some(o=>Object.values(o).some(v=>v>0));
 function fruitOf(id){const o=SAVE.owned[id],f=(o&&o.fruit)||{};return {atk:f.atk||0,def:f.def||0,spd:f.spd||0};}
+function gfruitOf(id){const o=SAVE.owned[id],f=(o&&o.gfruit)||{};return {atk:f.atk||0,def:f.def||0,spd:f.spd||0};}
+function eatGFruit(id,k){
+  const o=SAVE.owned[id],F=GFRUITS[k];if(!o||!F)return;
+  if(!SAVE.gfruits[k]){toast(`沒有${F.name}了`);return;}
+  const f=gfruitOf(id);if(f[k]>=GFRUIT_MAX){toast(`${CARDS[id].name} 的金色${F.stat}果實已經吃滿了`);return;}
+  SAVE.gfruits[k]--;o.gfruit={...f,[k]:f[k]+1};save();SFX.ssr();
+  toast(`${CARDS[id].name} 吃下${F.icon}${F.name}：${F.stat}永久 +${GFRUIT_GAIN}（${o.gfruit[k]}/${GFRUIT_MAX}）`);showCard(id);render();
+}
 function eatFruit(id,k){
   const o=SAVE.owned[id],F=FRUITS[k];if(!o||!F)return;
   if(!SAVE.fruits[k]){toast(`沒有${F.name}了`);return;}
@@ -2331,6 +2344,10 @@ function fruitHtml(id){
     <div class="row" style="margin-top:6px;gap:6px;flex-wrap:wrap">${Object.entries(FRUITS).map(([k,F])=>{
       const full=f[k]>=FRUIT_MAX,none=!SAVE.fruits[k];
       return `<button class="mini ${full?"":"gold"}" onclick="eatFruit('${id}','${k}')" ${full||none?"disabled":""}>${F.icon} ${F.stat} ${f[k]}/${FRUIT_MAX}${full?"（已滿）":`　持有 ×${SAVE.fruits[k]}`}</button>`;}).join("")}</div>
+    <div class="row" style="margin-top:6px;gap:6px;flex-wrap:wrap">${Object.entries(GFRUITS).map(([k,F])=>{
+      const g=gfruitOf(id),full=g[k]>=GFRUIT_MAX,none=!SAVE.gfruits[k];
+      return `<button class="mini ${full?"":"pri"}" onclick="eatGFruit('${id}','${k}')" ${full||none?"disabled":""}>${F.icon} 金色${F.stat} ${g[k]}/${GFRUIT_MAX}${full?"（已滿）":`　持有 ×${SAVE.gfruits[k]}`}</button>`;}).join("")}</div>
+    <div class="dim small" style="margin-top:4px">金色果實吃一顆永久 +${GFRUIT_GAIN}，每種最多 ${GFRUIT_MAX} 顆，跟一般果實各算各的。</div>
     <div class="dim small" style="margin-top:4px">果實跟著角色走：遣散、合成、熔煉這名角色時，已吃的果實不會退還。</div></div>`;
 }
 function buyFruit(k){const F=FRUITS[k];if(!FRUIT_OPEN||!pay(F.price))return;SAVE.fruits[k]++;save();SFX.click();toast(`${F.icon}${F.name} +1`);render();}

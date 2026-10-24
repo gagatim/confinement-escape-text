@@ -4813,7 +4813,8 @@ function runEvent(ch,pre){
   case "fsnack":{
     const C=CH();RUN.food++;
     aliveMembers().forEach(m=>m.hp=Math.min(m.maxHp,m.hp+Math.ceil(m.maxHp*.25)));
-    return S("🍜 泡麵角落",[pick(C.snack||["一個藏在角落的泡麵小站。"]),"全員恢復25%生命，<b>補給+1</b>。"],cont());}
+    S("🍜 泡麵角落",[pick(C.snack||["一個藏在角落的泡麵小站。"]),"全員恢復25%生命，<b>補給+1</b>。"],cont());
+    playFattyVoice(RUN.ch,"snack");return;}
   case "helipad":return helipad(L);
   case "ashen":return ashenCamp(ch,L);
   case "qing":return qingCamp(ch,L);
@@ -5131,7 +5132,7 @@ const STORY_VOX={
 // 第 13～15 章的結局配音（key＝章節索引 12、13、14）：旁白用一個聲音，阿燼、晴的台詞用各自的聲音，依序播放；不鎖按鈕，可隨時離開或按「重聽結局」
 const END_VOX={"12": ["end13_01"], "13": ["end14_01", "end14_02", "end14_03", "end14_04", "end14_05", "end14_06", "end14_07"], "14": ["end15_01", "end15_02", "end15_03", "end15_04", "end15_05", "end15_06"]};
 // 肥宅物語配音（旁白 Kokoro zm_yunxi、肥宅 edge-tts 雲哲；voice/gen_fatty_voice.py 產生）：每章開場、結局各一組
-const FATTY_VOX={"16": {"intro": ["fatty1_intro_01", "fatty1_intro_02", "fatty1_intro_03", "fatty1_intro_04"], "end": ["fatty1_end_01", "fatty1_end_02", "fatty1_end_03", "fatty1_end_04", "fatty1_end_05"]}, "17": {"intro": ["fatty2_intro_01", "fatty2_intro_02"], "end": ["fatty2_end_01", "fatty2_end_02", "fatty2_end_03", "fatty2_end_04", "fatty2_end_05", "fatty2_end_06", "fatty2_end_07"]}, "18": {"intro": ["fatty3_intro_01", "fatty3_intro_02", "fatty3_intro_03", "fatty3_intro_04"], "end": ["fatty3_end_01", "fatty3_end_02", "fatty3_end_03", "fatty3_end_04"]}, "19": {"intro": ["fatty4_intro_01", "fatty4_intro_02", "fatty4_intro_03"], "end": ["fatty4_end_01", "fatty4_end_02", "fatty4_end_03", "fatty4_end_04", "fatty4_end_05"]}, "20": {"intro": ["fatty5_intro_01", "fatty5_intro_02", "fatty5_intro_03"], "end": ["fatty5_end_01", "fatty5_end_02", "fatty5_end_03", "fatty5_end_04", "fatty5_end_05", "fatty5_end_06"]}};
+const FATTY_VOX={"16": {"intro": ["fatty1_intro_01", "fatty1_intro_02", "fatty1_intro_03", "fatty1_intro_04"], "end": ["fatty1_end_01", "fatty1_end_02", "fatty1_end_03", "fatty1_end_04", "fatty1_end_05"], "boss": ["fatty1_boss_01"], "story": ["fatty1_story_01", "fatty1_story_02", "fatty1_story_03", "fatty1_story_04"], "snack": ["fatty1_snack_01", "fatty1_snack_02"]}, "17": {"intro": ["fatty2_intro_01", "fatty2_intro_02"], "end": ["fatty2_end_01", "fatty2_end_02", "fatty2_end_03", "fatty2_end_04", "fatty2_end_05", "fatty2_end_06", "fatty2_end_07"], "boss": ["fatty2_boss_01"], "story": ["fatty2_story_01", "fatty2_story_02", "fatty2_story_03", "fatty2_story_04"], "snack": ["fatty2_snack_01", "fatty2_snack_02"]}, "18": {"intro": ["fatty3_intro_01", "fatty3_intro_02", "fatty3_intro_03", "fatty3_intro_04"], "end": ["fatty3_end_01", "fatty3_end_02", "fatty3_end_03", "fatty3_end_04"], "boss": ["fatty3_boss_01"], "story": ["fatty3_story_01", "fatty3_story_02", "fatty3_story_03"], "snack": ["fatty3_snack_01", "fatty3_snack_02", "fatty3_snack_03", "fatty3_snack_04"]}, "19": {"intro": ["fatty4_intro_01", "fatty4_intro_02", "fatty4_intro_03"], "end": ["fatty4_end_01", "fatty4_end_02", "fatty4_end_03", "fatty4_end_04", "fatty4_end_05"], "boss": ["fatty4_boss_01"], "story": ["fatty4_story_01", "fatty4_story_02", "fatty4_story_03"], "snack": ["fatty4_snack_01", "fatty4_snack_02"]}, "20": {"intro": ["fatty5_intro_01", "fatty5_intro_02", "fatty5_intro_03"], "end": ["fatty5_end_01", "fatty5_end_02", "fatty5_end_03", "fatty5_end_04", "fatty5_end_05", "fatty5_end_06"], "boss": ["fatty5_boss_01", "fatty5_boss_02", "fatty5_boss_03"], "story": ["fatty5_story_01", "fatty5_story_02", "fatty5_story_03", "fatty5_story_04"], "snack": ["fatty5_snack_01"]}};
 Object.keys(FATTY_VOX).forEach(c=>{END_VOX[c]=FATTY_VOX[c].end;});
 let ENDV={audio:null,id:0,lock:false,scene:null};
 function stopEndVoice(){ENDV.id++;ENDV.lock=false;if(ENDV.audio){try{ENDV.audio.pause();}catch(e){}ENDV.audio=null;}}
@@ -5145,6 +5146,13 @@ function playEndVoice(ch,force=false){
   stopEndVoice();
   const q=(END_VOX[ch]||[]).slice();if(!q.length||SAVE.muted)return;
   playVoiceList(q,force,"🔊 結局播放中……第一次通關，請先聽完");
+}
+// 肥宅物語其他場景配音（boss＝魔王戰前、story＝聽魔王的故事、snack＝泡麵角落）；force＝第一次聽要聽完
+function playFattyVoice(c,kind,force=true){
+  stopEndVoice();
+  const q=((FATTY_VOX[c]||{})[kind]||[]).slice();if(!q.length||SAVE.muted)return;
+  SAVE.lore=SAVE.lore||{};const key="fv"+kind+c;
+  playVoiceList(q,force&&!SAVE.lore[key],"🔊 故事播放中……第一次進入這一幕，請先聽完",()=>{if(!SAVE.lore[key]){SAVE.lore[key]=1;save();}});
 }
 // 肥宅物語開場配音：第一次進入這一章要聽完（聽完會記起來），之後不強迫
 function playIntroVoice(c){
@@ -5263,8 +5271,9 @@ function helipad(L){
       }});
   }};
   // 有魔王故事的章節，可以先聽故事再開打
-  const opts=C.story?[fight,{label:`📜 聽聽${MONSTERS[C.boss].name}的故事`,act(){setScene(C.bossLoc,`📜 ${MONSTERS[C.boss].name}的故事`,C.story,[fight]);render();}}]:[fight];
+  const opts=C.story?[fight,{label:`📜 聽聽${MONSTERS[C.boss].name}的故事`,act(){setScene(C.bossLoc,`📜 ${MONSTERS[C.boss].name}的故事`,C.story,[fight]);render();if(C.fatty)playFattyVoice(RUN.ch,"story",false);}}]:[fight];
   setScene(C.bossLoc,C.bossTitle,L.concat(C.bossLines),opts);if(C.bossPics)RUN.scene.pics=C.bossPics;kingSay("boss",RUN.ch);render();
+  if(C.fatty)playFattyVoice(RUN.ch,"boss");
 }
 /* ---- 深淵守門者 ---- */
 function abyssBoss(L){

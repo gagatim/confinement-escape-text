@@ -15,12 +15,14 @@
 
 旁白        沿用上面的旁白（Kokoro zm_yunxi，語速 0.85）
 肥宅        edge-tts   zh-TW-YunJheNeural（雲哲，台灣腔男聲）   只有肥宅使用
-檔案        voice/story/fatty{章}_intro_NN.mp3（開場）、fatty{章}_end_NN.mp3（結局），共 43 個
+檔案        voice/story/fatty{章}_{類型}_NN.mp3，共 79 個。類型：
+              intro＝開場、end＝結局、boss＝魔王戰前、story＝聽魔王的故事（選聽）、snack＝泡麵角落
 產生工具    voice/gen_fatty_voice.py（台詞文字寫在裡面，要改台詞就改這個檔案再重跑）
 
 強迫聽規則：每章開場與結局，第一次進入要聽完才能按按鈕；之後重打不強迫，結局畫面可按「重聽結局」。
-  - 開場：聽完後記在存檔（SAVE.lore.fv16～fv20），之後不再強迫。
+  - 開場、魔王戰前、泡麵角落：聽完後記在存檔（SAVE.lore.fv16～fv20、fvboss*、fvsnack*），之後不再強迫。
   - 結局：第一次通關該章才強迫。
+  - 聽魔王的故事：自動播放，但不強迫。
 
 ================ 這次試聽的 10 個候選（供參考） ================
 

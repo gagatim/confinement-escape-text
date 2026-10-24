@@ -2015,7 +2015,7 @@ function gearSort(a,b){
   return GEAR_ASC?-d:d;
 }
 function sortBar(){
-  return `<div class="filters sortbar"><span class="small dim" style="align-self:center">排序：</span>${Object.entries(GEAR_SORTS).map(([k,l])=>`<button class="${GEAR_SORT===k?"on":""}" onclick="setGearSort('${k}')">${l}${GEAR_SORT===k?(GEAR_ASC?" ↑":" ↓"):""}</button>`).join("")}</div>`;
+  return `<div class="filters sortbar"><span class="small dim" style="align-self:center">排序：</span>${Object.entries(GEAR_SORTS).map(([k,l])=>`<button class="${GEAR_SORT===k?"on":""}" onclick="setGearSort('${k}')">${l}${GEAR_SORT===k?(GEAR_ASC?" ↑":" ↓"):""}</button>`).join("")}<span class="small dim" style="align-self:center;margin-left:8px">部位：</span>${Object.keys(SLOTS).map(k=>{const fit=GEAR_MODE==="fit",on=fit?FIT_SLOT===k:GEAR_TAB===k;return `<button class="${on?"on":""}" onclick="${fit?`fitSlot('${k}')`:`GEAR_TAB=GEAR_TAB==='${k}'?'':'${k}';render()`}">${SLOTS[k]}</button>`;}).join("")}</div>`;
 }
 function gearCard(g,onclick){
   const G=GEAR[g.base],w=gearOwner(g.uid);

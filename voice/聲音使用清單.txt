@@ -15,7 +15,7 @@
 
 旁白        沿用上面的旁白（Kokoro zm_yunxi，語速 0.85）
 肥宅        edge-tts   zh-TW-YunJheNeural（雲哲，台灣腔男聲）   只有肥宅使用
-檔案        voice/story/fatty{章}_{類型}_NN.mp3，共 79 個。類型：
+檔案        voice/story/fatty{章}_{類型}_NN.mp3，共 80 個。類型：
               intro＝開場、end＝結局、boss＝魔王戰前、story＝聽魔王的故事（選聽）、snack＝泡麵角落
 產生工具    voice/gen_fatty_voice.py（台詞文字寫在裡面，要改台詞就改這個檔案再重跑）
 

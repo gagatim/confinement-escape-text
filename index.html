@@ -984,7 +984,7 @@ function cardStats(id,stars=1,scale=1,br=0){
 const SAVE_KEY="jbts_textgame_v1";
 // 遊戲版本（存檔格式有新增內容、舊頁面可能誤判時加 1）。存檔會記錄是哪個版本寫的；
 // 舊頁面讀到比自己新的存檔時，不做作弊檢查、不清空、也不寫回，只提示玩家重新整理頁面
-const APP_V=4;
+const APP_V=5;
 let STALE=false;
 const isNewerSave=s=>!!s&&(s.appv||0)>APP_V;
 function staleNotice(){

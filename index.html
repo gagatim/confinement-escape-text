@@ -527,7 +527,7 @@ const CARDS={
   exorcist:{name:"還魂師",r:"SSR",hp:28,atk:5,def:1,spd:4,
     skill:{name:"安魂儀式",cd:5,t:"none",kind:"heal",desc:"冷卻5回合。有隊友倒下時：復活其中最大生命最高的一名，復活後恢復40%最大生命。沒人倒下時：改為全隊活著的成員各恢復8%最大生命（至少4）。",
       use(B,u){const d=deadMates(B,u);if(d.length){const t=d.sort((a,b)=>b.maxHp-a.maxHp)[0];revive(B,t,.4);blog(B,`${nm(u)} 吟唱安魂曲，${nm(t)} 從暗影中歸來！`,"big");}else mates(B,u).forEach(m=>heal(B,m,Math.max(4,Math.round(m.maxHp*.08))));}},
-    passive:{name:"臨終祝禱",desc:"每場戰鬥中，自己第一次倒下時會立刻復活，恢復30%最大生命，並永久速度+1（本場）。每場只會觸發一次。"}},
+    passive:{name:"臨終祝禱",desc:"每場戰鬥中，自己第一次倒下時會立刻復活，恢復30%最大生命，並增加防禦15點（本場）。每場只會觸發一次。"}},
   butcher:{name:"屠夫",r:"SSR",hp:32,atk:7,def:1,spd:3,
     skill:{name:"屠宰",cd:3,t:"enemy",kind:"dmg",desc:"冷卻3回合。選擇一名敵人，造成2.2倍攻擊傷害（會受對方防禦影響）。",use(B,u,t){hit(B,u,t,2.2);}},
     passive:{name:"鮮血盛宴",desc:"每次造成傷害，都會恢復該傷害30%的生命（至少1），普通攻擊和技能都算。"}},
@@ -2660,7 +2660,7 @@ function handleDeath(B,t,killer){
   if(!t.alive)return;
   const pm=B.units.find(x=>x.side===t.side&&x.alive&&x.id==="paramedic"&&x!==t);
   if(pm&&!B.flags["pm"+t.side]){B.flags["pm"+t.side]=1;t.hp=1;blog(B,`🚑 ${nm(pm)} 的黃金十分鐘！${nm(t)} 撐住了最後一口氣。`,"big");return;}
-  if(t.id==="exorcist"&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*.3);t.perm.spd=(t.perm.spd||0)+1;blog(B,`${nm(t)} 的臨終祝禱生效，從死亡中歸來！`,"big");fx(B,t,"復活","heal");return;}
+  if(t.id==="exorcist"&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*.3);t.perm.def=(t.perm.def||0)+15;blog(B,`${nm(t)} 的臨終祝禱生效，從死亡中歸來！（本場防禦+15）`,"big");fx(B,t,"復活","heal");return;}
   if(DEF(t.id).boss2&&!t.flags.p2){
     const b2=DEF(t.id).boss2;t.flags.p2=1;t.hp=Math.ceil(t.maxHp*b2.hp);t.st={};t.buffs=t.buffs.filter(b=>b.v>0);
     t.perm.atk=(t.perm.atk||0)+Math.round(t.atk*b2.atk);t.perm.spd=(t.perm.spd||0)+b2.spd;t.cd=0;

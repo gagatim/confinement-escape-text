@@ -2082,7 +2082,17 @@ function viewDex(){
   <p class="dim small" style="margin-top:0">同稀有度的武器、防具、飾品穿 2 件、3 件有額外效果（3 件會同時拿到 2 件的效果）。</p>
   <div class="panel small">${GQ.map(q=>`<div style="margin-bottom:6px"><b class="r${q}">${GQ_NAME[q]}・${SETS[q].name}</b>　2 件：${statStr(SETS[q][2])}　3 件：${statStr(SETS[q][3])}</div>`).join("")}</div>
   <h3 style="margin-top:18px">📖 裝備素質說明</h3>
-  <div class="panel small">${STAT_HELP.map(([l,t])=>`<div style="margin-bottom:6px"><b>${l}</b>　${t}</div>`).join("")}</div>`;
+  <div class="panel small">${STAT_HELP.map(([l,t])=>`<div style="margin-bottom:6px"><b>${l}</b>　${t}</div>`).join("")}</div>
+  <h3 style="margin-top:18px">🎲 裝備浮動屬性說明</h3>
+  <div class="panel small">
+    <div style="margin-bottom:8px"><b>① 品質浮動</b>　每件裝備獲得時會骰一個「品質」，基礎數值（生命、攻擊、防禦、速度）乘上這個百分比，在範圍內每個整數機率相同。同一種裝備可能強弱不同，裝備詳情會顯示品質。</div>
+    <div style="margin-bottom:8px">${GQ.map(q=>`<span class="r${q}" style="margin-right:12px"><b>${q}</b> ${GEAR_ROLL[q][0]}%～${GEAR_ROLL[q][1]}%</span>`).join("")}</div>
+    <div style="margin-bottom:8px"><b>② 強化加成</b>　最終數值 = 基礎 × 品質 × 強化。+1～+${ENH_MAX} 每級 +8%；SSR 以上可以進入超頻區（+${ENH_MAX+1}～+${ENH_OC}），每級 +3.5%。</div>
+    <div style="margin-bottom:8px"><b>③ 隨機詞條</b>　N 沒有詞條；R 有 0～1 條（30% 有）、SR 1 條、SSR 1～2 條（50% 兩條）、UR 2～3 條（30% 三條）、EX 固定 3 條，種類不重複。詞條是固定加值，<b>不吃品質也不吃強化</b>；稀有度越高，每條的數值範圍越大（數值表見上方「隨機詞條數值表」）。</div>
+    <div style="margin-bottom:8px"><b>④ 詞條數值分布</b>　數值多半落在範圍中間：最低 2%、偏低 13%、中間 70%、偏高 13%、最高 2%。骰到該欄最大值會顯示 <span class="fxmax">🌟</span> 發光。</div>
+    <div style="margin-bottom:8px"><b>⑤ 稀有詞條</b>　每條詞條有 ${Math.round(AFFIX_RARE*100)}% 機率變成 <span class="fxrare">💎</span> 稀有詞條，數值為該欄最大值 +1（百分比 +1%、數字 +1）。</div>
+    <div><b>⑥ 出現機率</b>　8 種詞條機會相同，只有「吸血」被抽到的機率是其他的一半。EX 魔王專屬裝備的詞條也是隨機的。</div>
+  </div>`;
 }
 const STAT_HELP=[
   ["❤ 生命","角色的血量。歸零就倒下，裝備的生命是直接加上去的固定數值。"],

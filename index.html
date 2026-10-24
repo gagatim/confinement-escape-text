@@ -1248,7 +1248,7 @@ function bgmWant(){
   if(VIEW==="duel")return "duel";
   if(VIEW==="run"&&RUN&&RUN.active)return RUN.ch===ABYSS?"abyss":"run";
   if(VIEW==="story")return "story"; // 老國王的故事頁：莊嚴的合唱曲
-  if(VIEW==="gacha"||VIEW==="team"||VIEW==="gear")return "town"; // 招募、隊伍、裝備：中世紀風
+  if(VIEW==="gacha"||VIEW==="team"||VIEW==="dex"||VIEW==="gear")return "town"; // 招募、隊伍、裝備：中世紀風
   return "main";
 }
 function syncBgm(){
@@ -1265,7 +1265,7 @@ function toggleBgm(){
 
 /* ===================== VIEW ROUTER ===================== */
 let VIEW="home";
-const NAV=[["home","主頁"],["gacha","招募"],["team","隊伍"],["gear","裝備"],["shop","商店"],["run","遠征"],["train","練功房"],["arena","競技場"],["duel","雙人對決"],["ach","成就"],["story","故事"]];
+const NAV=[["home","主頁"],["gacha","招募"],["team","隊伍"],["dex","圖鑑"],["gear","裝備"],["shop","商店"],["run","遠征"],["boss","魔王討伐"],["train","練功房"],["arena","競技場"],["duel","雙人對決"],["ach","成就"],["story","故事"]];
 function locked(){return (RUN&&RUN.active)||(CUR_B&&!CUR_B.done)||(DUEL&&DUEL.phase==="battle")||!!NET;}
 function go(v){
   if(npcVoiceLocked()&&v!==VIEW){toast("對話還沒說完，請先聽完");return;}
@@ -1299,7 +1299,7 @@ function render(){
 }
 function renderInner(){
   renderHeader();
-  const f={home:viewHome,gacha:viewGacha,team:viewTeam,gear:viewGear,shop:viewShop,run:viewRun,train:viewTrain,arena:viewArena,ach:viewAch,story:viewStory,duel:viewDuel,battle:viewBattle}[VIEW]||viewHome;
+  const f={home:viewHome,gacha:viewGacha,team:viewTeam,dex:viewCodex,gear:viewGear,shop:viewShop,run:viewRun,boss:viewBossPage,train:viewTrain,arena:viewArena,ach:viewAch,story:viewStory,duel:viewDuel,battle:viewBattle}[VIEW]||viewHome;
   $("#view").innerHTML=f();
   if(VIEW==="battle"){const l=$("#blog");if(l)l.scrollTop=l.scrollHeight;kbApply();}
   if(CUR_B&&CUR_B.online&&!CUR_B.guest)pushSnap(CUR_B);
@@ -1590,6 +1590,17 @@ function viewTeam(){
   <label class="small"><input type="checkbox" ${SHOW_LOCKED?"checked":""} onchange="SHOW_LOCKED=this.checked;render()"> 顯示未獲得</label></div>
   ${clsFilter(TEAM_CLS,"setTeamCls")}
   ${TEAM_CLS?`<p class="small dim" style="margin:0 0 8px">${CLASSES[TEAM_CLS].icon}${CLASSES[TEAM_CLS].name}：${CLASSES[TEAM_CLS].desc}</p>`:""}
+  <div class="cardgrid">${ids.map(id=>cardTile(id,`showCard('${id}')`)).join("")}</div>`;
+}
+// 圖鑑：全部遊戲角色（含未獲得）＋ 8 位魔王
+let DEX_CLS="";
+function setDexCls(k){DEX_CLS=k;render();}
+function viewCodex(){
+  const ids=sortedIds().filter(id=>!DEX_CLS||CARDS[id].cls===DEX_CLS);
+  return `<h2>圖鑑</h2>
+  <h3>遊戲角色（${ownedCount()}/${CARD_IDS.length}）</h3>
+  ${clsFilter(DEX_CLS,"setDexCls")}
+  ${DEX_CLS?`<p class="small dim" style="margin:0 0 8px">${CLASSES[DEX_CLS].icon}${CLASSES[DEX_CLS].name}：${CLASSES[DEX_CLS].desc}</p>`:""}
   <div class="cardgrid">${ids.map(id=>cardTile(id,`showCard('${id}')`)).join("")}</div>
   <h3 style="margin-top:22px">👑 魔王角色 <span class="dim small">（無法獲取・僅供展示）</span></h3>
   <p class="dim small" style="margin-top:0">支線「魔王討伐」的 8 位魔王。點開可以看一般型態、爆氣型態、技能和個人故事。</p>
@@ -1608,7 +1619,7 @@ function openBossShow(id,ph){
     <div class="sk"><b>📜 ${M.name}的故事</b>${BOSS_STORY[id].map(t=>`<p style="margin:6px 0">${t}</p>`).join("")}</div>
     ${skillHtml(M)}
     <div class="sk"><b>💢 爆氣</b><br>第一條命打完後爆氣：生命回復到 ${Math.round(M.boss2.hp*100)}%、攻擊+${Math.round(M.boss2.atk*100)}%、速度+${M.boss2.spd}、解除減益與中毒、技能冷卻 -1。</div>
-    <div class="row" style="margin-top:12px"><button class="pri" onclick="closeModal();go('run')">前往魔王討伐</button><button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
+    <div class="row" style="margin-top:12px"><button class="pri" onclick="closeModal();go('boss')">前往魔王討伐</button><button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
 }
 function skillHtml(d){
   return `<div class="sk"><b>✦ ${d.skill.name}</b> <span class="dim small">冷卻 ${d.skill.cd}</span><br>${d.skill.desc}</div>
@@ -3485,6 +3496,7 @@ function bossCard(id,i){
     <div class="bn">${i+1}. ${M.name}</div><div class="small dim">${ok?M.quote:"打倒上一位魔王後解鎖"}</div>
     <div class="small" style="color:${n?"var(--green)":"var(--gold)"}">${n?`已討伐 ${n} 次`:ok?"未討伐":""}</div></div>`;
 }
+function viewBossPage(){return `<h2>魔王討伐</h2>${viewBosses()}`;}
 function viewBosses(){
   if(SAVE.prog.cleared<BOSS_REQ)return `<h3>⚔ 魔王討伐（支線）</h3><div class="panel dim">逃出第 1 章「禁閉室」後開放。</div>`;
   return `<h3>⚔ 魔王討伐（支線・可以不打）</h3>
@@ -3526,7 +3538,7 @@ function beginBoss(id){
   if(!SAVE.team.length)return;
   stopBossVoice();closeModal();
   const i=BOSS_LIST.indexOf(id),M=MONSTERS[id],r=bossReward(i),ids=SAVE.team.slice();
-  startBattle({title:`魔王討伐・${M.name}`,home:"run",maxRound:200,A:ids.map(teamUnit),B:[{id,stars:1,gx:M.gx}].concat(bossMinions(id)),bgm:BOSS_BGM[id],
+  startBattle({title:`魔王討伐・${M.name}`,home:"boss",maxRound:200,A:ids.map(teamUnit),B:[{id,stars:1,gx:M.gx}].concat(bossMinions(id)),bgm:BOSS_BGM[id],
     intro:`「${M.quote}」${BOSS_MINION[id]?`（${BOSS_MINION[id].name} ×2 站到了他的身後）`:""}`,
     resultNote:B=>B.over==="A"?`${M.name} 倒下了。`:"魔王太強了……升級、升星、換裝備後再來。",
     onEnd(win,B){
@@ -3541,7 +3553,7 @@ function beginBoss(id){
         if(i+1<BOSS_LIST.length&&first)notes.push(`🔓 下一位魔王出現了：<b>${MONSTERS[BOSS_LIST[i+1]].name}</b>`);
         if(i+1===BOSS_LIST.length&&first)notes.push("🎬 <b>8 位魔王全部討伐完成！</b>");
       }
-      save();CUR_B=null;VIEW="run";render();
+      save();CUR_B=null;VIEW="boss";render();
       if(win)openModal(`<h3>⚔ 討伐成功：${M.name}</h3><div class="detail"><div class="av"><img src="images/bosses/${id}_2.webp" alt=""></div><div><p>${notes.join("<br>")}</p></div></div>
         <div class="row"><button class="pri" onclick="openBoss('${id}')">再挑戰一次</button><button onclick="closeModal()">關閉</button></div>`);
     }});
@@ -5177,8 +5189,7 @@ function viewRun(){
       <li>遠征會自動存檔，中途關掉網頁，下次打開可以接著玩。</li>
     </ul></div>
     <h3>出戰隊伍</h3><div class="cardgrid">${SAVE.team.map(id=>cardTile(id,`showCard('${id}')`)).join("")||"<span class='dim'>尚未編隊</span>"}</div>
-    <p class="dim small">點上面的章節開始遠征。</p>
-    ${viewBosses()}`;
+    <p class="dim small">點上面的章節開始遠征。</p>`;
   const r=RUN,g=gasIdx(),ab=r.ch===ABYSS;
   if(ab)ensureFloor(Math.max(0,r.fi-3)+7);
   const idx=ab?Array.from({length:8},(_,k)=>Math.max(0,r.fi-3)+k):FL().map((f,i)=>i);

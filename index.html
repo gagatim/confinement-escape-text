@@ -1265,7 +1265,7 @@ function toggleBgm(){
 
 /* ===================== VIEW ROUTER ===================== */
 let VIEW="home";
-const NAV=[["home","主頁"],["gacha","招募"],["team","隊伍"],["dex","圖鑑"],["gear","裝備"],["shop","商店"],["run","遠征"],["boss","魔王討伐"],["train","練功房"],["arena","競技場"],["duel","雙人對決"],["ach","成就"],["story","故事"]];
+const NAV=[["home","主頁"],["gacha","招募"],["team","隊伍"],["dex","圖鑑"],["gear","裝備"],["shop","商店"],["boss","魔王討伐"],["run","遠征"],["train","練功房"],["arena","競技場"],["duel","雙人對決"],["ach","成就"],["story","故事"]];
 function locked(){return (RUN&&RUN.active)||(CUR_B&&!CUR_B.done)||(DUEL&&DUEL.phase==="battle")||!!NET;}
 function go(v){
   if(npcVoiceLocked()&&v!==VIEW){toast("對話還沒說完，請先聽完");return;}

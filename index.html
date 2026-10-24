@@ -662,7 +662,11 @@ const CARDS={
   qing:{name:"晴",r:"SSR",story:true,gachaCh:15,hp:28,atk:4,def:1,spd:4,
     skill:{name:"唸出名字",cd:4,t:"none",kind:"heal",desc:"冷卻4回合。全隊活著的成員各恢復10%最大生命（至少5），並解除身上所有減益與中毒。",
       use(B,u){blog(B,`${nm(u)} 輕聲唸出每一個名字。`);mates(B,u).forEach(m=>{heal(B,m,Math.max(5,Math.round(m.maxHp*.1)));cleanse(m);});}},
-    passive:{name:"我記得你",desc:"每當有隊友倒下，全隊攻擊永久+4%（至少+1），本場最多疊3次。羈絆「名冊合照」：與阿燼同時在場時，晴的治療量+7.5%。"}}
+    passive:{name:"我記得你",desc:"每當有隊友倒下，全隊攻擊永久+4%（至少+1），本場最多疊3次。羈絆「名冊合照」：與阿燼同時在場時，晴的治療量+7.5%。"}},
+  // 《肥宅物語》通關後，由 SR 肥宅進化而來（不進招募池）
+  fatty2:{name:"肥宅",r:"SSR",story:true,evolveFrom:"fatty",gachaCh:9999,hp:54,atk:6,def:3,spd:3,
+    skill:{name:"肉盾坦克",cd:3,t:"self",kind:"buff",desc:"冷卻3回合。嘲諷2回合（敵人優先攻擊你），防禦+4（2回合），並回復10%最大生命。",use(B,u){u.st.taunt=3;buff(B,u,"def",4,2);heal(B,u,Math.max(2,Math.round(u.maxHp*.1)));blog(B,`${nm(u)} 戴上耳機：「好，這一關，我來扛。」`);}},
+    passive:{name:"LEVEL UP",desc:"每次被攻擊後，這場戰鬥防禦+2（可累加）；每被攻擊5次，這場戰鬥防禦再額外+2。防禦加成上限+25。"}}
 };
 const MONSTERS={
   ghost:{name:"暗影",emoji:"👻",r:"R",hp:18,atk:6,def:0,spd:5,
@@ -807,7 +811,7 @@ const CARD_CLS={
   gambler:"warrior",scavenger:"ranger",trucker:"tank",bartender:"support",herbalist:"support",runner:"assassin",chef:"support",
   survivor:"tank",diver:"assassin",miner:"warrior",mediocre:"warrior",courier:"support",gourmet:"tank",climber:"assassin",
   hacker:"mage",tycoon:"mage",lucky:"ranger",arsonist:"mage",sentinel:"tank",janitor:"support",detective:"ranger",
-  ashen:"warrior",qing:"support"
+  ashen:"warrior",qing:"support",fatty2:"tank"
 };
 Object.keys(CARDS).forEach(id=>CARDS[id].cls=CARD_CLS[id]||"warrior");
 const clsOf=u=>CARDS[u.id]?CARDS[u.id].cls:null;
@@ -984,7 +988,7 @@ function cardStats(id,stars=1,scale=1,br=0){
 const SAVE_KEY="jbts_textgame_v1";
 // 遊戲版本（存檔格式有新增內容、舊頁面可能誤判時加 1）。存檔會記錄是哪個版本寫的；
 // 舊頁面讀到比自己新的存檔時，不做作弊檢查、不清空、也不寫回，只提示玩家重新整理頁面
-const APP_V=5;
+const APP_V=6;
 let STALE=false;
 const isNewerSave=s=>!!s&&(s.appv||0)>APP_V;
 function staleNotice(){
@@ -1060,6 +1064,7 @@ function validSave(s){
   if(!isInt(s.arenaTier,1,100000))return "競技場層數異常";
   if(s.train&&!isInt(s.train.best,0,TRAIN_MAX))return "練功房進度異常";
   if(!isInt(s.prog.cleared,0,ABYSS))return "主線進度異常";
+  if(s.prog.fatty!=null&&!isInt(s.prog.fatty,0,5))return "肥宅物語進度異常";
   if(s.run&&!(isInt(s.run.gold,0,5000000)&&isInt(s.run.food,0,9999)))return "遠征資料異常";
   return "";
 }
@@ -1113,6 +1118,7 @@ function exportBackup(i){
 function checkIntegrity(){if(!SAVE||STALE)return true;const why=validSave(SAVE);if(why){wipeTampered(why);return false;}return true;}
 // 舊存檔補欄位：已逃出過禁閉室就算通關第1章
 function migrate(s){
+  if(s.prog&&s.prog.fatty==null)s.prog.fatty=0; // 《肥宅物語》進度（0～5）
   if(!s.prog)s.prog={cleared:s.stats&&s.stats.escapes>0?1:0,clears:{},abyssBest:0};
   if(s.run===undefined)s.run=null;
   // 第5、6章插在無盡深淵前面：舊存檔的深淵遠征 ch 從 4 改成 6
@@ -1388,7 +1394,7 @@ function viewHome(){
     <div class="mode" onclick="go('gacha')"><div class="ic">🎴</div><b>招募所</b><p>花金條抽取職業卡。SSR 3%・十連保底 SR・60 抽保底 SSR</p></div>
     <div class="mode" onclick="go('team')"><div class="ic">👥</div><b>隊伍</b><p>已收集 ${ownedCount()}/${CARD_IDS.length} 名職業，挑 3 人出戰</p></div>
     <div class="mode" onclick="go('shop')"><div class="ic">🛒</div><b>商店・裝備</b><p>買裝備、強化到 +10（可能失敗！），還能買遠征物資帶上路</p></div>
-    <div class="mode" onclick="go('run')"><div class="ic">🪜</div><b>逃殺遠征</b><p>文字冒險主線 ${CHAPTERS.length-1} 章＋無盡深淵：選房間、搜物資、躲毒氣、結盟或背叛。目前進度：${progText()}</p></div>
+    <div class="mode" onclick="go('run')"><div class="ic">🪜</div><b>逃殺遠征</b><p>文字冒險主線 ${ABYSS} 章＋無盡深淵：選房間、搜物資、躲毒氣、結盟或背叛。目前進度：${progText()}</p></div>
     <div class="mode" onclick="go('train')"><div class="ic">🏋</div><b>練功房</b><p>重複打怪物練等級（每級全能力+2%），已解鎖到第 ${Math.min(TRAIN_MAX,trainBest()+1)} 關</p></div>
     <div class="mode" onclick="go('story')"><div class="ic">👑</div><b>故事</b><p>老國王說過的話與魔王的背景，12 章是一條連續的故事</p></div>
     <div class="mode" onclick="go('ach')"><div class="ic">🏆</div><b>成就</b><p>已達成 ${ACH.filter(a=>SAVE.ach&&SAVE.ach[a.id]).length}／${ACH.length}，達成自動領金條和突破石</p></div>
@@ -1637,7 +1643,9 @@ function showCard(id){
     ${setHtml(id)}${e.crit||e.steal||e.dodge||e.dr?`<div class="gfx">裝備特效：${statStr({crit:e.crit,steal:e.steal,dodge:e.dodge,dr:e.dr})}</div>`:""}`:""}
     </div></div>
     ${skillHtml(c)}
-    ${c.story?`<div class="sk small"><b>📖 劇情角色</b><br>《名冊》故事線的同伴。通關第 ${c.gachaCh} 章後可以在招募所抽到。<b>無法合成、熔煉、遣散</b>，等級也不能轉給別人（可以接收別人的等級）。</div>`:""}
+    ${c.evolveFrom?`<div class="sk small"><b>🆙 進化角色</b><br>《肥宅物語》通關後，由 SR 肥宅進化而來，不進招募池。<b>無法合成、熔煉、遣散</b>，等級也不能轉給別人（可以接收別人的等級）。</div>`:""}
+    ${id==="fatty"&&o&&(SAVE.prog.fatty||0)>=5&&!SAVE.owned.fatty2?`<div class="sk small"><b>🆙 可以進化！</b><br>《肥宅物語》已通關，這位肥宅可以進化成 SSR。<div class="row" style="margin-top:6px"><button class="pri" onclick="closeModal();confirmEvolve()">🆙 進化成 SSR</button></div></div>`:""}
+    ${c.story&&!c.evolveFrom?`<div class="sk small"><b>📖 劇情角色</b><br>《名冊》故事線的同伴。通關第 ${c.gachaCh} 章後可以在招募所抽到。<b>無法合成、熔煉、遣散</b>，等級也不能轉給別人（可以接收別人的等級）。</div>`:""}
     ${o&&fruitVisible(id)?fruitHtml(id):""}
     <div class="row" style="margin-top:12px">
       ${o?(inT?`<button onclick="toggleTeam('${id}')">移出隊伍</button>`:`<button class="pri" onclick="toggleTeam('${id}')" ${SAVE.team.length>=3?"disabled":""}>加入隊伍${SAVE.team.length>=3?"（已滿）":""}</button>`):`<span class="dim">尚未獲得</span>`}
@@ -2559,6 +2567,14 @@ function leechK(t){const d=DEF(t.id);return 1-((d&&d.leechRed)||0);}
 const SPLASH_IDS=["reclaimer","editor","nameless"];
 // 支線魔王「激動模式」：這幾位魔王面對 5 人以上的隊伍時啟動（開戰時判斷）：單體攻擊擴散 20%、技能與普通攻擊傷害 +10%
 const FRENZY_IDS=["doomhunter","voidlord","fatejudge","reaper","abyssking","nightemperor","overlord","endwalker"];
+function fattyExp(B,t){ // 肥宅（SSR）被動「LEVEL UP」：被打得越多，本場防禦越高（上限 +25）
+  const n=t.flags.fhit=(t.flags.fhit||0)+1,cur=t.perm.def||0;
+  const add=2+(n%5===0?2:0),nv=Math.min(25,cur+add);
+  if(nv===cur)return;
+  t.perm.def=nv;
+  fx(B,t,"DEF+"+(nv-cur),"sk");
+  if(n%5===0)blog(B,`🆙 <b style="color:var(--gold)">LEVEL UP！</b>${nm(t)} 被打了 ${n} 次，防禦大幅提升（本場防禦 +${nv}）。`);
+}
 function hit(B,a,t,mult,o={}){
   if(!t||!t.alive)return 0;
   if(!o.counter){
@@ -2626,6 +2642,7 @@ function hit(B,a,t,mult,o={}){
     if(others.length){blog(B,`💥 ${nm(a)} 的攻擊擴散開來，其餘敵人各受到 ${sp} 點傷害。`);
       others.forEach(x=>{x.hp-=sp;fx(B,x,"擴散-"+sp,"dmg");if(x.hp<=0)handleDeath(B,x,a);});}
   }
+  if(t.id==="fatty2"&&t.hp>0)fattyExp(B,t); // 肥宅（SSR）「肥肉坦克 Lv.99」
   if(t.hp<=0)handleDeath(B,t,a);
   else if(!o.counter&&a.alive&&a!==t){
     if(t.id==="tamer"&&rnd()<.25){blog(B,`🐕 獵犬撲向 ${nm(a)}！`);hit(B,t,a,1,{fixed:3,counter:true});}
@@ -2711,7 +2728,7 @@ function aiChoose(B,u){
     if(sk.t==="enemy")target=aiFoe(B,u);
     if(sk.t==="ally")target=(hurt.length?hurt:ms).slice().sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0];
     if(sk.t==="mate")target=pick(validTargets(B,u,"mate"));
-    if(u.id==="fatty"&&u.st.taunt>0)ok=false;
+    if((u.id==="fatty"||u.id==="fatty2")&&u.st.taunt>0)ok=false;
     if(ok)return {type:"skill",target};
   }
   if(B.items&&u.side==="A"&&!u.ally){
@@ -4025,7 +4042,7 @@ const ABYSS_ROOMS={ration:"配給站",pharmacy:"藥房",armory:"武器庫",black
 // 平衡：主線全破約需 40 次遠征（機器人模擬）。金條收入刻意壓低，抽卡要省著用
 const FIRST_CLEAR=[40,50,60,70,80,90,100,120,150,200,250,300,350,400,450];
 const CH_POW=[1,1.3,1.5,1.6,1.65,1.45,1.8,1.6,1.95,2.0,2.45,1.75,1.85,1.95,2.05]; // 第6、8章魔王會復活，倍數稍低以免變成高牆；第9、10章刻意偏難
-function chPow(){return RUN&&RUN.ch!==ABYSS?CH_POW[RUN.ch]:1;}
+function chPow(){return RUN&&RUN.ch!==ABYSS?CH_POW[effCh()]:1;}
 const CHAPTERS=[
   {name:"禁閉室",sub:"B7 停屍間 → 2F 停機坪",icon:"⛓",floors:FLOORS,minion:"ghost",boss:"warden",bossScale:1,bossHp:n=>48+n*12,
     veh:"直升機",vehIcon:"🚁",bossLoc:"2F · 202 停機坪",bossRoom:"停機坪",prepLoc:"2F · 201 基因庫",
@@ -4237,6 +4254,166 @@ const CHAPTERS=[
     shade:["黑暗裡有東西在呼吸。","你們走過的地方，影子沒有跟上來。","深淵在低語。"]}
 ];
 
+
+/* ===================== 肥宅物語（支線故事線，5 章） ===================== */
+// 通關主線第 FATTY_REQ 章後開放。章節放在 CHAPTERS 的 16～20 號（fatty:true），進度記在 SAVE.prog.fatty；
+// eq＝敵人強度比照主線的哪一章（只用在數值，不代表解鎖條件）。肥宅本人以劇情隊友加入，通關第 5 章後 SR 肥宅可以進化成 SSR。
+const FATTY_REQ=3;
+const FATTY_FIRST=[60,70,80,90,150];
+const FLOORS_F1=mkFloors("F1",[1,4,5,5,5,4,5,4,2]);
+const FLOORS_F2=mkFloors("F2",[1,4,5,5,5,4,5,4,2]);
+const FLOORS_F3=mkFloors("F3",[1,4,5,5,6,5,5,4,2]);
+const FLOORS_F4=mkFloors("F4",[1,4,5,5,6,5,5,5,2]);
+const FLOORS_F5=mkFloors("F5",[1,4,5,6,5,6,5,5,4,2]);
+Object.assign(ROOM_NAME,{
+  F1101:"醒來的鐵櫃",F1301:"泡麵角落",F1901:"教學關卡的小桌",F1902:"教學關卡",
+  F2101:"職業鑑定室外",F2301:"泡麵角落",F2901:"鑑定室的小桌",F2902:"鑑定室",
+  F3101:"留言區入口",F3301:"泡麵角落",F3901:"直播間後台的小桌",F3902:"直播間",
+  F4101:"斷糧營地",F4301:"泡麵角落",F4901:"樓梯間的小桌",F4902:"屋頂",
+  F5101:"頂樓競技場入口",F5401:"泡麵角落",F51001:"頂樓入口的小桌",F51002:"刪除台"
+});
+Object.assign(ROOM_EV,{醒來的鐵櫃:"morgue",職業鑑定室外:"morgue",留言區入口:"morgue",斷糧營地:"morgue",頂樓競技場入口:"morgue",
+  泡麵角落:"fsnack",教學關卡的小桌:"gene",鑑定室的小桌:"gene",直播間後台的小桌:"gene",樓梯間的小桌:"gene",頂樓入口的小桌:"gene",
+  教學關卡:"helipad",鑑定室:"helipad",直播間:"helipad",屋頂:"helipad",刪除台:"helipad"});
+// 肥宅物語的魔王（沒有圖時自動退回表情符號；圖放 images/monsters/{代號}.webp）
+Object.assign(MONSTERS,{
+  f_tut:{name:"教學機器人 TUT-01",emoji:"🤖",pic:true,r:"SSR",hp:80,atk:7,def:3,spd:3,dr:1,
+    skill:{name:"新手教學彈幕",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.7倍傷害。",use(B,u){blog(B,"📢 「請注意，這是教學。」彈幕鋪天蓋地射了過來！","bad");foes(B,u).forEach(t=>hit(B,u,t,.7));}},
+    passive:{name:"新手保護",desc:"受到的傷害-1。"}},
+  f_job:{name:"職業鑑定官",emoji:"🧐",pic:true,r:"SSR",hp:90,atk:7,def:3,spd:4,dr:1,
+    skill:{name:"判定：無用",cd:3,t:"enemy",kind:"dmg",desc:"造成1.3倍傷害，並使目標攻擊-2（3回合）。",use(B,u,t){hit(B,u,t,1.3);if(t.alive)buff(B,t,"atk",-2,3);}},
+    passive:{name:"冷眼旁觀",desc:"受到的傷害-1。"}},
+  f_chat:{name:"彈幕之王",emoji:"💬",pic:true,r:"SSR",hp:110,atk:8,def:3,spd:5,regen:2,
+    skill:{name:"彈幕轟炸",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.6倍傷害，並使其速度-1（2回合）。",use(B,u){blog(B,"💬 滿螢幕的留言同時炸開！","bad");foes(B,u).forEach(t=>{hit(B,u,t,.6);if(t.alive)buff(B,t,"spd",-1,2);});}},
+    passive:{name:"留言不斷",desc:"每回合開始恢復2生命。"}},
+  f_famine:{name:"斷糧者",emoji:"🥀",pic:true,r:"SSR",hp:120,atk:8,def:3,spd:4,evade:.1,
+    skill:{name:"飢荒",cd:3,t:"none",kind:"dmg",desc:"對全體敵人造成0.5倍傷害，並使其攻擊-2（2回合）。",use(B,u){blog(B,"🥀 一股空蕩蕩的飢餓感籠罩了全場……","bad");foes(B,u).forEach(t=>{hit(B,u,t,.5);if(t.alive)buff(B,t,"atk",-2,2);});}},
+    passive:{name:"餓到發慌",desc:"被攻擊時有10%機率閃過。"}},
+  f_delete:{name:"刪號者",emoji:"🗑️",pic:true,r:"SSR",hp:130,atk:9,def:3,spd:4,revive:.3,
+    skill:{name:"帳號刪除",cd:3,t:"enemy",kind:"dmg",desc:"造成1.6倍傷害。",use(B,u,t){blog(B,`🗑️ 「${t.name}，帳號刪除。」`,"bad");hit(B,u,t,1.6);}},
+    passive:{name:"備份還原",desc:"倒下時有30%機率以部分生命復活一次。"}}
+});
+const FATTY_CH=[
+  {name:"新手村",sub:"F101 醒來的鐵櫃 → F109 教學關卡",icon:"🍜",eq:3,minion:"drone",boss:"f_tut",
+    startLoc:"F101 · 醒來的鐵櫃",startTitle:"📦 鐵櫃之間的人",bossLoc:"F1 · F1902 教學關卡",bossRoom:"教學關卡",prepLoc:"F1 · F1901 教學關卡的小桌",
+    intro:it=>["停屍間的鐵櫃之間，有人用紙箱搭了一個小窩，四周堆滿泡麵、零食和可樂。一個圓滾滾的人影窩在裡面，捧著一碗冒煙的泡麵。",
+      "他抬起頭，鏡片上全是熱氣。「欸？你們也被傳進來啦？這遊戲的新手教學也太硬了吧。」",
+      "他叫<b>肥宅</b>。他完全不覺得這是真的——「這是 VR 吧？登出鍵在哪？」",
+      `你們在紙箱旁摸到了 ${it}。`,
+      "<span class='dim'>（肥宅加入了隊伍。他的能力會跟著你們的平均水準成長。）</span>"],
+    introPics:[{src:"images/story/fatty_1.webp",cap:"鐵櫃之間的泡麵窩"}],
+    shade:["紙箱之間有東西在動，是一團看不清的暗影。肥宅壓低聲音：「欸，新手怪，打得過。」","通風口傳來窸窣聲。肥宅把泡麵藏到背後：「不要搶我的存檔點。」","暗影從鐵櫃的縫隙滑出來。肥宅放下筷子：「教學第一課：看到怪，不要慌。」"],
+    prep:"教學關卡前的小桌。有人擺好了一碗還冒著煙的泡麵，旁邊貼著便利貼：「吃飽再上，新手保護期結束了。」只夠用一次。",
+    bossTitle:"🤖 教學關卡",bossLines:["一道白色的門在你們面前打開，裡面是一間空蕩蕩的練習場。一台笑容僵硬的機器人轉過身來。",
+      "<b style='color:var(--red)'>教學機器人 TUT-01</b>。「歡迎來到新手教學。請在三分鐘內學會：<b>不要死</b>。」"],
+    story:["教學機器人是節目為新人準備的教學系統，每一季都重複同一句話：「請學會不要死。」","它教了很多季，沒有一個人通過它的考試。它不明白為什麼，只好把題目出得更難。",
+      "肥宅看著它，沉默了一下。「它只是想教我們怎麼活下去，只是教得很爛。」他說。「……這關，我們就讓它畢業吧。」"],
+    bossIntro:"「教學開始。請注意：不要死。」",lose:"機器人在螢幕上打出一行字：「考試不及格，請重新學習。」",
+    fall:"教學機器人的螢幕一閃一閃，打出最後一行字：「……及格。」",
+    escape:"教學機器人倒下的時候，螢幕上跳出一行字：「恭喜畢業。」<br>肥宅看著那行字，抓了抓頭。「……欸，這好像不是遊戲欸。」<br>他低頭看了看自己的手，剛才捧著泡麵的那雙手，還在微微發抖。「沒關係。反正，我本來就不想一個人待在紙箱裡。」<br>🆙 <b>LEVEL UP！</b>前方有一道新的門亮了起來。",
+    snack:["鐵櫃之間藏著一個小角落：整排整排的泡麵。肥宅熟練地燒水：「新手村補給站，不吃白不吃。」"]},
+  {name:"坦克也是職業",sub:"F201 職業鑑定室外 → F209 鑑定室",icon:"🛡",eq:4,minion:"guard",boss:"f_job",
+    startLoc:"F201 · 職業鑑定室外",startTitle:"🧐 職業鑑定",bossLoc:"F2 · F2902 鑑定室",bossRoom:"鑑定室",prepLoc:"F2 · F2901 鑑定室的小桌",
+    intro:it=>["新手教學的門後，是一條長長的暗廊，牆上貼滿職業的圖示：戰士、法師、盜賊、牧師。",
+      "喇叭廣播著：<b>「請依照職業，排隊接受鑑定。無職業者，將被視為多餘的人。」</b>",
+      `你們在走廊盡頭摸到了 ${it}。`,
+      "肥宅看著牆上的圖示，嘴裡嘟囔：「這種遊戲，我一定都選坦克。」他停了一下，「……可是這裡的人，好像不覺得坦克算職業。」"],
+    shade:["走廊兩側的影子同時舉起手：「你是什麼職業？」肥宅：「……坦克。」影子們哄堂大笑。","影子在牆上排成了一排，每一個都比了個大大的叉。","暗影從鑑定室的門縫滑出來：「無職業者，請離開。」"],
+    prep:"鑑定室前的小桌上，有人放了一張空白的職業卡，和一杯珍奶。字條上寫著：「想填什麼，自己決定。」只夠用一次。",
+    bossTitle:"🧐 鑑定室",bossLines:["鑑定室的中央，一個戴著單片眼鏡的人影正翻著厚厚的名簿，頭也不抬。",
+      "<b style='color:var(--red)'>職業鑑定官</b>。「下一位。……嗯，無職業。有用的人這邊，沒用的人那邊。」"],
+    story:["職業鑑定官是節目裡負責替參賽者「分類」的人，他的工作，是判斷誰有價值、誰沒價值。","他只認得戰士、法師、盜賊這些能打的職業，從來沒有一個欄位，是留給「站在前面挨打的人」。",
+      "肥宅說：「坦克也是職業。」他把手上的泡麵放下，「它不會很帥，可是少了它，其他人就不用上場了。」"],
+    bossIntro:"「下一位。……無職業。」",lose:"鑑定官在名簿上畫了一個叉：「判定：無用。」",
+    fall:"鑑定官手中的名簿一頁一頁散開，單片眼鏡掉在地上，碎了。",
+    endPics:[{src:"images/story/fatty_2.webp",cap:"第一次，替隊友擋下這一刀"}],
+    escape:"鑑定官倒下的前一刻，把手裡最後一把刀，擲向了隊友的背後。<br>肥宅什麼都沒想，整個人撲了過去。刀鋒擦過他的外套，他悶哼了一聲，卻沒有退。「欸，這一下，我擋得住。」<br>隊友回過頭，臉色發白。肥宅咬著牙，拍了拍他的肩。「坦克也是職業。登記起來，以後有人可以抄。」<br>🆙 <b>LEVEL UP！</b>他眼前跳出一行字：<b>DEF +1</b>。肥宅愣了一下。「……欸，這好像是真的？」",
+    snack:["鑑定室外有個小角落，擺著還沒開封的泡麵和珍奶。肥宅：「坦克的補血，就是吃。」"]},
+  {name:"留言區靜音",sub:"F301 留言區入口 → F309 直播間",icon:"💬",eq:5,minion:"audience",boss:"f_chat",
+    startLoc:"F301 · 留言區入口",startTitle:"💬 彈幕",bossLoc:"F3 · F3902 直播間",bossRoom:"直播間",prepLoc:"F3 · F3901 直播間後台的小桌",
+    intro:it=>["走廊的鐵櫃之間，空氣裡浮滿了密密麻麻的留言，像一場永不停止的暴風雪。",
+      "「肥宅去死」「第一個淘汰」「笑死，坦克」「這隻誰啊」——每一個字，都在看著你們。",
+      `你們在鐵櫃旁摸到了 ${it}。`,
+      "肥宅抬頭看了一會兒，握緊拳頭。然後戴上耳機。「欸，沒事。我在網路上被罵習慣了。」他把留言區<b>靜音</b>，繼續往前走。"],
+    introPics:[{src:"images/story/fatty_3.webp",cap:"滿天的留言，每一條都在看著他"}],
+    shade:["留言像雪一樣飄落，每一片雪裡都藏著一個影子：「淘汰他、淘汰他。」","彈幕在空中排成了一個嘲笑的臉，伸手朝你們抓過來。","影子從螢幕裡爬出來：「你們這隊，我賭三分鐘。」"],
+    prep:"直播間後台的小桌上，放著一副新的降噪耳機，和一張字條：「不想聽的，就別聽。」只夠用一次。",
+    bossTitle:"💬 直播間",bossLines:["直播間的中央，一面比樓房還高的螢幕緩緩亮起。無數條留言匯聚成一個巨大的、沒有臉的輪廓。",
+      "<b style='color:var(--red)'>彈幕之王</b>。「我們看你們很久了。……你，坦克，為什麼還不倒？」"],
+    story:["彈幕之王，是每一個曾經打過留言的人，聚在一起變成的東西。","他們一開始只是隨便打打字，後來發現，罵人最容易被看到，於是，罵得越來越大聲。",
+      "肥宅說：「被罵很痛，我知道。」他停了一下，「可是，罵我的人，也是一個人在螢幕前面，打字而已。……靜音，不是不理你們，是我先把我的人救下來。」"],
+    bossIntro:"「全體留言，集火！」",lose:"彈幕淹沒了你們，最後一行字是：「笑死，又一隊。」",
+    fall:"彈幕之王的輪廓一格一格崩解，留言一條一條熄滅，直播間裡只剩下安靜的雜訊。",
+    escape:"彈幕之王倒下，滿螢幕的留言一條一條熄滅，只剩下最後一行小小的字：「……對不起。」<br>肥宅把耳機拿下來一邊，靜靜地看了很久。「欸，我沒有生氣。」他說，「下次，換你們幫別人擋著吧。」<br>他沒有關掉靜音，只是讓一點點聲音，漏了進來。<br>🆙 <b>LEVEL UP！</b>",
+    snack:["留言區的角落，居然有人留了一桶還熱的泡麵。肥宅：「這是……來自觀眾的愛？」他吃了一口，「……算了，好吃就好。」"]},
+  {name:"最後一碗泡麵",sub:"F401 斷糧營地 → F409 荒廢大樓屋頂",icon:"🍜",eq:6,minion:"mutant",boss:"f_famine",
+    startLoc:"F401 · 斷糧營地",startTitle:"🥀 斷糧",bossLoc:"F4 · F4902 荒廢大樓屋頂",bossRoom:"屋頂",prepLoc:"F4 · F4901 樓梯間的小桌",
+    intro:it=>["你們走進一片荒廢的營地，補給箱全空了，只剩下被翻得亂七八糟的紙箱。空氣裡，是一股空蕩蕩的飢餓感。",
+      "廣播低聲念著：<b>「補給已耗盡。最後一份，只夠一個人。」</b>",
+      `你們在空箱子旁摸到了 ${it}。`,
+      "隊伍裡的每個人，都開始盯著彼此的背包。肥宅沒有說話，默默把自己的背包拉開。「……來，大家分。」"],
+    shade:["貨架後面傳來咀嚼聲，一團瘦長的影子正在啃著空箱子。","暗影在空營地裡遊蕩：「給我……給我吃的……」","空箱子裡鑽出了影子，肚子咕嚕咕嚕叫：「只有一份、只有一份……」"],
+    prep:"樓梯間的小桌上，擺著肥宅最後一碗泡麵，旁邊用紙寫著：「大家先吃。我喝湯就好。」只夠用一次。",
+    bossTitle:"🥀 屋頂",bossLines:["荒廢大樓的屋頂邊緣，夜風很冷。一個瘦得像影子的人，正抱著一個空空的紙箱坐在地上，腳下是整座亮晶晶的城市夜景。",
+      "<b style='color:var(--red)'>斷糧者</b>。「只有一份……只夠一個人……你們，誰要留下？」"],
+    story:["斷糧者掌管著節目裡的補給。他最擅長的，不是打人，而是讓人彼此猜疑。","他只要把補給藏起來，再放出一句「只夠一個人」，隊伍就會自己分崩離析。",
+      "肥宅說：「我以前窩在家裡，最怕沒東西吃的時候。」他把泡麵放到桌上，「所以，我知道，一個人吃，比分著吃，餓得更快。」"],
+    bossIntro:"「只有一份。你們，誰留下？」",lose:"斷糧者抱著空箱子，低聲說：「……果然，只有一份。」",
+    fall:"斷糧者手裡的空箱子落到地上，裡面什麼都沒有。他愣愣地看著它，像是第一次發現，自己一直抱著的是空的。",
+    endPics:[{src:"images/story/fatty_4.webp",cap:"一碗泡麵，分給所有人"}],
+    escape:"斷糧者倒下，空箱子裡滾出了一顆小小的糖果。他看著肥宅，低聲問：「……為什麼，你們沒有搶？」<br>那天晚上，肥宅把最後一碗泡麵，分成了好幾份。營火旁，每個人手裡都捧著一點熱湯，沒有人說話，只有筷子碰到碗邊的聲音。<br>斷糧者站在火光的邊緣，肥宅把自己那份，也遞了過去。「欸，因為我們有人幫我們擋著，所以，不用搶。」<br>🆙 <b>LEVEL UP！</b>肥宅笑了笑。「一碗泡麵的錢，換一群朋友，這筆生意不虧。」",
+    snack:["營地的角落，居然堆著一堆沒被找到的泡麵。肥宅：「欸，這就是傳說中的……隱藏補給！」"]},
+  {name:"第一個站出來的人",sub:"F501 頂樓競技場入口 → F510 刪除台",icon:"🛡",eq:7,minion:"doppel",boss:"f_delete",
+    startLoc:"F501 · 頂樓競技場入口",startTitle:"🗑️ 註銷",bossLoc:"F5 · F51002 刪除台",bossRoom:"刪除台",prepLoc:"F5 · F51001 頂樓入口的小桌",
+    intro:it=>["最後一個大廳，是一座蓋在大樓頂樓的巨大競技場。看台上坐滿了沉默的觀眾，腳下是整座城市的夜景，競技場中央，立著一個巨大的紅色按鈕。",
+      "廣播平靜地念著：<b>「請選出一位，永久刪除。其餘人，可以離開。」</b>",
+      `你們在入口的長椅上摸到了 ${it}。`,
+      "肥宅看著那顆按鈕，把耳機摘了下來，輕輕放進口袋。「……這次，我自己來說。」"],
+    shade:["看台上的影子低聲問：「誰是那個，可以被刪的人？」","暗影從競技場的裂縫爬出來：「選一個吧。大家都在等。」","影子在地上排成了一排，每一個，都長得像你們其中一個人。"],
+    prep:"頂樓入口的小桌上，放著一支麥克風，和一碗還沒涼的泡麵。字條寫著：「想說的話，現在可以說了。」只夠用一次。",
+    bossTitle:"🗑️ 刪除台",bossLines:["雷雨交加的夜空下，競技場的盡頭，一個巨大的、長著角的身影，慢慢從城市的夜景裡站了起來。他的手指，懸在那顆紅色按鈕上方。",
+      "<b style='color:var(--red)'>刪號者</b>。「請選擇。……誰是最不重要的那一個？」",
+      "沒有人說話。然後，肥宅一個人，走到了最前面，張開了雙手。「要刪的話，先過我這關。」"],
+    bossPics:[{src:"images/story/fatty_5a.webp",cap:"他一個人，走到了最前面"},{src:"images/story/fatty_5b.webp",cap:"身後的人把手搭上他的肩，金色的護盾展開"},{src:"images/story/fatty_5c.webp",cap:"護盾出現了裂痕——可是，他沒有退"}],
+    story:["刪號者是節目的最後一道關卡。他的工作很簡單：每一季結束時，選一個人，刪掉。","他從來沒有真的選過。每一次，隊伍裡的人會自己，指著最弱的那一個。",
+      "肥宅說：「我是坦克，我的工作，就是站在大家前面。」他停了一下，「……所以，這一次，沒有人是最弱的。」"],
+    bossIntro:"「請選擇。誰，可以被刪除？」",lose:"刪號者按下了按鈕。你們的名字，一個一個，從畫面上消失了。",
+    fall:"刪號者的手，停在按鈕上方，遲遲沒有按下去。他抬起頭，看著站在最前面的那個人。",
+    endPics:[{src:"images/story/fatty_5d.webp",cap:"留言，變成了力量"},{src:"images/story/fatty_5e.webp",cap:"全員，衝鋒"},{src:"images/story/fatty_5f.webp",cap:"那天晚上，營火邊的泡麵"}],
+    escape:"護盾快要碎掉的那一刻，滿天的留言突然湧了出來。這一次，不是罵聲：「撐住！」「不要輸！」「這才是主角！」<br>肥宅把留言區的<b>靜音</b>，整個打開了。那些字化成金色的光，匯進他的手心，凝成了一把劍。<br>他握緊劍，回頭看了一眼身後的人。「欸，這一次，換我們打回去。」全員衝鋒，刪號者伸向按鈕的手，被一劍擋了下來。紅色的按鈕，慢慢熄滅了。<br>那天晚上，大家圍著營火，每個人手裡都捧著一碗泡麵。滿天的留言，變成了星星：「好好休息。」「你們做到了。」<br>🆙 <b>LEVEL UP！</b>肥宅的耳機，發出了淡淡的藍光。",
+    finale:"🍔 <b>《肥宅物語》完。</b><br>💖 SR 肥宅可以進化成 SSR 了！到「隊伍」點開肥宅，或回到遠征頁的「肥宅物語」按下「進化」。",
+    snack:["頂樓入口的角落，有人留下了一碗還熱的泡麵，和一張字條：「最後一餐，請慢用。」肥宅看了很久，把它分成了好幾份。"]}
+];
+FATTY_CH.forEach((C,k)=>{
+  C.fatty=true;C.veh="傳送門";C.vehIcon="🌀";C.noSeats=true;
+  C.floors=[FLOORS_F1,FLOORS_F2,FLOORS_F3,FLOORS_F4,FLOORS_F5][k];
+  const E=CHAPTERS[C.eq];C.bossScale=E.bossScale;C.bossHp=E.bossHp;
+  CHAPTERS.push(C);
+});
+const FATTY_FIRST_CH=ABYSS+1; // 肥宅物語第 1 章在 CHAPTERS 裡的編號（16）
+// 這一章的敵人強度比照主線的哪一章（肥宅物語專用）
+const effCh=()=>{const c=RUN&&CHAPTERS[RUN.ch];return c&&c.eq!=null?c.eq:RUN.ch;};
+function fattyMateId(){return SAVE.owned.fatty2?"fatty2":"fatty";}
+function fattyCanEvolve(){return !!SAVE.owned.fatty&&!SAVE.owned.fatty2&&(SAVE.prog.fatty||0)>=5;}
+function confirmEvolve(){
+  if(!fattyCanEvolve())return;
+  if(SAVE.run||RUN){toast("遠征中無法進化，請先結束遠征");return;}
+  openModal(`<h3>🆙 肥宅進化</h3><div class="detail"><div class="av fx-SSR">${avatar("fatty2")}</div><div style="flex:1">
+    <div class="rSSR">SSR</div><h2 style="margin:2px 0">肥宅</h2>
+    <div class="small">❤ ${CARDS.fatty2.hp}　⚔ ${CARDS.fatty2.atk}　🛡 ${CARDS.fatty2.def}　💨 ${CARDS.fatty2.spd}</div></div></div>
+    ${skillHtml(CARDS.fatty2)}
+    <p class="dim small">SR 肥宅會變成 SSR 肥宅，<b>等級、星數、突破、裝備、果實全部保留</b>，隊伍位置也不變。進化後無法回到 SR，也不能再進招募池。</p>
+    <div class="row"><button class="pri" onclick="evolveFatty()">🆙 進化</button><button onclick="closeModal()" style="margin-left:auto">取消</button></div>`);
+}
+function evolveFatty(){
+  if(!fattyCanEvolve()||SAVE.run||RUN)return;
+  SAVE.owned.fatty2=SAVE.owned.fatty;delete SAVE.owned.fatty;
+  SAVE.team=SAVE.team.map(id=>id==="fatty"?"fatty2":id);
+  if(FIT_CHAR==="fatty")FIT_CHAR="fatty2";
+  save();SFX.ssr();glog("🆙EVOLVE","肥宅進化成 SSR");
+  render();showCard("fatty2");toast("🆙 肥宅進化成 SSR 了！");
+}
+
 /* ===================== 劇情：老國王與魔王背景 ===================== */
 // 老國王是貫穿 12 章的旁白角色：進章節、到魔王房前、通關後各說一段話（講真相，也提醒魔王的特性）。
 // 真相：三個座位原本是王座旁的三個位子（一張王座、兩張椅凳），是國王選繼承人的「三席試煉」。
@@ -4353,12 +4530,14 @@ const FL=()=>RUN.floors;
 const LAST=()=>RUN.ch===ABYSS?Infinity:RUN.floors.length-1;
 function ensureFloor(i){if(RUN.ch!==ABYSS)return;while(RUN.floors.length<=i)RUN.floors.push({label:"D"+RUN.floors.length});}
 function isBossFloor(i){return RUN.ch===ABYSS?i>0&&i%5===0:i===LAST();}
-function unlocked(c){return c===ABYSS?SAVE.prog.cleared>=1:SAVE.prog.cleared>=c;}
+function unlocked(c){
+  if(CHAPTERS[c]&&CHAPTERS[c].fatty){const k=c-FATTY_FIRST_CH;return SAVE.prog.cleared>=FATTY_REQ&&(SAVE.prog.fatty||0)>=k;}
+  return c===ABYSS?SAVE.prog.cleared>=1:SAVE.prog.cleared>=c;}
 function progText(){const c=SAVE.prog.cleared;return c>=ABYSS?"全破":`第 ${c+1} 章「${CHAPTERS[c].name}」`;}
 const EV_ICON={rival:"👤",shade:"👻",loot:"📦",empty:"🕸️",gasleak:"☣️",stash:"💰",
   wine:"🍷",ration:"🥫",junk:"🗑️",granary:"🌾",warehouse:"🏭",teleport:"🌀",lotto:"🎰",pharmacy:"💊",respec:"🧬",surgery:"🏥",
   canteen:"🍽️",vault:"🏦",control:"🖥️",recycle:"♻️",armory:"🔫",water:"💧",laser:"🔴",gene:"🧪",helipad:"🚁",morgue:"⚰️",
-  cryo:"🧊",prisoncell:"🔒",blackmarket:"🕶️",casino:"🃏",chapel:"🕯️",abyssboss:"💀",ashen:"🔥",qing:"📖",qing2:"📖",whisper:"👥",seat37:"🪑"};
+  cryo:"🧊",prisoncell:"🔒",blackmarket:"🕶️",casino:"🃏",chapel:"🕯️",abyssboss:"💀",ashen:"🔥",qing:"📖",qing2:"📖",whisper:"👥",seat37:"🪑",fsnack:"🍜"};
 const SHOP={pill:4,adrenaline:5,wine:3,rope:6,gasmask:5,knife:5,pistol:8,shotgun:12,rocket:9};
 const EV_HINT={rival:"有人的氣息",shade:"陰冷的低語",loot:"散落的物資",empty:"空蕩蕩",gasleak:"管線嘶嘶作響",stash:"金屬反光"};
 const ITEMS={
@@ -4406,21 +4585,26 @@ function diffName(d){return DIFFS[d||1].name;}
 function dMul(){return RUN&&RUN.ch!==ABYSS?(RUN.diff||1):1;}
 function openDiff(c){
   const C=CHAPTERS[c],dc=(SAVE.prog.dclears||{})[c]||{};
-  openModal(`<h3>${C.icon} 第 ${c+1} 章　${C.name}</h3><p class="dim small">${C.sub}</p><p>選擇難度：</p>
+  openModal(`<h3>${C.icon} ${C.fatty?`肥宅物語 第 ${c-FATTY_FIRST_CH+1} 章`:`第 ${c+1} 章`}　${C.name}</h3><p class="dim small">${C.sub}</p><p>選擇難度：</p>
     <div class="opts">${[1,2,3].map(d=>`<button class="${d===1?"":d===2?"gold":"pri"}" onclick="closeModal();startRun(${c},${d})">${DIFFS[d].icon} ${DIFFS[d].name}${dc[d]?`　✓ 已逃出 ${dc[d]} 次`:""}<br><span class="small dim">${DIFFS[d].desc}</span></button>`).join("")}</div>
     <div class="row" style="margin-top:10px"><button onclick="closeModal()">取消</button></div>`);
 }
 function startRun(c=0,diff=1){
   stopEndVoice();
-  const team=SAVE.team.filter(id=>SAVE.owned[id]);
+  let team=SAVE.team.filter(id=>SAVE.owned[id]);
   if(!team.length){toast("先去「隊伍」編隊吧");return;}
   if(!unlocked(c)){toast("尚未解鎖");return;}
   const C=CHAPTERS[c];
+  if(C.fatty){
+    team=team.filter(id=>id!=="fatty"&&id!=="fatty2"); // 肥宅是故事主角，以劇情隊友加入，不能再當自己的隊員
+    if(!team.length){toast("肥宅物語需要至少 1 名其他角色出戰（肥宅本人會自動加入）");return;}
+  }
   if(C.abyss)diff=1;
   glog("🚩RUN",`開始：${C.name}（${diffName(diff)}）`);
   RUN={active:true,ch:c,diff,fi:0,time:0,food:3,gold:0,items:[],party:team.map(id=>mkMember(id,SAVE.owned[id].stars,{gear:equipBonus(id),scale:lvScale(id),br:brOf(id)})),
     visited:{},choices:null,scene:null,sel:null,log:[],floors:C.abyss?[{label:"D0"}]:C.floors.map(f=>({label:f.label,rooms:f.rooms}))};
   (C.mates||[]).forEach(id=>RUN.party.push(storyMate(id))); // 這條故事線已經加入的同伴
+  if(C.fatty)RUN.party.push(storyMate(fattyMateId())); // 肥宅物語：肥宅本人加入
   const st=SAVE.stash,packed=st.items.map(gainItem);RUN.food+=st.food;
   const intro=[];if(packed.length||st.food)intro.push(`🎒 你們帶上了從商店買的行囊：${packed.join("、")}${st.food?`${packed.length?"、":""}🥫補給+${st.food}`:""}。`);
   SAVE.stash={items:[],food:0};
@@ -4428,8 +4612,10 @@ function startRun(c=0,diff=1){
   const it=pick(["pill","knife","wine"]);gainItem(it);
   RUN.visited[0]=C.startLoc.split(" · ")[1];
   setScene(C.startLoc,C.startTitle,C.intro(`${ITEMS[it].icon}${ITEMS[it].name}`).concat(intro),[{label:C.abyss?"⬇ 往下走":"⬆ 往上爬",cls:"pri",act:toChoose}]);
+  if(C.introPics)RUN.scene.pics=C.introPics; // 故事插圖（肥宅物語）
   if(C.abyss)kingSay("abyss",0);else kingSay("intro",c);
   VIEW="run";render();
+  if(C.fatty)playIntroVoice(c);
 }
 // 遠征存檔：選房間畫面存完整進度；進房間後存「事件中」，重開時跳過該事件（守門者／魔王會重打）
 function persistRun(stage){
@@ -4624,6 +4810,10 @@ function runEvent(ch,pre){
       {label:`🧪 ${m.name}：生命上限+8`,act(){m.maxHp+=8;m.hp+=8;geneDone(m,"生命上限+8");}},
       {label:`🧪 ${m.name}：防禦+2`,act(){m.bonus.def+=2;geneDone(m,"防禦+2");}}
     ]).concat([{label:`${CH().vehIcon} 不拿了，直接前往${CH().bossRoom}`,cls:"pri",act:goHelipad}]));
+  case "fsnack":{
+    const C=CH();RUN.food++;
+    aliveMembers().forEach(m=>m.hp=Math.min(m.maxHp,m.hp+Math.ceil(m.maxHp*.25)));
+    return S("🍜 泡麵角落",[pick(C.snack||["一個藏在角落的泡麵小站。"]),"全員恢復25%生命，<b>補給+1</b>。"],cont());}
   case "helipad":return helipad(L);
   case "ashen":return ashenCamp(ch,L);
   case "qing":return qingCamp(ch,L);
@@ -4687,7 +4877,7 @@ function blackMarket(ch,L,stock){
 /* ---- 對手 ---- */
 const PRISONER_NO=()=>"#"+String(ri(1,999)).padStart(3,"0");
 function rivalUnit(fi){
-  const c=RUN.ch;let pool,stars,scale;
+  const c=effCh();let pool,stars,scale;
   if(c===0){pool=fi<3?POOL.R:fi<6?POOL.R.concat(POOL.SR,POOL.SR):CARD_IDS;stars=clamp(1+Math.floor(fi/3)+(rnd()<.3?1:0),1,5);scale=.78+fi*.06;}
   else if(c===ABYSS){pool=CARD_IDS;stars=clamp(2+Math.floor(fi/8)+(rnd()<.3?1:0),1,5);scale=1+fi*.035;}
   else{pool=fi<3?POOL.R.concat(POOL.SR):CARD_IDS;stars=clamp(1+Math.floor((fi+c*3)/4)+(rnd()<.3?1:0),1,5);scale=.78+fi*.05+c*.07;}
@@ -4747,7 +4937,7 @@ function allyBetrays(al,lines,ch){
   }
 }
 function shadeAmbush(ch,L,n){
-  const fi=RUN.fi,c=RUN.ch,id=c===ABYSS?pick(["ghost","mutant","guard","drone","deepone","mirror","echo","doppel","cameraman","fanatic","rookie","guardian"]):CH().minion,M=MONSTERS[id];
+  const fi=RUN.fi,c=effCh(),id=c===ABYSS?pick(["ghost","mutant","guard","drone","deepone","mirror","echo","doppel","cameraman","fanatic","rookie","guardian"]):CH().minion,M=MONSTERS[id];
   const scale=c===0?.8+fi*.07:c===ABYSS?1+fi*.04:.8+fi*.05+c*.08;
   const g=Array.from({length:n},()=>({id,stars:1,scale}));
   setScene(loc(ch),`${M.emoji} ${M.name}`,L,[
@@ -4766,13 +4956,13 @@ function runBattle(ch,group,ambush,intro,after){
       CUR_B=null;VIEW="run";
       const l=[];
       if(!win||runLost())return endRun(false,["你們倒在了"+where+"。"]);
-      const n=group.length,g=addGold((RUN.ch===ABYSS?2+Math.floor(fi/4):1+Math.floor(fi/2)+RUN.ch)*n);l.push(`戰鬥勝利。從對手身上搜出 🪙${g}。`);
+      const n=group.length,g=addGold((RUN.ch===ABYSS?2+Math.floor(fi/4):1+Math.floor(fi/2)+effCh())*n);l.push(`戰鬥勝利。從對手身上搜出 🪙${g}。`);
       if(!MONSTERS[group[0].id]){
         if(RUN.pendingLoot){l.push("槍架上的 "+gainItem(RUN.pendingLoot)+" 歸你們了。");RUN.pendingLoot=null;}
         else if(rnd()<.6)l.push("還撿到 "+gainItem(pick(LOOT_TABLE))+"。");
       }
       if(hasRun("courier")&&rnd()<.3)l.push("郵差從對方包裡翻出 "+gainItem(pick(LOOT_TABLE))+"。");
-      l.push(runExp(4+fi+RUN.ch*3+n*2));
+      l.push(runExp(4+fi+effCh()*3+n*2));
       const al=allyMember();if(al){al.trust+=5;l.push(`<span class="dim">${al.name} 對你們多了幾分信任。</span>`);}
       if(B.units.some(u=>u.ref&&u.ref.betrayed))l.push("叛徒的屍體倒在你們腳邊。");
       if(after)return after();
@@ -4856,7 +5046,7 @@ function qingFree(ch,pre){
 function qingJoin(ch){
   RUN.party.push(storyMate("qing"));SAVE.lore=SAVE.lore||{};SAVE.lore.s_qing=1;save();SFX.sr();
   aliveMembers().forEach(m=>m.hp=Math.min(m.maxHp,m.hp+Math.ceil(m.maxHp*.3)));
-  const g=Array.from({length:2+(RUN.party.length>=5?1:0)},()=>({id:CH().minion,stars:1,scale:.8+RUN.fi*.05+RUN.ch*.08}));
+  const g=Array.from({length:2+(RUN.party.length>=5?1:0)},()=>({id:CH().minion,stars:1,scale:.8+RUN.fi*.05+effCh()*.08}));
   setScene(loc(ch),"✨ 名字不會消失",["晴把羽毛筆插回髮間，翻開名冊。「我跟你們走。……我也想看看，外面有沒有天亮。」","她替每個人包紮了傷口，動作很輕。全隊恢復了一些體力。","白色的人影圍了上來，沒有五官，卻有一雙很大的、空白的手。"],[
     {label:"⚔️ 迎戰",cls:"pri",act:()=>runBattle(ch,g,null,"「站我後面。」——阿燼橫劍擋在晴的前面。",()=>qingAfter(ch))}]);
   RUN.scene.npc=QING_NPC(["治愈之光，與你同在。","……請多指教。"]);
@@ -4887,7 +5077,7 @@ function qingLastPage(ch,L){
   render();
 }
 function whisperRoom(ch,L){
-  const where=loc(ch),g=Array.from({length:3},()=>({id:CH().minion,stars:1,scale:.8+RUN.fi*.05+RUN.ch*.08}));
+  const where=loc(ch),g=Array.from({length:3},()=>({id:CH().minion,stars:1,scale:.8+RUN.fi*.05+effCh()*.08}));
   setScene(where,"👥 無名的低語",L.concat([
     "一排影子轉過頭來。它們沒有嘴，聲音卻從四面八方傳來：「……我是誰？」",
     "晴往前一步，翻開名冊。她看著其中一個影子，一個字一個字，念出了一個名字。影子停住了，肩膀輕輕顫了一下。",
@@ -4940,6 +5130,9 @@ const STORY_VOX={
 };
 // 第 13～15 章的結局配音（key＝章節索引 12、13、14）：旁白用一個聲音，阿燼、晴的台詞用各自的聲音，依序播放；不鎖按鈕，可隨時離開或按「重聽結局」
 const END_VOX={"12": ["end13_01"], "13": ["end14_01", "end14_02", "end14_03", "end14_04", "end14_05", "end14_06", "end14_07"], "14": ["end15_01", "end15_02", "end15_03", "end15_04", "end15_05", "end15_06"]};
+// 肥宅物語配音（旁白 Kokoro zm_yunxi、肥宅 edge-tts 雲哲；voice/gen_fatty_voice.py 產生）：每章開場、結局各一組
+const FATTY_VOX={"16": {"intro": ["fatty1_intro_01", "fatty1_intro_02", "fatty1_intro_03", "fatty1_intro_04"], "end": ["fatty1_end_01", "fatty1_end_02", "fatty1_end_03", "fatty1_end_04", "fatty1_end_05"]}, "17": {"intro": ["fatty2_intro_01", "fatty2_intro_02"], "end": ["fatty2_end_01", "fatty2_end_02", "fatty2_end_03", "fatty2_end_04", "fatty2_end_05", "fatty2_end_06", "fatty2_end_07"]}, "18": {"intro": ["fatty3_intro_01", "fatty3_intro_02", "fatty3_intro_03", "fatty3_intro_04"], "end": ["fatty3_end_01", "fatty3_end_02", "fatty3_end_03", "fatty3_end_04"]}, "19": {"intro": ["fatty4_intro_01", "fatty4_intro_02", "fatty4_intro_03"], "end": ["fatty4_end_01", "fatty4_end_02", "fatty4_end_03", "fatty4_end_04", "fatty4_end_05"]}, "20": {"intro": ["fatty5_intro_01", "fatty5_intro_02", "fatty5_intro_03"], "end": ["fatty5_end_01", "fatty5_end_02", "fatty5_end_03", "fatty5_end_04", "fatty5_end_05", "fatty5_end_06"]}};
+Object.keys(FATTY_VOX).forEach(c=>{END_VOX[c]=FATTY_VOX[c].end;});
 let ENDV={audio:null,id:0,lock:false,scene:null};
 function stopEndVoice(){ENDV.id++;ENDV.lock=false;if(ENDV.audio){try{ENDV.audio.pause();}catch(e){}ENDV.audio=null;}}
 function endVoiceUnlock(){
@@ -4951,16 +5144,26 @@ function endVoiceUnlock(){
 function playEndVoice(ch,force=false){
   stopEndVoice();
   const q=(END_VOX[ch]||[]).slice();if(!q.length||SAVE.muted)return;
+  playVoiceList(q,force,"🔊 結局播放中……第一次通關，請先聽完");
+}
+// 肥宅物語開場配音：第一次進入這一章要聽完（聽完會記起來），之後不強迫
+function playIntroVoice(c){
+  stopEndVoice();
+  const q=((FATTY_VOX[c]||{}).intro||[]).slice();if(!q.length||SAVE.muted)return;
+  SAVE.lore=SAVE.lore||{};const key="fv"+c;
+  playVoiceList(q,!SAVE.lore[key],"🔊 故事播放中……第一次進入這一章，請先聽完",()=>{if(!SAVE.lore[key]){SAVE.lore[key]=1;save();}});
+}
+function playVoiceList(q,force,hint,onDone){
   const my=ENDV.id;
   if(force&&RUN&&RUN.scene){
     ENDV.lock=true;ENDV.scene=RUN.scene;
     const opts=document.querySelector("#view .scene .opts");
     if(opts){opts.querySelectorAll("button").forEach(b=>{b.disabled=true;});
-      if(!document.getElementById("npcHint"))opts.insertAdjacentHTML("beforebegin",'<div id="npcHint" class="dim small" style="margin-top:8px">🔊 結局播放中……第一次通關，請先聽完</div>');}
+      if(!document.getElementById("npcHint"))opts.insertAdjacentHTML("beforebegin",`<div id="npcHint" class="dim small" style="margin-top:8px">${hint}</div>`);}
   }
   const next=()=>{
     if(ENDV.id!==my)return;
-    const f=q.shift();if(!f){if(ENDV.lock)endVoiceUnlock();return;}
+    const f=q.shift();if(!f){if(ENDV.lock)endVoiceUnlock();if(onDone)onDone();return;}
     let adv=false,tm=0;
     const go=()=>{if(adv)return;adv=true;clearTimeout(tm);setTimeout(next,300);};
     try{
@@ -5028,7 +5231,7 @@ function ashenTalk(ch,pre){
 }
 function ashenJoin(ch){
   RUN.party.push(storyMate("ashen"));SAVE.lore=SAVE.lore||{};SAVE.lore.s_ashen=1;save();SFX.sr();
-  const g=Array.from({length:2},()=>({id:CH().minion,stars:1,scale:.8+RUN.fi*.05+RUN.ch*.08}));
+  const g=Array.from({length:2},()=>({id:CH().minion,stars:1,scale:.8+RUN.fi*.05+effCh()*.08}));
   aliveMembers().forEach(m=>m.hp=Math.min(m.maxHp,m.hp+Math.ceil(m.maxHp*.3))); // 營火的暖意：先恢復一些體力
   setScene(loc(ch),"🛡 守夜",["他點了一下頭。很輕，但你們看見了。","營火的暖意讓大家恢復了一些體力。","遠處傳來履帶碾過廢鐵的聲音，越來越近。火堆後的人開始發抖。","阿燼把重劍從地上拔起來，走到所有人的最前面。"],[
     {label:"⚔️ 迎戰",cls:"pri",act:()=>runBattle(ch,g,null,"「站我後面。」——阿燼橫劍擋在最前面。",()=>ashenAfter(ch))}]);
@@ -5055,13 +5258,13 @@ function helipad(L){
         RUN.party=RUN.party.filter(m=>!m.betrayed);
         CUR_B=null;VIEW="run";
         if(!win||runLost())return endRun(false,[C.lose]);
-        RUN.xpNote=runExp(25+RUN.ch*12);
+        RUN.xpNote=runExp(25+effCh()*12);
         seats();
       }});
   }};
   // 有魔王故事的章節，可以先聽故事再開打
   const opts=C.story?[fight,{label:`📜 聽聽${MONSTERS[C.boss].name}的故事`,act(){setScene(C.bossLoc,`📜 ${MONSTERS[C.boss].name}的故事`,C.story,[fight]);render();}}]:[fight];
-  setScene(C.bossLoc,C.bossTitle,L.concat(C.bossLines),opts);kingSay("boss",RUN.ch);render();
+  setScene(C.bossLoc,C.bossTitle,L.concat(C.bossLines),opts);if(C.bossPics)RUN.scene.pics=C.bossPics;kingSay("boss",RUN.ch);render();
 }
 /* ---- 深淵守門者 ---- */
 function abyssBoss(L){
@@ -5123,12 +5326,14 @@ function seats(){
 }
 
 /* ---- 結算 ---- */
+const effCh0=r=>{const c=CHAPTERS[r.ch];return c&&c.eq!=null?c.eq:r.ch;};
 function endRun(escaped,lines=[]){
   stopNpcVoice();stopEndVoice();
   const r=RUN;r.active=false;r.escaped=escaped;SAVE.run=null;SAVE.runCk=null;
   glog("🏁RUN",`${CHAPTERS[r.ch].name}（${diffName(r.diff)}）結束：${escaped?"逃出":"失敗"}，到達 ${r.fi}`);
   const reached=r.fi,C=CHAPTERS[r.ch],abyss=r.ch===ABYSS,P=SAVE.prog;
-  const firstClear=!abyss&&escaped&&P.cleared<=r.ch; // 這一章第一次通關
+  const fat=!!C.fatty,ec=effCh0(r),fk=r.ch-FATTY_FIRST_CH; // 肥宅物語：fk＝第幾章（0～4）
+  const firstClear=!abyss&&escaped&&(fat?(P.fatty||0)<=fk:P.cleared<=r.ch); // 這一章第一次通關
   let bonus=0;
   const out=lines.slice();
   if(escaped){
@@ -5136,13 +5341,19 @@ function endRun(escaped,lines=[]){
     if(abyss)bonus=r.fi*2;
     else{
       const dm=r.diff||1;
-      bonus=(10+r.ch*5)*dm;P.clears[r.ch]=(P.clears[r.ch]||0)+1;
+      bonus=(10+ec*5)*dm;P.clears[r.ch]=(P.clears[r.ch]||0)+1;
       P.dclears=P.dclears||{};P.dclears[r.ch]=P.dclears[r.ch]||{};P.dclears[r.ch][dm]=(P.dclears[r.ch][dm]||0)+1;
       if(dm>1)out.push(`<span style="color:var(--gold)">${DIFFS[dm].icon} ${DIFFS[dm].name}難度：金條、突破石、裝備 ×${dm}</span>`);
-      const q=r.ch>=4?(rnd()<.06?"UR":rnd()<.35?"SSR":"SR"):r.ch>=2?(rnd()<.12?"SSR":"SR"):(rnd()<.3?"SR":"R");
+      const q=ec>=4?(rnd()<.06?"UR":rnd()<.35?"SSR":"SR"):ec>=2?(rnd()<.12?"SSR":"SR"):(rnd()<.3?"SR":"R");
       for(let k=0;k<dm;k++)out.push(`🎁 ${C.bossRoom}留下了一件裝備：<b>${dropGear(q)}</b>（已放進裝備）`);
-      const st=(1+Math.floor(r.ch/2))*dm;SAVE.charms.stone+=st;out.push(`💎 撿到突破石 ×${st}`);
-      if(P.cleared<=r.ch){
+      const st=(1+Math.floor(ec/2))*dm;SAVE.charms.stone+=st;out.push(`💎 撿到突破石 ×${st}`);
+      if(fat&&(P.fatty||0)<=fk){
+        P.fatty=fk+1;bonus+=FATTY_FIRST[fk];
+        if(FRUIT_OPEN){const fk2=pick(Object.keys(FRUITS));SAVE.fruits[fk2]++;out.push(`${FRUITS[fk2].icon} 撿到 <b>${FRUITS[fk2].name}</b> ×1（到「隊伍」點角色就能吃）`);}
+        out.push(`🏅 首次通關「${C.name}」！額外 🪙${FATTY_FIRST[fk]}`);
+        if(fk<4)out.push(`🔓 解鎖新章節：<b>肥宅物語 第 ${fk+2} 章「${CHAPTERS[r.ch+1].name}」</b>`);
+        else if(C.finale)out.push(C.finale);
+      }else if(!fat&&P.cleared<=r.ch){
         P.cleared=r.ch+1;bonus+=FIRST_CLEAR[r.ch];
         if(FRUIT_OPEN){const fk=pick(Object.keys(FRUITS));SAVE.fruits[fk]++;out.push(`${FRUITS[fk].icon} 撿到 <b>${FRUITS[fk].name}</b> ×1（到「隊伍」點角色就能吃）`);}
         out.push(`🏅 首次通關「${C.name}」！額外 🪙${FIRST_CLEAR[r.ch]}`);
@@ -5167,8 +5378,11 @@ function endRun(escaped,lines=[]){
   SAVE.gold+=gain;if(r.ch===0)SAVE.stats.best=Math.max(SAVE.stats.best,reached);save();
   r.scene={loc:escaped?"夜空":"黑暗",title:escaped?(abyss?"🪜 撤離深淵":`${C.vehIcon} 逃出生天`):"✝ 遠征失敗",lines:out,opts:[{label:"回到主頁",cls:"pri",act(){RUN=null;go("home");}},{label:"再來一次",act(){RUN=null;startRun(r.ch,r.diff);}},
     ...(escaped&&!abyss&&END_VOX[r.ch]?[{label:"🔊 重聽結局",act(){playEndVoice(r.ch);}}]:[]),
-    ...(escaped&&!abyss&&CHAPTERS[r.ch+1]&&r.ch+1<ABYSS?[{label:`➡ 前往第 ${r.ch+2} 章`,act(){RUN=null;startRun(r.ch+1,r.diff);}}]:[])]};
-  r.choices=null;if(escaped&&!abyss)kingSay("end",r.ch);VIEW="run";render();
+    ...(escaped&&!abyss&&!fat&&CHAPTERS[r.ch+1]&&r.ch+1<ABYSS?[{label:`➡ 前往第 ${r.ch+2} 章`,act(){RUN=null;startRun(r.ch+1,r.diff);}}]:[]),
+    ...(escaped&&fat&&fk<4?[{label:`➡ 前往肥宅物語 第 ${fk+2} 章`,act(){RUN=null;startRun(r.ch+1,r.diff);}}]:[]),
+    ...(escaped&&fat&&fk===4&&fattyCanEvolve()?[{label:"🆙 肥宅進化",cls:"gold",act(){RUN=null;go("home");confirmEvolve();}}]:[])]};
+  if(escaped&&C.endPics)r.scene.pics=C.endPics;
+  r.choices=null;if(escaped&&!abyss&&!fat)kingSay("end",r.ch);VIEW="run";render();
   if(escaped&&!abyss)playEndVoice(r.ch,firstClear);
 }
 
@@ -5194,11 +5408,43 @@ function shareFood(){
 function abandonRun(){
   openModal(`<h3>放棄遠征？</h3><p class="dim">視同全隊覆沒，只帶回一半金條。</p><div class="row"><button class="pri" onclick="closeModal();endRun(false,['你們選擇放棄，躺回了停屍間的鐵櫃。'])">放棄</button><button onclick="closeModal()">繼續</button></div>`);
 }
+let RUN_TAB="main";
+function setRunTab(k){RUN_TAB=k;SFX.click();render();}
+function runTabs(){
+  return `<div class="filters" style="margin-top:0"><button class="${RUN_TAB==="main"?"on":""}" onclick="setRunTab('main')">🪜 主線遠征</button>
+    <button class="${RUN_TAB==="fatty"?"on":""}" onclick="setRunTab('fatty')">🍔 肥宅物語</button></div>`;
+}
+function fattyChapterCard(i){
+  const C=CHAPTERS[i],k=i-FATTY_FIRST_CH,ok=unlocked(i),n=SAVE.prog.clears[i]||0;
+  return `<div class="chap ${ok?"":"lockc"}" ${ok&&SAVE.team.length?`onclick="openDiff(${i})"`:""}><div class="ic">${ok?C.icon:"🔒"}</div>
+    <div><b>第 ${k+1} 章　${C.name}</b><div class="dim small">${ok?C.sub:k===0?`通關主線第 ${FATTY_REQ} 章後解鎖`:`通關「${CHAPTERS[i-1].name}」後解鎖`}</div>
+    <div class="small" style="color:var(--gold)">${n?`已逃出 ${n} 次`:ok?`首通獎勵 🪙${FATTY_FIRST[k]}`:""}</div></div></div>`;
+}
+function viewFattyStory(){
+  const P=SAVE.prog,done=P.fatty||0,open=P.cleared>=FATTY_REQ;
+  let evo;
+  if(SAVE.owned.fatty2)evo=`<div class="panel small">✅ 肥宅已經進化成 <b class="rSSR">SSR</b>。</div>`;
+  else if(done>=5)evo=SAVE.owned.fatty?`<div class="panel"><b>🆙 肥宅可以進化了！</b><p class="small dim" style="margin:6px 0">SR 肥宅 → SSR 肥宅，等級、星數、突破、裝備全部保留。</p><button class="pri" onclick="confirmEvolve()">🆙 進化</button></div>`
+    :`<div class="panel small dim">你還沒有 SR 肥宅。到招募所抽到他之後，就能在這裡進化成 SSR。</div>`;
+  else evo=`<div class="panel small dim">🆙 通關第 5 章後，SR 肥宅可以進化成 SSR。（目前進度 ${done}／5 章）</div>`;
+  return `<h2>逃殺遠征</h2>${runTabs()}
+  <h3>🍔 肥宅物語（支線・${done}／5 章）</h3>
+  <p class="dim small" style="margin-top:0">一個把世界當成遊戲的肥宅，一路被看不起，最後成為全隊最可靠的人。<b>肥宅本人會自動加入隊伍</b>（不佔你的出戰名額，出戰隊伍裡的肥宅會暫時休息）。通關第 ${FATTY_REQ} 章後開放。</p>
+  ${open?"":`<div class="panel dim">通關主線第 ${FATTY_REQ} 章「${CHAPTERS[FATTY_REQ-1].name}」後開放。</div>`}
+  <div class="chapters">${Array.from({length:5},(_,k)=>fattyChapterCard(FATTY_FIRST_CH+k)).join("")}</div>
+  ${evo}
+  <h3>出戰隊伍</h3><div class="cardgrid">${SAVE.team.map(id=>cardTile(id,`showCard('${id}')`)).join("")||"<span class='dim'>尚未編隊</span>"}</div>
+  <p class="dim small">點上面的章節開始。規則和主線遠征一樣（選房間、補給、毒氣），沒有三個座位的限制。</p>`;
+}
+function scenePics(list){
+  return `<div class="spics">${list.map(p=>`<figure style="margin:10px 0"><img src="${p.src}" alt="" style="width:100%;max-width:520px;border-radius:12px;display:block" onerror="this.parentNode.remove()">${p.cap?`<figcaption class="dim small" style="margin-top:4px">${p.cap}</figcaption>`:""}</figure>`).join("")}</div>`;
+}
 function viewRun(){
   if(!RUN&&SAVE.run)return `<h2>逃殺遠征</h2><div class="panel"><p>你有一場進行中的遠征：<b>${CHAPTERS[SAVE.run.ch].name}</b>・${SAVE.run.floors[SAVE.run.fi].label}</p>
     <div class="row"><button class="pri" onclick="resumeRun()">▶ 繼續遠征</button><button onclick="SAVE.run=null;save();render()">放棄這場遠征</button></div></div>`;
-  if(!RUN)return `<h2>逃殺遠征</h2>
-    <div class="chapters">${CHAPTERS.map((C,i)=>{const ok=unlocked(i),n=SAVE.prog.clears[i]||0;
+  if(!RUN&&RUN_TAB==="fatty")return viewFattyStory();
+  if(!RUN)return `<h2>逃殺遠征</h2>${runTabs()}
+    <div class="chapters">${CHAPTERS.map((C,i)=>{if(C.fatty)return "";const ok=unlocked(i),n=SAVE.prog.clears[i]||0;
       return `<div class="chap ${ok?"":"lockc"}" ${ok&&SAVE.team.length?`onclick="${C.abyss?`startRun(${i})`:`openDiff(${i})`}"`:""}><div class="ic">${ok?C.icon:"🔒"}</div>
         <div><b>${C.abyss?"":`第 ${i+1} 章　`}${C.name}</b><div class="dim small">${ok?C.sub:i===ABYSS?"通關第 1 章後解鎖":`通關「${CHAPTERS[i-1].name}」後解鎖`}</div>
         <div class="small" style="color:var(--gold)">${C.abyss?(SAVE.prog.abyssBest?`最深 D${SAVE.prog.abyssBest}`:""):n?`已逃出 ${n} 次`:ok?`首通獎勵 🪙${FIRST_CLEAR[i]}`:""}</div></div></div>`;}).join("")}</div>
@@ -5230,7 +5476,7 @@ function viewRun(){
   }else{
     const s=r.scene;
     main=`<div class="scene"><div class="loc">${s.loc}</div><h2>${s.title}</h2>
-      <div class="txt">${s.lines.filter(Boolean).map((t,i)=>`<p style="animation-delay:${i*.18}s">${t}</p>`).join("")}</div>${s.npc?npcBox(s.npc):""}
+      <div class="txt">${s.lines.filter(Boolean).map((t,i)=>`<p style="animation-delay:${i*.18}s">${t}</p>`).join("")}</div>${s.pics?scenePics(s.pics):""}${s.npc?npcBox(s.npc):""}
       ${npcVoiceLocked()?'<div id="npcHint" class="dim small" style="margin-top:8px">🔊 對話播放中……聽完才能繼續</div>':""}<div class="opts">${s.opts.map((o,i)=>`<button class="${o.cls||""}" ${npcVoiceLocked()?"disabled":""} onclick="sceneOpt(${i})">${o.label}</button>`).join("")}</div></div>`;
   }
   const al=allyMember();

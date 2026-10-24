@@ -658,7 +658,7 @@ const CARDS={
   ashen:{name:"阿燼",r:"SSR",story:true,gachaCh:15,hp:36,atk:7,def:1,spd:4,
     skill:{name:"撿回來的刀",cd:3,t:"enemy",kind:"dmg",desc:"冷卻3回合。選擇一名敵人，造成2.0倍攻擊傷害（會受對方防禦影響）；自己生命低於50%時，改為2.6倍。",
       use(B,u,t){const low=u.hp<u.maxHp*.5;if(low)blog(B,`${nm(u)} 握緊了劍：「……還沒結束。」`);hit(B,u,t,low?2.6:2.0);}},
-    passive:{name:"我不會丟下你",desc:"有隊友生命低於35%時，該隊友被攻擊有40%機率改由阿燼代受，代受的傷害只算原本的70%；每代受一次，阿燼的攻擊永久+6%（至少+1），本場最多疊3次。羈絆「名冊合照」：與晴同時在場時，阿燼的攻擊+4%。"}},
+    passive:{name:"我不會丟下你",desc:"有隊友生命低於35%時，該隊友被攻擊有40%機率改由阿燼代受，代受的傷害只算原本的60%；每代受一次，阿燼的攻擊永久+6%（至少+1），本場最多疊3次。羈絆「名冊合照」：與晴同時在場時，阿燼的攻擊+4%。"}},
   qing:{name:"晴",r:"SSR",story:true,gachaCh:15,hp:28,atk:4,def:1,spd:4,
     skill:{name:"唸出名字",cd:4,t:"none",kind:"heal",desc:"冷卻4回合。全隊活著的成員各恢復22.5%最大生命（至少5），並解除身上所有減益與中毒。",
       use(B,u){blog(B,`${nm(u)} 輕聲唸出每一個名字。`);mates(B,u).forEach(m=>{heal(B,m,Math.max(5,Math.round(m.maxHp*.225)));cleanse(m);});}},
@@ -2592,7 +2592,7 @@ function hit(B,a,t,mult,o={}){
       const g=mates(B,t).find(x=>x.id==="ashen"&&x!==t);
       if(g&&rnd()<.4){
         blog(B,`🛡 ${nm(g)}：「站我後面。」——替 ${nm(t)} 擋下了這一擊。`);
-        t=g;mult*=.7;
+        t=g;mult*=.6;
         if((g.flags.ashenN||0)<3){g.flags.ashenN=(g.flags.ashenN||0)+1;g.perm.atk=(g.perm.atk||0)+Math.max(1,Math.round(g.atk*.06));fx(B,g,"攻擊↑","sk");}
       }
     }

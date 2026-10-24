@@ -2080,8 +2080,21 @@ function viewDex(){
       <div class="small dim">${GQ_NAME[G.q]}・${SLOTS[G.slot]}・${gearCls(k)} ${reqTag(null,k)}</div>${o.n?"":`<div class="small dim">未擁有</div>`}</div>`;}).join("")}</div>
   <h3 style="margin-top:18px">🧩 套裝效果</h3>
   <p class="dim small" style="margin-top:0">同稀有度的武器、防具、飾品穿 2 件、3 件有額外效果（3 件會同時拿到 2 件的效果）。</p>
-  <div class="panel small">${GQ.map(q=>`<div style="margin-bottom:6px"><b class="r${q}">${GQ_NAME[q]}・${SETS[q].name}</b>　2 件：${statStr(SETS[q][2])}　3 件：${statStr(SETS[q][3])}</div>`).join("")}</div>`;
+  <div class="panel small">${GQ.map(q=>`<div style="margin-bottom:6px"><b class="r${q}">${GQ_NAME[q]}・${SETS[q].name}</b>　2 件：${statStr(SETS[q][2])}　3 件：${statStr(SETS[q][3])}</div>`).join("")}</div>
+  <h3 style="margin-top:18px">📖 裝備素質說明</h3>
+  <div class="panel small">${STAT_HELP.map(([l,t])=>`<div style="margin-bottom:6px"><b>${l}</b>　${t}</div>`).join("")}</div>`;
 }
+const STAT_HELP=[
+  ["❤ 生命","角色的血量。歸零就倒下，裝備的生命是直接加上去的固定數值。"],
+  ["⚔ 攻擊","決定造成的傷害。每次攻擊的傷害會在 90%～110% 之間浮動。"],
+  ["🛡 防禦","每 1 點防禦會抵銷 0.7 點受到的傷害（無視防禦的攻擊不受影響）。傷害最低仍有 1 點。"],
+  ["💨 速度","決定每回合的行動順序，速度高的先出手。部分技能（例如刺客的背刺）也會比較雙方速度。"],
+  ["🎯 暴擊","每次攻擊多出的暴擊機率（%），基礎是 8%，會與職業加成累加。暴擊傷害為 1.5 倍。"],
+  ["🩸 吸血","攻擊命中後，把造成傷害的一部分（%）轉成自己的生命。有「吸血減免」的魔王會讓吸血效果打折。"],
+  ["🌀 閃避","被攻擊時完全閃過的機率（%），閃過就不受任何傷害。無視防禦的攻擊和固定傷害閃不掉。"],
+  ["🧱 減傷","受到的傷害再減少一定比例（%），上限 30%。無視防禦的攻擊不受影響。"]
+];
+
 function openDex(k){
   const G=GEAR[k],o=dexOwned(k),[lo,hi]=GEAR_ROLL[G.q],m=AFFIX_MULT[G.q];
   const rng=Object.keys(G.st).map(s=>{const a=Math.max(1,Math.round(G.st[s]*lo/100)),b=Math.max(1,Math.round(G.st[s]*hi/100));return `${ST_LBL[s]}${a===b?a:a+"～"+b}`;}).join(" ");

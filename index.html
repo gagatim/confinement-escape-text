@@ -1402,7 +1402,7 @@ function viewHome(){
     <span>競技場勝場 ${st.arenaWins}</span><span>總抽數 ${SAVE.pulls}</span>
   </div>
   <div class="row small" style="margin-top:8px">
-    <span class="dim">存檔會自動保存在這個瀏覽器（遠征中途關掉也能接著玩）。</span>
+    <span class="dim">存檔會自動保存在這個瀏覽器（遠征中途關掉也能接著玩）。${typeof SAVE.playSec==="number"?`遊戲時間 ${fmtPlay(SAVE.playSec)}`:""}</span>
     <button class="mini" style="margin-left:auto" onclick="exportSave()">📤 匯出存檔</button>
     <button class="mini" onclick="importSave()">📥 匯入存檔</button>
     ${readBackups().length?'<button class="mini gold" onclick="openRestore()">♻ 還原備份</button>':""}
@@ -3702,7 +3702,8 @@ function authErr(e){
   return "發生錯誤："+(c||e&&e.message||e);
 }
 function setAcct(u){ACCT={uid:u.uid,name:u.displayName||u.email.split("@")[0]};try{localStorage.setItem(ACCT_KEY,ACCT.name);}catch(e){}renderHeader();}
-function saveSummary(s){return `🪙${s.gold}・抽 ${s.pulls} 次・角色 ${Object.keys(s.owned).length} 名・${s.prog.cleared>=ABYSS?"主線全破":`主線第 ${s.prog.cleared+1} 章`}${s.updatedAt?`<br><span class="dim">最後存檔 ${new Date(s.updatedAt).toLocaleString()}</span>`:""}`;}
+function fmtPlay(sec){const m=Math.floor(sec/60);return m>=60?`${Math.floor(m/60)} 小時 ${m%60} 分`:`${m} 分鐘`;}
+function saveSummary(s){return `🪙${s.gold}・抽 ${s.pulls} 次・角色 ${Object.keys(s.owned).length} 名・${s.prog.cleared>=ABYSS?"主線全破":`主線第 ${s.prog.cleared+1} 章`}${typeof s.playSec==="number"?`・遊戲時間 ${fmtPlay(s.playSec)}`:""}${s.updatedAt?`<br><span class="dim">最後存檔 ${new Date(s.updatedAt).toLocaleString()}</span>`:""}`;}
 function openAccount(){
   if(ACCT)return openModal(`<h3>👤 ${ACCT.name}</h3>
     <p class="small">已登入。存檔會自動上傳雲端，換手機或電腦登入同一個帳號就能接著玩。</p>
@@ -5259,6 +5260,15 @@ SAVE_READY=true;save();
 if(STALE)setTimeout(staleNotice,0);
 if(BOOT_BAD)setTimeout(()=>tamperNotice(BOOT_BAD),0);
 setInterval(checkIntegrity,5000);
+// 遊戲總時間：頁面在前景時每秒累計（舊存檔沒有這個欄位，從更新後第一次開啟才開始記錄）
+let PLAY_T=Date.now();
+setInterval(()=>{
+  const n=Date.now(),d=n-PLAY_T;PLAY_T=n;
+  if(document.hidden||!SAVE||STALE||!SAVE_READY)return;
+  if(typeof SAVE.playSec!=="number")SAVE.playSec=0;
+  SAVE.playSec+=Math.min(d,3000)/1000;
+},1000);
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&SAVE_READY&&!STALE&&typeof SAVE.playSec==="number")save();});
 // 戰鬥看門狗：電腦方行動超過 20 秒沒有進展（不是在等玩家操作），提醒玩家用 🆘
 setInterval(()=>{
   const B=CUR_B;if(!B||B.done||B.over||B.wait||B.guest||B.rwait)return;

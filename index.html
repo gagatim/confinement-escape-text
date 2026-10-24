@@ -660,8 +660,8 @@ const CARDS={
       use(B,u,t){const low=u.hp<u.maxHp*.5;if(low)blog(B,`${nm(u)} 握緊了劍：「……還沒結束。」`);hit(B,u,t,low?2.6:2.0);}},
     passive:{name:"我不會丟下你",desc:"有隊友生命低於35%時，該隊友被攻擊有40%機率改由阿燼代受，代受的傷害只算原本的70%；每代受一次，阿燼的攻擊永久+6%（至少+1），本場最多疊3次。羈絆「名冊合照」：與晴同時在場時，阿燼的攻擊+4%。"}},
   qing:{name:"晴",r:"SSR",story:true,gachaCh:15,hp:28,atk:4,def:1,spd:4,
-    skill:{name:"唸出名字",cd:4,t:"none",kind:"heal",desc:"冷卻4回合。全隊活著的成員各恢復10%最大生命（至少5），並解除身上所有減益與中毒。",
-      use(B,u){blog(B,`${nm(u)} 輕聲唸出每一個名字。`);mates(B,u).forEach(m=>{heal(B,m,Math.max(5,Math.round(m.maxHp*.1)));cleanse(m);});}},
+    skill:{name:"唸出名字",cd:4,t:"none",kind:"heal",desc:"冷卻4回合。全隊活著的成員各恢復22.5%最大生命（至少5），並解除身上所有減益與中毒。",
+      use(B,u){blog(B,`${nm(u)} 輕聲唸出每一個名字。`);mates(B,u).forEach(m=>{heal(B,m,Math.max(5,Math.round(m.maxHp*.225)));cleanse(m);});}},
     passive:{name:"我記得你",desc:"每當有隊友倒下，全隊攻擊永久+4%（至少+1），本場最多疊3次。羈絆「名冊合照」：與阿燼同時在場時，晴的治療量+7.5%。"}},
   // 《肥宅物語》通關後，由 SR 肥宅進化而來（不進招募池）
   fatty2:{name:"肥宅",r:"SSR",story:true,evolveFrom:"fatty",gachaCh:9999,hp:54,atk:6,def:3,spd:3,

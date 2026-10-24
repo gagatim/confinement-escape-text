@@ -1066,6 +1066,7 @@ function validSave(s){
   if(s.train&&!isInt(s.train.best,0,TRAIN_MAX))return "練功房進度異常";
   if(!isInt(s.prog.cleared,0,ABYSS))return "主線進度異常";
   if(s.prog.fatty!=null&&!isInt(s.prog.fatty,0,5))return "肥宅物語進度異常";
+  if(s.fattyCopies!=null&&!isInt(s.fattyCopies,0,99999))return "肥宅卡片數量異常";
   if(s.run&&!(isInt(s.run.gold,0,5000000)&&isInt(s.run.food,0,9999)))return "遠征資料異常";
   return "";
 }
@@ -1120,6 +1121,7 @@ function checkIntegrity(){if(!SAVE||STALE)return true;const why=validSave(SAVE);
 // 舊存檔補欄位：已逃出過禁閉室就算通關第1章
 function migrate(s){
   if(s.prog&&s.prog.fatty==null)s.prog.fatty=0; // 《肥宅物語》進度（0～5）
+  if(s.fattyCopies==null)s.fattyCopies=s.owned&&s.owned.fatty?s.owned.fatty.stars:0; // 抽到的 SR 肥宅張數（舊存檔用現有星數估）
   if(!s.prog)s.prog={cleared:s.stats&&s.stats.escapes>0?1:0,clears:{},abyssBest:0};
   if(s.run===undefined)s.run=null;
   // 第5、6章插在無盡深淵前面：舊存檔的深淵遠征 ch 從 4 改成 6
@@ -1485,11 +1487,7 @@ function rollRarity(){
   return x<.20?"SR":"R";
 }
 function grant(id){
-  if(id==="fatty"&&!SAVE.owned.fatty&&SAVE.owned.fatty2){ // 肥宅已進化成 SSR：重複抽到的 SR 肥宅併進 SSR 肥宅（升星；滿星換碎片）
-    const o2=SAVE.owned.fatty2;
-    if(o2.stars<5){o2.stars++;return {id,up:o2.stars};}
-    const sh=SHARD_DUP.SR;SAVE.gold+=5;SAVE.charms.stone++;SAVE.shards.SR+=sh;return {id,refund:5,sh};
-  }
+  if(id==="fatty")SAVE.fattyCopies=(SAVE.fattyCopies||0)+1; // 抽到幾張 SR 肥宅（10 張可換 1 張 SSR 肥宅）
   const o=SAVE.owned[id];
   if(!o){SAVE.owned[id]={stars:1};return {id,isNew:true};}
   if(o.stars<5){o.stars++;return {id,up:o.stars};}
@@ -1574,7 +1572,7 @@ function closeGacha(){$("#gacha").classList.remove("show");render();}
 
 /* ===================== TEAM ===================== */
 let SHOW_LOCKED=false;
-function sortedIds(){return Object.keys(CARDS).filter(id=>(!CARDS[id].story||SAVE.owned[id])&&!(id==="fatty"&&SAVE.owned.fatty2&&!SAVE.owned.fatty)).sort((a,b)=>R_ORDER[CARDS[a].r]-R_ORDER[CARDS[b].r]||a.localeCompare(b));}
+function sortedIds(){return Object.keys(CARDS).filter(id=>!CARDS[id].story||SAVE.owned[id]).sort((a,b)=>R_ORDER[CARDS[a].r]-R_ORDER[CARDS[b].r]||a.localeCompare(b));}
 function cardTile(id,onclick,extraCls=""){
   const c=CARDS[id],o=SAVE.owned[id];
   return `<div class="ccard ${c.r} ${o?"":"locked"} ${o&&o.br?brTier(o.br):""} ${SAVE.team.includes(id)?"inteam":""} ${extraCls}" onclick="${onclick}">
@@ -1649,7 +1647,8 @@ function showCard(id){
     ${setHtml(id)}${e.crit||e.steal||e.dodge||e.dr?`<div class="gfx">裝備特效：${statStr({crit:e.crit,steal:e.steal,dodge:e.dodge,dr:e.dr})}</div>`:""}`:""}
     </div></div>
     ${skillHtml(c)}
-    ${c.evolveFrom?`<div class="sk small"><b>🆙 進化角色</b><br>《肥宅物語》通關後，由 SR 肥宅進化而來，不進招募池。<b>無法合成、熔煉、遣散</b>，等級也不能轉給別人（可以接收別人的等級）。</div>`:""}
+    ${c.evolveFrom?`<div class="sk small"><b>🆙 進化角色</b><br>《肥宅物語》通關後由 SR 肥宅進化，或用 10 張 SR 肥宅兌換取得，不進招募池。<b>無法合成、熔煉、遣散</b>，等級也不能轉給別人（可以接收別人的等級）。</div>`:""}
+    ${id==="fatty"?`<div class="sk small"><b>🔁 SSR 肥宅</b><br>抽到 SR 肥宅 ${fattyCopies()}／${FATTY_EXCHANGE} 張，${fattyExchangeOpen()?`滿 ${FATTY_EXCHANGE} 張可以換 1 張 SSR 肥宅。`:`🔒 通關肥宅物語第 5 章後，滿 ${FATTY_EXCHANGE} 張可以換 1 張 SSR 肥宅。`}SR 肥宅不提供合成。<div class="row" style="margin-top:6px"><button class="mini ${fattyCanExchange()?"pri":""}" onclick="closeModal();confirmFattyExchange()" ${fattyCanExchange()?"":"disabled"}>${fattyExchangeOpen()?"🔁 兌換 SSR 肥宅":"🔒 兌換（尚未開放）"}</button></div></div>`:""}
     ${id==="fatty"&&o&&(SAVE.prog.fatty||0)>=5&&!SAVE.owned.fatty2?`<div class="sk small"><b>🆙 可以進化！</b><br>《肥宅物語》已通關，這位肥宅可以進化成 SSR。<div class="row" style="margin-top:6px"><button class="pri" onclick="closeModal();confirmEvolve()">🆙 進化成 SSR</button></div></div>`:""}
     ${c.story&&!c.evolveFrom?`<div class="sk small"><b>📖 劇情角色</b><br>《名冊》故事線的同伴。通關第 ${c.gachaCh} 章後可以在招募所抽到。<b>無法合成、熔煉、遣散</b>，等級也不能轉給別人（可以接收別人的等級）。</div>`:""}
     ${o&&fruitVisible(id)?fruitHtml(id):""}
@@ -1713,6 +1712,7 @@ const SYN_COST=6,SYN_UP={R:"SR",SR:"SSR"};
 let SYN={tier:"R",pick:{}};
 function synBlock(id){
   if(storyOn(id))return "劇情角色";
+  if(id==="fatty")return "不提供合成";
   if(SAVE.team.includes(id))return "隊伍中";
   if(SAVE.run&&SAVE.run.party.some(m=>!m.ally&&m.id===id))return "遠征中";
   if(brOf(id))return "已突破";
@@ -1753,7 +1753,7 @@ function doSynth(){
 // 合成一次：扣掉投入的星數，給 1 名高一階的隨機角色（60% 優先沒有的）
 function synthCore(pk,tier){
   Object.entries(pk).forEach(([id,n])=>{SAVE.owned[id].stars-=n;if(SAVE.owned[id].stars<=0)delete SAVE.owned[id];});
-  const up=SYN_UP[tier],pool=POOL[up],fresh=pool.filter(id=>!SAVE.owned[id]);
+  const up=SYN_UP[tier],pool=POOL[up].filter(id=>id!=="fatty"),fresh=pool.filter(id=>!SAVE.owned[id]);
   const id=fresh.length&&rnd()<.6?pick(fresh):pick(pool);
   return {id,gr:grant(id)};
 }
@@ -4410,8 +4410,32 @@ function confirmEvolve(){
     <div class="rSSR">SSR</div><h2 style="margin:2px 0">肥宅</h2>
     <div class="small">❤ ${CARDS.fatty2.hp}　⚔ ${CARDS.fatty2.atk}　🛡 ${CARDS.fatty2.def}　💨 ${CARDS.fatty2.spd}</div></div></div>
     ${skillHtml(CARDS.fatty2)}
-    <p class="dim small">SR 肥宅會變成 SSR 肥宅，<b>等級、星數、突破、裝備、果實全部保留</b>，隊伍位置也不變。進化後無法回到 SR，也不能再進招募池。</p>
+    <p class="dim small">SR 肥宅會變成 SSR 肥宅，<b>等級、星數、突破、裝備、果實全部保留</b>，隊伍位置也不變。進化後這張 SR 肥宅會消失，但之後還是可以在招募所抽到 SR 肥宅；SSR 肥宅不進招募池。</p>
     <div class="row"><button class="pri" onclick="evolveFatty()">🆙 進化</button><button onclick="closeModal()" style="margin-left:auto">取消</button></div>`);
+}
+const FATTY_EXCHANGE=10;
+function fattyCopies(){return SAVE.fattyCopies||0;}
+const fattyExchangeOpen=()=>(SAVE.prog.fatty||0)>=5; // 通關肥宅物語第 5 章後才開放兌換
+const fattyCanExchange=()=>fattyExchangeOpen()&&fattyCopies()>=FATTY_EXCHANGE;
+function confirmFattyExchange(){
+  if(!fattyExchangeOpen()){toast("通關肥宅物語第 5 章後，才能兌換 SSR 肥宅");return;}
+  if(fattyCopies()<FATTY_EXCHANGE){toast(`SR 肥宅還不夠（${fattyCopies()}／${FATTY_EXCHANGE} 張）`);return;}
+  const have=SAVE.owned.fatty2;
+  openModal(`<h3>🔁 兌換 SSR 肥宅</h3><div class="detail"><div class="av fx-SSR">${avatar("fatty2")}</div><div style="flex:1">
+    <div class="rSSR">SSR</div><h2 style="margin:2px 0">肥宅</h2></div></div>
+    <p>用 <b>${FATTY_EXCHANGE} 張</b> SR 肥宅換 1 張 SSR 肥宅（目前 ${fattyCopies()} 張）。${have?`你已經有 SSR 肥宅，兌換會讓他 <b>升 1★</b>${have.stars>=5?"（已滿星，改換成金條、突破石和碎片）":""}。`:"他會以 1★、Lv.1 加入收藏。"}</p>
+    <p class="dim small">只會扣掉「抽到的張數」，你手上的 SR 肥宅不會消失。</p>
+    <div class="row"><button class="pri" onclick="fattyExchange()">🔁 兌換</button><button onclick="closeModal()" style="margin-left:auto">取消</button></div>`);
+}
+function fattyExchange(){
+  if(!fattyCanExchange())return;
+  SAVE.fattyCopies-=FATTY_EXCHANGE;
+  const o=SAVE.owned.fatty2;
+  if(!o)SAVE.owned.fatty2={stars:1};
+  else if(o.stars<5)o.stars++;
+  else{SAVE.gold+=5;SAVE.charms.stone++;SAVE.shards.SSR+=SHARD_DUP.SSR;}
+  save();SFX.ssr();glog("🔁EXCHANGE","10 張 SR 肥宅換 SSR 肥宅");
+  render();showCard("fatty2");toast("🔁 兌換成功！");
 }
 function evolveFatty(){
   if(!fattyCanEvolve()||SAVE.run||RUN)return;
@@ -5440,10 +5464,14 @@ function fattyChapterCard(i){
 function viewFattyStory(){
   const P=SAVE.prog,done=P.fatty||0,open=P.cleared>=FATTY_REQ;
   let evo;
-  if(SAVE.owned.fatty2)evo=`<div class="panel small">✅ 肥宅已經進化成 <b class="rSSR">SSR</b>。</div>`;
+  if(SAVE.owned.fatty2)evo=`<div class="panel small">✅ 你已經有 <b class="rSSR">SSR</b> 肥宅（${SAVE.owned.fatty2.stars}★）。</div>`;
   else if(done>=5)evo=SAVE.owned.fatty?`<div class="panel"><b>🆙 肥宅可以進化了！</b><p class="small dim" style="margin:6px 0">SR 肥宅 → SSR 肥宅，等級、星數、突破、裝備全部保留。</p><button class="pri" onclick="confirmEvolve()">🆙 進化</button></div>`
     :`<div class="panel small dim">你還沒有 SR 肥宅。到招募所抽到他之後，就能在這裡進化成 SSR。</div>`;
   else evo=`<div class="panel small dim">🆙 通關第 5 章後，SR 肥宅可以進化成 SSR。（目前進度 ${done}／5 章）</div>`;
+  evo+=`<div class="panel"><b>🔁 SR 肥宅兌換</b>　<span class="small dim">抽到 SR 肥宅 ${fattyCopies()}／${FATTY_EXCHANGE} 張</span>
+    <div class="ratebar"><i style="width:${Math.min(100,fattyCopies()/FATTY_EXCHANGE*100)}%"></i></div>
+    <p class="small dim" style="margin:6px 0">${fattyExchangeOpen()?`抽到 ${FATTY_EXCHANGE} 張 SR 肥宅就能換 1 張 SSR 肥宅（已經有的話升 1★）。`:`🔒 通關肥宅物語第 5 章後開放。開放後，抽到 ${FATTY_EXCHANGE} 張 SR 肥宅就能換 1 張 SSR 肥宅（已經有的話升 1★）。`}</p>
+    <button class="pri" onclick="confirmFattyExchange()" ${fattyCanExchange()?"":"disabled"}>${fattyExchangeOpen()?"🔁 兌換":"🔒 兌換（尚未開放）"}</button></div>`;
   return `<h2>逃殺遠征</h2>${runTabs()}
   <h3>🍔 肥宅物語（支線・${done}／5 章）</h3>
   <p class="dim small" style="margin-top:0">一個把世界當成遊戲的肥宅，一路被看不起，最後成為全隊最可靠的人。<b>肥宅本人會自動加入隊伍</b>（不佔你的出戰名額，出戰隊伍裡的肥宅會暫時休息）。通關第 ${FATTY_REQ} 章後開放。</p>

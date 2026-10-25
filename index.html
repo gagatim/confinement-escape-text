@@ -1431,7 +1431,7 @@ function nextHint(){
 /* ===================== HOME ===================== */
 /* ===== 每日登入獎勵：7 天一輪，連續登入才會往下一天走，斷掉就從第 1 天重來 ===== */
 const LOGIN_REWARDS=[
-  {gold:60},{gold:80},{stone:2},{gold:100},{protect:2},{gold:120},{gold:200,stone:2,luck:2}];
+  {gold:300},{gold:400},{stone:10},{gold:500},{protect:10},{gold:600},{gold:1000,stone:10,luck:10}];
 function loginTxt(r){return [r.gold&&`🪙${r.gold}`,r.stone&&`💎突破石×${r.stone}`,r.protect&&`🧿保護符×${r.protect}`,r.luck&&`🍀幸運符×${r.luck}`].filter(Boolean).join(" ");}
 function dateStr(off=0){const d=new Date();d.setDate(d.getDate()+off);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
 // 今天可不可以領：日期比上次領的晚才行（系統時間往回調不算）；回傳 {ok, day}（day 是這次會領到第幾天）

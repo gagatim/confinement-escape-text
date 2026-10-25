@@ -4821,6 +4821,14 @@ function startRun(c=0,diff=1){
     team=team.filter(id=>id!=="fatty"&&id!=="fatty2"); // 肥宅是故事主角，以劇情隊友加入，不能再當自己的隊員
     if(!team.length){toast("肥宅物語需要至少 1 名其他角色出戰（肥宅本人會自動加入）");return;}
   }
+  // 這條故事線會讓阿燼、晴以劇情版加入：你隊伍裡同一張卡暫時休息（不消耗），避免出現兩個同一個人。劇情夥伴不佔出戰名額
+  const matesHere=C.mates||[],sitOut=team.filter(id=>matesHere.includes(id));
+  if(sitOut.length){
+    team=team.filter(id=>!matesHere.includes(id));
+    if(!team.length){toast(`${sitOut.map(id=>CARDS[id].name).join("、")}會以劇情夥伴的身分加入，請再編至少 1 名其他角色出戰`);return;}
+    toast(`${sitOut.map(id=>CARDS[id].name).join("、")} 由劇情版出場，你的卡這次先休息`);
+    glog("👥MATE",`出戰卡休息：${sitOut.join("、")}`);
+  }
   if(C.abyss)diff=1;
   glog("🚩RUN",`開始：${C.name}（${diffName(diff)}）`);
   RUN={active:true,ch:c,diff,fi:0,time:0,food:3,gold:0,items:[],party:team.map(id=>mkMember(id,SAVE.owned[id].stars,{gear:equipBonus(id),scale:lvScale(id),br:brOf(id)})),
@@ -5112,7 +5120,7 @@ function rivalGroup(fi){
   return Array.from({length:n},()=>rivalUnit(fi));
 }
 function rivalEncounter(ch,L,group,opt={}){
-  const where=loc(ch),solo=group.length===1,g=group[0],al=allyMember(),full=RUN.party.filter(m=>m.alive).length>=teamMax()+1;
+  const where=loc(ch),solo=group.length===1,g=group[0],al=allyMember(),full=RUN.party.filter(m=>m.alive&&!m.story).length>=teamMax()+1;
   const desc=group.map(x=>`${x.name}（${CARDS[x.id].r} ${"★".repeat(x.stars)}）`).join("、");
   const lines=L.concat([`<div class="row" style="gap:6px;margin:6px 0">${group.map(x=>`<div style="width:56px;height:56px;border-radius:8px;overflow:hidden;border:2px solid var(--sideB)">${avatar(x.id)}</div>`).join("")}</div>`,
     `遭遇：<b style="color:var(--sideB)">${desc}</b>`,
@@ -5195,7 +5203,7 @@ function runBattle(ch,group,ambush,intro,after){
 }
 
 /* ===== 劇情隊友（《名冊》故事線）：能力跟著自己隊伍的平均值走，不吃養成 ===== */
-const hasStory=id=>!!RUN&&RUN.party.some(m=>m.story&&m.id===id);
+const hasStory=id=>!!RUN&&RUN.party.some(m=>!m.ally&&m.id===id); // 劇情版或你自己出戰的同一張卡，隊伍裡已經有了就不再加入
 function storyMate(id){
   const t=RUN.party.filter(m=>!m.ally&&!m.story),n=Math.max(1,t.length);
   const avg=f=>t.reduce((a,x)=>a+f(x),0)/n;

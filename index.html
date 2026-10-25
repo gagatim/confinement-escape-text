@@ -2552,7 +2552,7 @@ function viewShop(){
       <div class="shopsec">${Object.entries(FRUITS).map(([k,F])=>`<div class="sitem"><div class="gi">${F.icon}</div><b>${F.name}</b><div class="small dim">吃了${F.stat}永久 +1</div>
         <div class="small">持有 ×${SAVE.fruits[k]}</div><button class="gold" onclick="buyFruit('${k}')" ${SAVE.gold<F.price?"disabled":""}>🪙${F.price}</button></div>`).join("")}</div>`;
   }else{
-    body=`<div class="panel small" style="margin-bottom:10px">🎒 行囊（下一次遠征自動帶上）：${st.items.map(id=>ITEMS[id].icon+ITEMS[id].name).join("、")||"<span class='dim'>空</span>"}　🥫 補給 +${st.food}
+    body=`<div class="panel small" style="margin-bottom:10px">🎒 行囊（下一次遠征自動帶上）：${groupItems(st.items).map(g=>ITEMS[g.id].icon+ITEMS[g.id].name+(g.n>1?`×${g.n}`:"")).join("、")||"<span class='dim'>空</span>"}　🥫 補給 +${st.food}
       <span class="dim">（道具最多 ${STASH_MAX} 件、補給最多 ${FOOD_MAX} 份）</span></div>
       <div class="shopsec">${Object.entries(SUPPLY).map(([id,p])=>`<div class="sitem"><div class="gi">${ITEMS[id].icon}</div><b>${ITEMS[id].name}</b><div class="small dim">${ITEMS[id].desc}</div>
         <button onclick="buySupply('${id}')" ${SAVE.gold<p||st.items.length>=STASH_MAX?"disabled":""}>🪙${p}</button></div>`).join("")}
@@ -3143,7 +3143,7 @@ function actionPanel(B){
   const u=w.u,sk=DEF(u.id).skill,who=B.ctrl.A==="human"&&B.ctrl.B==="human"?`<span class="tag">${B.labels[u.side]}</span> `:"";
   if(w.mode==="target")return `<div class="apanel"><div class="who">${who}${nm(u)}：選擇【${w.label}】的目標（點選發光的角色）</div><div class="btns"><button data-kb="back" onclick="cancelTarget()">✕ 取消</button></div>${KB_HINT}</div>`;
   if(w.mode==="items")return `<div class="apanel"><div class="who">選擇道具</div><div class="btns">
-    ${B.items.map((id,i)=>ITEMS[id].battle?`<button data-kb="item${i}" onclick="pickItem(${i})" title="${ITEMS[id].desc}">${ITEMS[id].icon}${ITEMS[id].name}</button>`:"").join("")||"<span class='dim'>沒有可在戰鬥中使用的道具</span>"}
+    ${groupItems(B.items).map(g=>ITEMS[g.id].battle?`<button data-kb="item${g.i}" onclick="pickItem(${g.i})" title="${ITEMS[g.id].desc}">${ITEMS[g.id].icon}${ITEMS[g.id].name}${g.n>1?`×${g.n}`:""}</button>`:"").join("")||"<span class='dim'>沒有可在戰鬥中使用的道具</span>"}
     <button data-kb="back" onclick="cancelTarget()">返回</button></div>${KB_HINT}</div>`;
   const usable=B.items?B.items.filter(id=>ITEMS[id].battle).length:0;
   return `<div class="apanel"><div class="who">${who}${nm(u)} 的回合</div><div class="btns">
@@ -5680,6 +5680,12 @@ function applyOutItem(mi){
   else if(id==="wine"){const k=ri(1,3);if(k===1){m.hp=Math.min(m.maxHp,m.hp+6);toast("好酒！恢復6");}else if(k===2){m.hp=Math.min(m.maxHp,m.hp+2);toast("微醺，恢復2");}else{m.hp=Math.max(1,m.hp-2);toast("……酒壞了，-2");}}
   render();
 }
+// 道具顯示：相同的合併成一格（×n），順序照第一次出現；i 是第一個的位置，點擊時用它
+function groupItems(ids){
+  const m={},out=[];
+  ids.forEach((id,i)=>{if(m[id])m[id].n++;else out.push(m[id]={id,n:1,i});});
+  return out;
+}
 // 一鍵補血：從隊伍最前面開始，每人補到滿血為止；先用藥片（穩定），藥片用完才用酒（隨機）
 function autoHeal(){
   if(!RUN||!RUN.active)return;
@@ -5795,7 +5801,7 @@ function viewRun(){
     <div class="gasbar">☣ 毒氣：${g<0?"尚未出現":"已淹到 "+FL()[clamp(g,0,FL().length-1)].label}</div>
     <h3>隊伍</h3>${party}
     ${al&&r.food>0&&r.active?`<button class="mini" onclick="shareFood()">🥫 分補給給盟友（信任+20）</button>`:""}
-    <h3>背包</h3>${r.active&&r.items.some(i=>i==="pill"||i==="wine")&&r.party.some(m=>m.alive&&m.hp<m.maxHp)?`<button class="mini gold" onclick="autoHeal()">💊 一鍵補血（前面優先）</button>`:""}<div class="items">${r.items.map((id,i)=>`<span class="item ${r.sel===i?"sel":""}" title="${ITEMS[id].desc}" onclick="useOutItem(${i})">${ITEMS[id].icon}${ITEMS[id].name}</span>`).join("")||"<span class='dim small'>空</span>"}</div>
+    <h3>背包</h3>${r.active&&r.items.some(i=>i==="pill"||i==="wine")&&r.party.some(m=>m.alive&&m.hp<m.maxHp)?`<button class="mini gold" onclick="autoHeal()">💊 一鍵補血（前面優先）</button>`:""}<div class="items">${groupItems(r.items).map(g=>`<span class="item ${r.sel!=null&&r.items[r.sel]===g.id?"sel":""}" title="${ITEMS[g.id].desc}" onclick="useOutItem(${g.i})">${ITEMS[g.id].icon}${ITEMS[g.id].name}${g.n>1?`×${g.n}`:""}</span>`).join("")||"<span class='dim small'>空</span>"}</div>
     ${r.sel!=null?`<div class="small" style="color:var(--gold);margin-top:6px">選擇要使用／裝備的隊員 →</div>`:""}
     ${r.active?`<div class="row" style="margin-top:14px"><button class="mini" onclick="abandonRun()">放棄遠征</button><button class="mini" onclick="openStuck()">🐞 卡住了／回報問題</button></div>`:""}
   </div>`;

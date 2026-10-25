@@ -1341,14 +1341,17 @@ function toggleBgm(){
 
 /* ===================== VIEW ROUTER ===================== */
 let VIEW="home";
-const NAV=[["home","主頁"],["gacha","招募"],["team","整備室"],["story","檔案室"],["shop","商店"],["boss","魔王討伐"],["run","遠征"],["train","練功房"],["arena","競技場"],["duel","雙人對決"]];
+const NAV=[["home","主頁"],["gacha","招募"],["team","整備室"],["story","檔案室"],["shop","商店"],["boss","魔王討伐"],["run","遠征"],["train","練功房"],["arena","競技場"]];
 // 合併頁：一個導覽按鈕對應多個分頁（各頁的代號、內容、背景音樂維持原樣，只是共用上方的分頁列）
-//   檔案室＝圖鑑／故事／成就；整備室＝隊伍／裝備／轉換
+//   檔案室＝圖鑑／故事／成就；整備室＝隊伍／裝備／轉換；競技場＝競技場／雙人對決
 const PAGE_GROUPS=[
-  {nav:"story",title:"🗄 檔案室",tabs:[["story","👑 故事"],["ach","🏆 成就"],["dex","📖 圖鑑"]]},
-  {nav:"team",title:"🛠 整備室",tabs:[["team","👥 隊伍"],["gear","🛡 裝備"],["convert","🔁 轉換"]]}
+  {nav:"story",title:"🗄 檔案室",tabs:[["story","👑 故事"],["ach","🏆 成就"],["dex","📖 圖鑑"],["log","📝 更新說明"]]},
+  {nav:"team",title:"🛠 整備室",tabs:[["team","👥 隊伍"],["gear","🛡 裝備"],["convert","🔁 轉換"]]},
+  {nav:"arena",title:"🏟 競技場",tabs:[["arena","⚔ 競技場"],["duel","🆚 雙人對決"]]}
 ];
 const groupOf=v=>PAGE_GROUPS.find(g=>g.tabs.some(([k])=>k===v));
+// 目前導覽列該亮哪一顆：分頁歸屬的導覽鈕；戰鬥中看是從哪個頁面打的
+const navOf=()=>{const v=VIEW==="battle"?BATTLE_HOME:VIEW,g=groupOf(v);return g?g.nav:v;};
 function groupTabs(g){
   return `<div class="row" style="align-items:center;gap:10px;margin-top:6px"><b style="font-size:18px">${g.title}</b>
     <div class="filters" style="margin:0">${g.tabs.map(([k,l])=>`<button class="${VIEW===k?"on":""}" onclick="go('${k}')">${l}</button>`).join("")}</div></div>`;
@@ -1364,9 +1367,9 @@ let NAV_OPEN=false;
 function toggleNav(){NAV_OPEN=!NAV_OPEN;SFX.click();renderHeader();}
 function renderHeader(){
   $("#app").classList.toggle("inbattle",VIEW==="battle"); // 戰鬥中收起導覽列（本來就不能離開），多留空間給戰場
-  $("#nav").innerHTML=NAV.map(([k,l])=>`<button class="${VIEW===k||(groupOf(VIEW)&&groupOf(VIEW).nav===k)||(VIEW==="battle"&&k===BATTLE_HOME)?"on":""}" onclick="go('${k}')">${l}</button>`).join("");
+  $("#nav").innerHTML=NAV.map(([k,l])=>`<button class="${navOf()===k?"on":""}" onclick="go('${k}')">${l}</button>`).join("");
   $("#nav").className=NAV_OPEN?"open":"";
-  const cur=NAV.find(([k])=>k===VIEW||(groupOf(VIEW)&&groupOf(VIEW).nav===k)||(VIEW==="battle"&&k===BATTLE_HOME));
+  const cur=NAV.find(([k])=>k===navOf());
   $("#menuBtn").textContent=(NAV_OPEN?"✕ ":"☰ ")+(cur?cur[1]:"選單");
   $("#wallet").textContent="🪙 "+SAVE.gold;
   $("#muteBtn").textContent=SAVE.muted?"🔇":"🔊";
@@ -1387,7 +1390,7 @@ function render(){
 }
 function renderInner(){
   renderHeader();
-  const f={home:viewHome,gacha:viewGacha,team:viewTeam,convert:viewConvert,dex:viewCodex,gear:viewGear,shop:viewShop,run:viewRun,boss:viewBossPage,train:viewTrain,arena:viewArena,ach:viewAch,story:viewStory,duel:viewDuel,battle:viewBattle}[VIEW]||viewHome;
+  const f={home:viewHome,gacha:viewGacha,team:viewTeam,convert:viewConvert,dex:viewCodex,gear:viewGear,shop:viewShop,run:viewRun,boss:viewBossPage,train:viewTrain,arena:viewArena,ach:viewAch,story:viewStory,log:viewChangelog,duel:viewDuel,battle:viewBattle}[VIEW]||viewHome;
   $("#view").innerHTML=(groupOf(VIEW)?groupTabs(groupOf(VIEW)):"")+f();
   if(VIEW==="battle"){const l=$("#blog");if(l)l.scrollTop=l.scrollHeight;kbApply();}
   if(CUR_B&&CUR_B.online&&!CUR_B.guest)pushSnap(CUR_B);
@@ -4731,6 +4734,15 @@ function npcBox(n){
 }
 
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
+/* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
+const CHANGELOG=[
+  {d:"2026-10-26",t:["雙人對決移到「競技場」底下，競技場頁面上方可以切換","遠征新增「一鍵補血」：從隊伍最前面開始補滿，先用藥片再用酒","背包裡相同的道具合併顯示（例如 🚀火箭筒×2）","檔案室新增「分析」：列出所有角色的初始素質，可點表頭排序","新增這份「更新說明」"]},
+  {d:"2026-10-25",t:["每日登入獎勵調整為原來的 5 倍","魔王討伐頁面也會播放魔王戰配樂","修正手機抽卡結果看不到的問題（改用直接換面，不再用 3D 翻牌）"]}
+];
+function viewChangelog(){
+  return `<h2>📝 更新說明</h2><p class="dim small">每次更新的內容都會記在這裡，新的在最上面。</p>
+  ${CHANGELOG.map(e=>`<div class="panel"><b style="color:var(--gold)">${e.d}</b><ul style="margin:6px 0 0;padding-left:20px">${e.t.map(x=>`<li>${x}</li>`).join("")}</ul></div>`).join("")}`;
+}
 let STORY_TAB="lore",ANA_SORT="r";
 function viewStory(){
   const tabs=[["lore","👑 故事"],["ana","📊 分析"]];

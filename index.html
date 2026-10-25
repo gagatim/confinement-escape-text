@@ -401,6 +401,12 @@ footer.credit a{color:var(--gold)}
 .npcsay p{margin:0 0 7px;color:#f1e6c8;font-size:14.5px;line-height:1.65;animation:fadein .6s both}
 .npcsay p b{color:#ffd97a}
 .lorech{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin-top:8px}
+.anatbl{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+.anatbl th,.anatbl td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
+.anatbl th{cursor:pointer;background:var(--panel2);position:sticky;top:0}
+.anatbl th.on{color:var(--gold)}
+.anatbl td:first-child,.anatbl th:first-child{text-align:left}
+.anatbl td.mx{color:var(--gold);font-weight:700}
 .lorech summary{cursor:pointer;padding:4px 0;list-style-position:inside}
 .lorech[open]{border-color:#8a6d2b}
 .kingrow{margin-top:8px;padding:8px 10px;border-left:3px solid #8a6d2b;background:rgba(245,196,81,.05);border-radius:0 8px 8px 0}
@@ -4725,7 +4731,29 @@ function npcBox(n){
 }
 
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
+let STORY_TAB="lore",ANA_SORT="r";
 function viewStory(){
+  const tabs=[["lore","👑 故事"],["ana","📊 分析"]];
+  return `<div class="filters">${tabs.map(([k,l])=>`<button class="${STORY_TAB===k?"on":""}" onclick="STORY_TAB='${k}';render()">${l}</button>`).join("")}</div>`
+    +(STORY_TAB==="ana"?viewAnalysis():viewStoryLore());
+}
+/* ---- 分析：所有角色的初始素質（1★、Lv.1，不含裝備與突破），點表頭排序 ---- */
+function viewAnalysis(){
+  const cols=[["name","角色"],["r","稀有度"],["hp","生命"],["atk","攻擊"],["def","防禦"],["spd","速度"],["sum","總和"]];
+  const rows=Object.keys(CARDS).map(id=>{const c=CARDS[id];return {id,name:c.name,r:c.r,hp:c.hp,atk:c.atk,def:c.def,spd:c.spd,sum:c.hp+c.atk+c.def+c.spd,story:!!c.story};});
+  const key=ANA_SORT;
+  rows.sort((a,b)=>key==="name"?a.name.localeCompare(b.name):key==="r"?R_ORDER[a.r]-R_ORDER[b.r]||b.sum-a.sum:b[key]-a[key]||R_ORDER[a.r]-R_ORDER[b.r]);
+  const top={};["hp","atk","def","spd","sum"].forEach(k=>top[k]=Math.max(...rows.map(x=>x[k])));
+  const avg=["SSR","SR","R"].map(r=>{const g=rows.filter(x=>x.r===r);if(!g.length)return "";const m=k=>(g.reduce((s,x)=>s+x[k],0)/g.length).toFixed(1);
+    return `<span class="r${r}">${r}</span> ${g.length} 名：生命 ${m("hp")}・攻擊 ${m("atk")}・防禦 ${m("def")}・速度 ${m("spd")}`;}).join("<br>");
+  return `<h2>📊 分析</h2>
+  <p class="dim small">所有角色的初始素質（1★、Lv.1，不含裝備、果實、突破）。點表頭可以排序；<b style="color:var(--gold)">金色</b>是該欄最高。📖 是劇情角色。</p>
+  <div class="panel small">${avg}</div>
+  <div style="overflow-x:auto"><table class="anatbl"><thead><tr>${cols.map(([k,l])=>`<th class="${key===k?"on":""}" onclick="ANA_SORT='${k}';render()">${l}${key===k?" ▾":""}</th>`).join("")}</tr></thead><tbody>
+    ${rows.map(x=>`<tr><td>${x.story?"📖 ":""}<b class="r${x.r}">${x.name}</b></td><td class="r${x.r}">${x.r}</td>${["hp","atk","def","spd","sum"].map(k=>`<td class="${x[k]===top[k]?"mx":""}">${x[k]}</td>`).join("")}</tr>`).join("")}
+  </tbody></table></div>`;
+}
+function viewStoryLore(){
   const cl=SAVE.prog.cleared,seen=SAVE.lore||{};
   const has=(k,i)=>!!seen[LORE_KEY[k]+i]||cl>i;
   const kinds=[["intro","🚪 進入這一章"],["boss","⚔️ 魔王之前"],["end","🏁 通關之後"]];

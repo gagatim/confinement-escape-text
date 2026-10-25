@@ -1655,16 +1655,14 @@ function cardTile(id,onclick,extraCls=""){
     <div class="av">${avatar(id)}</div><div class="nm">${c.name}</div>
     <div class="stars ${o&&o.stars>=5?"max":""}">${o?starStr(o.stars,o.br):"未獲得"}</div>${o&&canBreak(id)?`<div class="small" style="color:var(--gold)">✨可突破</div>`:""}<div class="small"><span class="r${c.r}">${c.r}</span>${o?` <b>Lv.${lvOf(id)}</b>`:""} ${clsTag(id)}</div></div>`;
 }
-// 還沒解鎖 5 人出戰時，顯示三個條件的進度
-function fiveHtml(){
+// 還沒解鎖 5 人出戰時，在「出戰隊伍」標題後面提示三個條件和目前進度；解鎖後就不再顯示
+function fiveTip(){
   if(fiveOk(SAVE.prog))return "";
-  const P=SAVE.prog,row=(ok,t,v)=>`<li>${ok?"✅":"⬜"} ${t}　<span class="dim">${v}</span></li>`;
-  return `<div class="panel small" style="margin:10px 0"><b>🔒 5 人出戰</b>　<span class="dim">平常最多 3 人；下面三個條件都達成後，一次解鎖到 5 人。</span>
-    <ul style="margin:6px 0 0;padding-left:20px;list-style:none">
-      ${row((P.cleared||0)>=ABYSS,"主線 15 章全破（簡單難度即可）",`${Math.min(P.cleared||0,ABYSS)}／${ABYSS} 章`)}
-      ${row((P.fatty||0)>=5,"通關肥宅物語",`${P.fatty||0}／5 章`)}
-      ${row((P.abyssBest||0)>=FIVE_ABYSS,`無盡深淵到達 D${FIVE_ABYSS}`,`目前最深 D${P.abyssBest||0}`)}
-    </ul></div>`;
+  const P=SAVE.prog,it=(ok,t,v)=>`<span style="white-space:nowrap">${ok?"✅":"⬜"} ${t}<span class="dim">（${v}）</span></span>`;
+  return `<span class="small" style="display:inline-flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline"><b>🔒 解鎖 5 人出戰：</b>
+    ${it((P.cleared||0)>=ABYSS,"主線 15 章全破",`${Math.min(P.cleared||0,ABYSS)}/${ABYSS}・簡單即可`)}
+    ${it((P.fatty||0)>=5,"通關肥宅物語",`${P.fatty||0}/5`)}
+    ${it((P.abyssBest||0)>=FIVE_ABYSS,`深淵到達 D${FIVE_ABYSS}`,`目前 D${P.abyssBest||0}`)}</span>`;
 }
 // N 白卡：只能遣散。沒有任何白卡時不顯示這一區
 function junkPanel(){
@@ -1691,10 +1689,9 @@ function clsFilter(cur,fn){
 function setTeamCls(k){TEAM_CLS=k;render();}
 function viewTeam(){
   const ids=sortedIds().filter(id=>(SHOW_LOCKED||SAVE.owned[id])&&(!TEAM_CLS||CARDS[id].cls===TEAM_CLS));
-  return `<div class="row"><h2 style="margin-right:auto">出戰隊伍</h2></div>
+  return `<div class="row" style="align-items:baseline;gap:6px 14px"><h2 style="margin-right:0">出戰隊伍</h2>${fiveTip()}</div>
   <div class="teamslots ${teamMax()>3?"five":""}">${Array.from({length:teamMax()},(_,i)=>i).map(i=>{const id=SAVE.team[i];return id?cardTile(id,`showCard('${id}')`):`<div class="slot">空位</div>`;}).join("")}</div>
   <p class="dim small">點卡片查看技能、加入或移出隊伍。遠征與競技場都使用這支隊伍。不要的角色可以在卡片裡「遣散」換金條（R 🪙3／SR 🪙10／SSR 🪙30，每星計算），或用「合成」把 <b>5 張 N 白卡</b>換成 1 名 R、6★ 份的 R 換成 1 名 SR、6★ 份的 SR 換成 1 名 SSR，或用「熔煉」把 2 名同稀有度角色熔成 1 名同稀有度的其他角色（等級、星數、突破取較低的）。</p>
-  ${fiveHtml()}
   ${shardPanel()}
   ${junkPanel()}
   <div class="row"><h3 style="margin-right:auto">收藏（${ownedCount()}/${CARD_IDS.length}）</h3>

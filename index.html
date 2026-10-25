@@ -660,7 +660,7 @@ const CARDS={
   detective:{name:"私家偵探",r:"R",hp:24,atk:5,def:1,spd:4,run:"reveal",
     skill:{name:"推理",cd:3,t:"enemy",kind:"dmg",desc:"造成0.8倍傷害並標記目標2回合：受到的傷害+50%。",use(B,u,t){hit(B,u,t,.8);if(t.alive){t.st.mark=2;fx(B,t,"標記","sk");}}},
     passive:{name:"洞察",desc:"遠征中可看見未知房間的事件；對標記目標暴擊率+30%。"}},
-  // 劇情角色（story:true）：通關第 gachaCh 章後才會進招募池；不能合成、熔煉、遣散，也不能當等級轉移的來源；故事線裡以劇情隊友的身分加入遠征
+  // 劇情角色（story:true）：通關第 gachaCh 章後才會進招募池；不能合成、熔煉、遣散，也不能當「轉換」的來源；故事線裡以劇情隊友的身分加入遠征
   ashen:{name:"阿燼",r:"SSR",story:true,gachaCh:15,hp:36,atk:7,def:1,spd:4,
     skill:{name:"撿回來的刀",cd:3,t:"enemy",kind:"dmg",desc:"冷卻3回合。選擇一名敵人，造成2.0倍攻擊傷害（會受對方防禦影響）；自己生命低於50%時，改為2.6倍。",
       use(B,u,t){const low=u.hp<u.maxHp*.5;if(low)blog(B,`${nm(u)} 握緊了劍：「……還沒結束。」`);hit(B,u,t,low?2.6:2.0);}},
@@ -1295,7 +1295,7 @@ function toggleBgm(){
 
 /* ===================== VIEW ROUTER ===================== */
 let VIEW="home";
-const NAV=[["home","主頁"],["gacha","招募"],["team","隊伍"],["dex","圖鑑"],["gear","裝備"],["shop","商店"],["boss","魔王討伐"],["run","遠征"],["train","練功房"],["arena","競技場"],["duel","雙人對決"],["ach","成就"],["story","故事"]];
+const NAV=[["home","主頁"],["gacha","招募"],["team","隊伍"],["convert","轉換"],["dex","圖鑑"],["gear","裝備"],["shop","商店"],["boss","魔王討伐"],["run","遠征"],["train","練功房"],["arena","競技場"],["duel","雙人對決"],["ach","成就"],["story","故事"]];
 function locked(){return (RUN&&RUN.active)||(CUR_B&&!CUR_B.done)||(DUEL&&DUEL.phase==="battle")||!!NET;}
 function go(v){
   if(npcVoiceLocked()&&v!==VIEW){toast("對話還沒說完，請先聽完");return;}
@@ -1329,7 +1329,7 @@ function render(){
 }
 function renderInner(){
   renderHeader();
-  const f={home:viewHome,gacha:viewGacha,team:viewTeam,dex:viewCodex,gear:viewGear,shop:viewShop,run:viewRun,boss:viewBossPage,train:viewTrain,arena:viewArena,ach:viewAch,story:viewStory,duel:viewDuel,battle:viewBattle}[VIEW]||viewHome;
+  const f={home:viewHome,gacha:viewGacha,team:viewTeam,convert:viewConvert,dex:viewCodex,gear:viewGear,shop:viewShop,run:viewRun,boss:viewBossPage,train:viewTrain,arena:viewArena,ach:viewAch,story:viewStory,duel:viewDuel,battle:viewBattle}[VIEW]||viewHome;
   $("#view").innerHTML=f();
   if(VIEW==="battle"){const l=$("#blog");if(l)l.scrollTop=l.scrollHeight;kbApply();}
   if(CUR_B&&CUR_B.online&&!CUR_B.guest)pushSnap(CUR_B);
@@ -1655,7 +1655,7 @@ function clsFilter(cur,fn){
 function setTeamCls(k){TEAM_CLS=k;render();}
 function viewTeam(){
   const ids=sortedIds().filter(id=>(SHOW_LOCKED||SAVE.owned[id])&&(!TEAM_CLS||CARDS[id].cls===TEAM_CLS));
-  return `<div class="row"><h2 style="margin-right:auto">出戰隊伍</h2><button class="gold" onclick="openXfer('reset')" title="把角色的等級轉給另一名角色">🔁 轉移等級</button></div>
+  return `<div class="row"><h2 style="margin-right:auto">出戰隊伍</h2></div>
   <div class="teamslots">${[0,1,2].map(i=>{const id=SAVE.team[i];return id?cardTile(id,`showCard('${id}')`):`<div class="slot">空位</div>`;}).join("")}</div>
   <p class="dim small">點卡片查看技能、加入或移出隊伍。遠征與競技場都使用這支隊伍。不要的角色可以在卡片裡「遣散」換金條（R 🪙3／SR 🪙10／SSR 🪙30，每星計算），或用「合成」把 6★ 份的 R 換成 1 名 SR、6★ 份的 SR 換成 1 名 SSR，或用「熔煉」把 2 名同稀有度角色熔成 1 名同稀有度的其他角色（等級、星數、突破取較低的）。</p>
   ${shardPanel()}
@@ -1717,10 +1717,10 @@ function showCard(id){
     ${setHtml(id)}${e.crit||e.steal||e.dodge||e.dr?`<div class="gfx">裝備特效：${statStr({crit:e.crit,steal:e.steal,dodge:e.dodge,dr:e.dr})}</div>`:""}`:""}
     </div></div>
     ${skillHtml(c)}
-    ${c.evolveFrom?`<div class="sk small"><b>🆙 進化角色</b><br>《肥宅物語》通關後由 SR 肥宅進化，或用 10 張 SR 肥宅兌換取得，不進招募池。<b>無法合成、熔煉、遣散</b>，等級也不能轉給別人（可以接收別人的等級）。</div>`:""}
+    ${c.evolveFrom?`<div class="sk small"><b>🆙 進化角色</b><br>《肥宅物語》通關後由 SR 肥宅進化，或用 10 張 SR 肥宅兌換取得，不進招募池。<b>無法合成、熔煉、遣散</b>，不能當「轉換」的來源（可以當轉換的目標）。</div>`:""}
     ${id==="fatty"?`<div class="sk small"><b>🔁 SSR 肥宅</b><br>抽到 SR 肥宅 ${fattyCopies()}／${FATTY_EXCHANGE} 張，${fattyExchangeOpen()?`滿 ${FATTY_EXCHANGE} 張可以換 1 張 SSR 肥宅。`:`🔒 通關肥宅物語第 5 章後，滿 ${FATTY_EXCHANGE} 張可以換 1 張 SSR 肥宅。`}SR 肥宅不提供合成。<div class="row" style="margin-top:6px"><button class="mini ${fattyCanExchange()?"pri":""}" onclick="closeModal();confirmFattyExchange()" ${fattyCanExchange()?"":"disabled"}>${fattyExchangeOpen()?"🔁 兌換 SSR 肥宅":"🔒 兌換（尚未開放）"}</button></div></div>`:""}
     ${id==="fatty"&&o&&(SAVE.prog.fatty||0)>=5&&!SAVE.owned.fatty2?`<div class="sk small"><b>🆙 可以進化！</b><br>《肥宅物語》已通關，這位肥宅可以進化成 SSR。<div class="row" style="margin-top:6px"><button class="pri" onclick="closeModal();confirmEvolve()">🆙 進化成 SSR</button></div></div>`:""}
-    ${c.story&&!c.evolveFrom?`<div class="sk small"><b>📖 劇情角色</b><br>《名冊》故事線的同伴。通關第 ${c.gachaCh} 章後可以在招募所抽到。<b>無法合成、熔煉、遣散</b>，等級也不能轉給別人（可以接收別人的等級）。</div>`:""}
+    ${c.story&&!c.evolveFrom?`<div class="sk small"><b>📖 劇情角色</b><br>《名冊》故事線的同伴。通關第 ${c.gachaCh} 章後可以在招募所抽到。<b>無法合成、熔煉、遣散</b>，不能當「轉換」的來源（可以當轉換的目標）。</div>`:""}
     ${o&&fruitVisible(id)?fruitHtml(id):""}
     <div class="row" style="margin-top:12px">
       ${o?(inT?`<button onclick="toggleTeam('${id}')">移出隊伍</button>`:`<button class="pri" onclick="toggleTeam('${id}')" ${SAVE.team.length>=3?"disabled":""}>加入隊伍${SAVE.team.length>=3?"（已滿）":""}</button>`):`<span class="dim">尚未獲得</span>`}
@@ -1992,78 +1992,85 @@ function doSmelt(){
     <div class="row" style="margin-top:12px"><button class="pri" onclick="openSmelt()">繼續熔煉</button><button onclick="showCard('${nid}')">查看角色</button><button onclick="closeModal()">關閉</button></div>`);
 }
 
-/* ===== 轉移：把一名角色的等級（連同經驗值）轉給另一名等級較低的角色 ===== */
-// 來源回到 Lv.1、經驗歸零；目標變成來源原本的等級。要花金條：轉移的等級 ×3。星數、突破、裝備都不會動
-let XFER={src:"",dst:""};
-const XFER_COST=3;
-function xferCost(lv){return lv*XFER_COST;}
-function xferBlock(id){
+/* ===== 轉換：把同稀有度角色 A 的等級＋星數，整個轉給 B ===== */
+// 目標的等級、星數取兩者較高的（不會降低）；來源回到 Lv.1、1★。花 🪙10000。突破、裝備、果實、重複卡都不會動
+let CONV={src:"",dst:""};
+const CONV_COST=10000;
+function convBlock(id){
   if(SAVE.run&&SAVE.run.party.some(m=>!m.ally&&m.id===id))return "遠征中";
   if(RUN&&RUN.active&&RUN.party.some(m=>!m.ally&&m.id===id))return "遠征中";
   return "";
 }
-function xferStat(id,lv){const o=SAVE.owned[id],s=cardStats(id,o.stars,lvMul(lv),brOf(id));return `❤${s.maxHp} ⚔${s.atk}`;}
-function openXfer(step){
-  if(step==="reset")XFER={src:"",dst:""};
-  const ids=sortedIds().filter(id=>SAVE.owned[id]),src=XFER.src&&SAVE.owned[XFER.src]?XFER.src:"",dst=XFER.dst&&SAVE.owned[XFER.dst]?XFER.dst:"";
-  if(!src)XFER.dst="";
-  const sl=src?lvOf(src):0,cost=xferCost(sl),ok=!!(src&&dst&&sl>lvOf(dst)&&SAVE.gold>=cost);
+function convStat(id,stars,lv){const s=cardStats(id,stars,lvMul(lv),brOf(id));return `❤${s.maxHp} ⚔${s.atk}`;}
+// 轉換後目標的等級、經驗、星數
+function convResult(src,dst){
+  const s=SAVE.owned[src],d=SAVE.owned[dst],sl=lvOf(src),dl=lvOf(dst);
+  return {lv:Math.max(sl,dl),exp:sl>dl?(s.exp||0):sl<dl?(d.exp||0):Math.max(s.exp||0,d.exp||0),stars:Math.max(s.stars,d.stars)};
+}
+const convGain=(src,dst)=>{const r=convResult(src,dst);return r.lv>lvOf(dst)||r.stars>SAVE.owned[dst].stars;};
+function convPick(mode,id){
+  if(mode==="src"){CONV.src=id;CONV.dst="";}else CONV.dst=id;
+  SFX.click();render();
+}
+function convReset(){CONV={src:"",dst:""};render();}
+function viewConvert(){
+  const owned=sortedIds().filter(id=>SAVE.owned[id]);
+  const src=CONV.src&&SAVE.owned[CONV.src]?CONV.src:"",dst=CONV.dst&&SAVE.owned[CONV.dst]&&src?CONV.dst:"";
   const tile=(id,mode)=>{
-    const o=SAVE.owned[id],b=xferBlock(id);let why=b;
-    if(mode==="src"&&!why&&storyOn(id))why="劇情角色，等級不能轉出";
-    if(mode==="src"&&!why&&lvOf(id)<=1)why="已經是 Lv.1";
-    if(mode==="dst"&&!why){if(id===src)why="就是來源角色";else if(lvOf(id)>=sl)why="等級不低於來源";}
+    const o=SAVE.owned[id];let why=convBlock(id);
+    if(mode==="src"&&!why&&storyOn(id))why="劇情角色不能轉出";
+    if(mode==="src"&&!why&&lvOf(id)<=1&&o.stars<=1)why="已經是 Lv.1・1★";
+    if(mode==="dst"&&!why){if(id===src)why="就是來源角色";else if(!convGain(src,id))why="轉換後沒有提升";}
     const on=(mode==="src"&&id===src)||(mode==="dst"&&id===dst);
-    return `<div class="ccard ${CARDS[id].r} ${why?"locked":""}" style="${on?"outline:3px solid var(--gold);outline-offset:2px":""}" ${why?"":`onclick="xferPick('${mode}','${id}')"`}>
+    return `<div class="ccard ${CARDS[id].r} ${why?"locked":""}" style="${on?"outline:3px solid var(--gold);outline-offset:2px":""}" ${why?"":`onclick="convPick('${mode}','${id}')"`}>
       <div class="av">${avatar(id)}</div><div class="nm">${CARDS[id].name}</div><div class="stars">${starStr(o.stars,o.br)}</div>
       <div class="small"><b>Lv.${lvOf(id)}</b> ${clsTag(id)}</div><div class="small" style="color:var(--red)">${why||"&nbsp;"}</div></div>`;};
+  const ok=!!(src&&dst&&!convBlock(src)&&!convBlock(dst)&&SAVE.gold>=CONV_COST);
   let body;
   if(!src){
-    body=`<h4 style="margin:6px 0">① 選擇「來源」：要把等級轉出去的角色</h4><div class="cardgrid">${ids.filter(id=>lvOf(id)>1||xferBlock(id)).map(id=>tile(id,"src")).join("")||`<span class="dim">沒有等級高於 Lv.1 的角色。</span>`}</div>`;
+    body=`<h3>① 選擇「來源」：要把等級和星數轉出去的角色</h3><div class="cardgrid">${owned.map(id=>tile(id,"src")).join("")}</div>`;
   }else{
-    const warn=Object.values(SAVE.owned[src].eq||{}).map(gearById).filter(g=>g&&GEAR_REQ[GEAR[g.base].q]>1).map(g=>GEAR[g.base].name);
-    body=`<div class="panel small" style="margin-bottom:8px">來源：<b>${CARDS[src].name}</b>　Lv.${sl}（${xferStat(src,sl)}）→ <b>Lv.1</b>（${xferStat(src,1)}）</div>
-      <h4 style="margin:6px 0">② 選擇「目標」：接收等級的角色（必須比來源等級低）</h4>
-      <div class="cardgrid">${ids.filter(id=>id!==src).map(id=>tile(id,"dst")).join("")}</div>
+    const so=SAVE.owned[src],r=dst?convResult(src,dst):null,sl=lvOf(src);
+    const warn=Object.values(so.eq||{}).map(gearById).filter(g=>g&&GEAR_REQ[GEAR[g.base].q]>1).map(g=>GEAR[g.base].name);
+    body=`<div class="panel small" style="margin-bottom:8px">來源：<b>${CARDS[src].name}</b>（<span class="r${CARDS[src].r}">${CARDS[src].r}</span>）　Lv.${sl}・${so.stars}★　→　<b>Lv.1・1★</b></div>
+      <h3>② 選擇「目標」：接收的角色（只能選同樣是 ${CARDS[src].r} 的角色）</h3>
+      <div class="cardgrid">${owned.filter(id=>id!==src&&CARDS[id].r===CARDS[src].r).map(id=>tile(id,"dst")).join("")||`<span class="dim">你沒有其他 ${CARDS[src].r} 角色。</span>`}</div>
       ${dst?`<div class="panel" style="margin-top:10px">
-        <b>轉移預覽</b>
-        <div class="small" style="margin-top:4px">📤 ${CARDS[src].name}：Lv.${sl} → <b>Lv.1</b>，${xferStat(src,sl)} → ${xferStat(src,1)}</div>
-        <div class="small">📥 ${CARDS[dst].name}：Lv.${lvOf(dst)} → <b style="color:var(--green)">Lv.${sl}</b>，${xferStat(dst,lvOf(dst))} → <b style="color:var(--green)">${xferStat(dst,sl)}</b></div>
-        <div class="small" style="margin-top:4px">費用：<b style="color:${SAVE.gold>=cost?"var(--gold)":"var(--red)"}">🪙${cost}</b>（等級 ${sl} × ${XFER_COST}）${SAVE.gold>=cost?"":"　金條不足"}</div>
+        <b>轉換預覽</b>
+        <div class="small" style="margin-top:4px">📤 ${CARDS[src].name}：Lv.${sl}・${so.stars}★ → <b>Lv.1・1★</b>（${convStat(src,so.stars,sl)} → ${convStat(src,1,1)}）</div>
+        <div class="small">📥 ${CARDS[dst].name}：Lv.${lvOf(dst)}・${SAVE.owned[dst].stars}★ → <b style="color:var(--green)">Lv.${r.lv}・${r.stars}★</b>（${convStat(dst,SAVE.owned[dst].stars,lvOf(dst))} → <b style="color:var(--green)">${convStat(dst,r.stars,r.lv)}</b>）</div>
+        <div class="small" style="margin-top:4px">費用：<b style="color:${SAVE.gold>=CONV_COST?"var(--gold)":"var(--red)"}">🪙${CONV_COST}</b>${SAVE.gold>=CONV_COST?"":"　金條不足"}</div>
         ${warn.length?`<div class="small" style="color:var(--gold);margin-top:4px">⚠ ${CARDS[src].name} 降到 Lv.1 後，身上的 ${warn.join("、")} 會因為等級不足而失效（裝備不會被拿掉，等級回來就恢復）。</div>`:""}
       </div>`:`<p class="dim small">選好目標後會顯示預覽。</p>`}`;
   }
-  openModal(`<h3>🔁 轉移等級</h3>
-    <div class="sk small"><b>📖 轉移說明</b><ul style="padding-left:18px;margin:4px 0">
-      <li>把 <b>來源</b> 角色的等級轉給 <b>等級較低的目標</b>：目標變成來源原本的等級，經驗值一起轉過去，來源回到 <b>Lv.1</b>。</li>
-      <li>費用 <b>🪙 = 轉移的等級 × ${XFER_COST}</b>（例如 Lv.30 要 🪙${xferCost(30)}）。</li>
-      <li>星數、突破、裝備都 <b>不會</b> 轉移，也不會消失。</li>
-      <li>遠征中的角色不能轉移。想把等級練在新抽到的強力角色身上時用。</li></ul></div>
+  return `<h2>🔁 轉換</h2>
+    <div class="sk small"><b>📖 轉換說明</b><ul style="padding-left:18px;margin:4px 0">
+      <li>把 <b>來源</b> 角色的 <b>等級和星數</b>（連同經驗值）整個轉給 <b>同樣稀有度</b> 的目標，來源回到 <b>Lv.1・1★</b>。</li>
+      <li><b>不會降低</b>：目標的等級、星數取兩者較高的，不會比原本差。</li>
+      <li>每次費用 <b>🪙${CONV_COST}</b>。</li>
+      <li>突破、裝備、果實、重複卡都 <b>不會</b> 轉移，也不會消失。遠征中的角色、劇情角色（當來源時）不能轉換。</li></ul></div>
     ${body}
     <div class="row" style="margin-top:12px">
-      <button class="pri" onclick="doXfer()" ${ok?"":"disabled"}>🔁 轉移${ok?`（🪙${cost}）`:""}</button>
-      ${src?`<button onclick="openXfer('reset')">重選</button>`:""}<button style="margin-left:auto" onclick="closeModal()">關閉</button></div>`);
+      <button class="pri" onclick="doConvert()" ${ok?"":"disabled"}>🔁 轉換${ok?`（🪙${CONV_COST}）`:""}</button>
+      ${src?`<button onclick="convReset()">重選</button>`:""}</div>`;
 }
-function xferPick(mode,id){
-  if(mode==="src"){XFER.src=id;XFER.dst="";}else XFER.dst=id;
-  SFX.click();openXfer();
-}
-function doXfer(){
-  const s=SAVE.owned[XFER.src],d=SAVE.owned[XFER.dst];if(!s||!d)return;
-  const sl=lvOf(XFER.src),cost=xferCost(sl);
-  if(xferBlock(XFER.src)||xferBlock(XFER.dst)){toast("遠征中的角色不能轉移");return;}
-  if(storyOn(XFER.src)){toast("劇情角色的等級不能轉出");return;}
-  if(sl<=lvOf(XFER.dst)){toast("目標的等級必須比來源低");return;}
-  if(SAVE.gold<cost){toast("金條不足");return;}
-  SAVE.gold-=cost;
-  d.lv=sl;d.exp=s.exp||0;
-  s.lv=1;s.exp=0;
-  glog("🔁XFER",`${XFER.src} Lv.${sl} → ${XFER.dst}（🪙${cost}）`);
-  const a=CARDS[XFER.src].name,b=CARDS[XFER.dst].name;
-  XFER={src:"",dst:""};save();SFX.sr();render();
-  openModal(`<h3>🔁 轉移完成</h3><div class="enhres ok">${b} 升到 <b>Lv.${sl}</b>！</div>
-    <p class="small dim">${a} 回到 Lv.1；花費 🪙${cost}。</p>
-    <div class="row" style="margin-top:12px"><button class="pri" onclick="openXfer('reset')">再轉移一次</button><button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
+function doConvert(){
+  const s=SAVE.owned[CONV.src],d=SAVE.owned[CONV.dst];if(!s||!d)return;
+  if(CARDS[CONV.src].r!==CARDS[CONV.dst].r){toast("只能轉給同樣稀有度的角色");return;}
+  if(convBlock(CONV.src)||convBlock(CONV.dst)){toast("遠征中的角色不能轉換");return;}
+  if(storyOn(CONV.src)){toast("劇情角色不能轉出");return;}
+  if(CONV.src===CONV.dst||!convGain(CONV.src,CONV.dst)){toast("轉換後目標沒有提升");return;}
+  if(SAVE.gold<CONV_COST){toast("金條不足");return;}
+  const r=convResult(CONV.src,CONV.dst),sl=lvOf(CONV.src),ss=s.stars;
+  SAVE.gold-=CONV_COST;
+  d.lv=r.lv;d.exp=r.exp;d.stars=r.stars;
+  s.lv=1;s.exp=0;s.stars=1;
+  glog("🔁CONV",`${CONV.src} Lv.${sl}・${ss}★ → ${CONV.dst}（🪙${CONV_COST}）`);
+  const a=CARDS[CONV.src].name,b=CARDS[CONV.dst].name;
+  CONV={src:"",dst:""};save();SFX.sr();render();
+  openModal(`<h3>🔁 轉換完成</h3><div class="enhres ok">${b} 現在是 <b>Lv.${r.lv}・${r.stars}★</b>！</div>
+    <p class="small dim">${a} 回到 Lv.1・1★；花費 🪙${CONV_COST}。</p>
+    <div class="row" style="margin-top:12px"><button class="pri" onclick="closeModal()">好</button></div>`);
 }
 
 function toggleTeam(id){

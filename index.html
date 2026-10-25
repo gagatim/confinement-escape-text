@@ -2712,7 +2712,7 @@ function mkUnit(o){
   // 章節強度：越後面的主線章節，敵人生命、攻擊、防禦越高（速度不變）
   const pw=o.pow||1;
   if(pw!==1){u.maxHp=Math.round(u.maxHp*pw);u.atk=Math.round(u.atk*pw);u.def=Math.round(u.def*pw);}
-  u.hp=o.hp!=null?Math.min(Math.round(o.hp*mul),u.maxHp):u.maxHp;
+  u.hp=o.hp!=null?Math.min(Math.round(o.hp*mul*pw),u.maxHp):u.maxHp; // 開場血量也要乘章節強度（和最大生命同一個倍率），魔王才會滿血開打
   if(u.hp<=0)u.alive=false;
   return u;
 }

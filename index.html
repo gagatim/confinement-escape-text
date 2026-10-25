@@ -1308,7 +1308,14 @@ function toggleBgm(){
 
 /* ===================== VIEW ROUTER ===================== */
 let VIEW="home";
-const NAV=[["home","主頁"],["gacha","招募"],["team","隊伍"],["convert","轉換"],["dex","圖鑑"],["gear","裝備"],["shop","商店"],["boss","魔王討伐"],["run","遠征"],["train","練功房"],["arena","競技場"],["duel","雙人對決"],["ach","成就"],["story","故事"]];
+const NAV=[["home","主頁"],["gacha","招募"],["team","隊伍"],["convert","轉換"],["dex","檔案室"],["gear","裝備"],["shop","商店"],["boss","魔王討伐"],["run","遠征"],["train","練功房"],["arena","競技場"],["duel","雙人對決"]];
+// 檔案室：圖鑑、故事、成就合併成一頁，用上方分頁切換（各頁的代號、背景音樂維持原樣）
+const ARCHIVE=[["dex","📖 圖鑑"],["story","👑 故事"],["ach","🏆 成就"]];
+const inArchive=v=>ARCHIVE.some(([k])=>k===v);
+function archiveTabs(){
+  return `<div class="row" style="align-items:center;gap:10px;margin-top:6px"><b style="font-size:18px">🗄 檔案室</b>
+    <div class="filters" style="margin:0">${ARCHIVE.map(([k,l])=>`<button class="${VIEW===k?"on":""}" onclick="go('${k}')">${l}</button>`).join("")}</div></div>`;
+}
 function locked(){return (RUN&&RUN.active)||(CUR_B&&!CUR_B.done)||(DUEL&&DUEL.phase==="battle")||!!NET;}
 function go(v){
   if(npcVoiceLocked()&&v!==VIEW){toast("對話還沒說完，請先聽完");return;}
@@ -1320,9 +1327,9 @@ let NAV_OPEN=false;
 function toggleNav(){NAV_OPEN=!NAV_OPEN;SFX.click();renderHeader();}
 function renderHeader(){
   $("#app").classList.toggle("inbattle",VIEW==="battle"); // 戰鬥中收起導覽列（本來就不能離開），多留空間給戰場
-  $("#nav").innerHTML=NAV.map(([k,l])=>`<button class="${VIEW===k||(VIEW==="battle"&&k===BATTLE_HOME)?"on":""}" onclick="go('${k}')">${l}</button>`).join("");
+  $("#nav").innerHTML=NAV.map(([k,l])=>`<button class="${VIEW===k||(k==="dex"&&inArchive(VIEW))||(VIEW==="battle"&&k===BATTLE_HOME)?"on":""}" onclick="go('${k}')">${l}</button>`).join("");
   $("#nav").className=NAV_OPEN?"open":"";
-  const cur=NAV.find(([k])=>k===VIEW||(VIEW==="battle"&&k===BATTLE_HOME));
+  const cur=NAV.find(([k])=>k===VIEW||(k==="dex"&&inArchive(VIEW))||(VIEW==="battle"&&k===BATTLE_HOME));
   $("#menuBtn").textContent=(NAV_OPEN?"✕ ":"☰ ")+(cur?cur[1]:"選單");
   $("#wallet").textContent="🪙 "+SAVE.gold;
   $("#muteBtn").textContent=SAVE.muted?"🔇":"🔊";
@@ -1344,7 +1351,7 @@ function render(){
 function renderInner(){
   renderHeader();
   const f={home:viewHome,gacha:viewGacha,team:viewTeam,convert:viewConvert,dex:viewCodex,gear:viewGear,shop:viewShop,run:viewRun,boss:viewBossPage,train:viewTrain,arena:viewArena,ach:viewAch,story:viewStory,duel:viewDuel,battle:viewBattle}[VIEW]||viewHome;
-  $("#view").innerHTML=f();
+  $("#view").innerHTML=(inArchive(VIEW)?archiveTabs():"")+f();
   if(VIEW==="battle"){const l=$("#blog");if(l)l.scrollTop=l.scrollHeight;kbApply();}
   if(CUR_B&&CUR_B.online&&!CUR_B.guest)pushSnap(CUR_B);
   syncBgm();
@@ -3863,7 +3870,7 @@ function checkAch(){
   }
   if(got.length){
     glog("🏆ACH",got.map(a=>a.n).join("、"));
-    setTimeout(()=>{toast(got.length===1?`🏆 成就達成：${got[0].n}（${rewardStr(got[0].r)}）`:`🏆 一次達成 ${got.length} 個成就！到「成就」頁看看`);SFX.sr();renderHeader();},0);
+    setTimeout(()=>{toast(got.length===1?`🏆 成就達成：${got[0].n}（${rewardStr(got[0].r)}）`:`🏆 一次達成 ${got.length} 個成就！到「檔案室」的成就頁看看`);SFX.sr();renderHeader();},0);
   }
   return got;
 }

@@ -793,7 +793,7 @@ const JUNK={
   chair:{name:"斷腿椅子",emoji:"🪑",r:"N"},
   quilt:{name:"發霉棉被",emoji:"🛏️",r:"N"},
   torch:{name:"壞掉的手電筒",emoji:"🔦",r:"N"},
-  sock:{name:"一隻襪子",emoji:"🧦",r:"N"},
+  sock:{name:"一雙襪子",emoji:"🧦",r:"N"},
   locker:{name:"空的鐵櫃",emoji:"🗄️",r:"N"}
 };
 const JUNK_IDS=Object.keys(JUNK),JUNK_PRICE=1;
@@ -1458,7 +1458,7 @@ function viewGacha(){
     <span class="rSSR">SSR 3%</span>（${gachaPool("SSR").map(i=>CARDS[i].name).join("、")}）<br>
     <span class="rSR">SR 15%</span>（${gachaPool("SR").map(i=>CARDS[i].name).join("、")}）<br>
     <span class="rR">R 62%</span>（其他 ${gachaPool("R").length} 名）<br>
-    <span class="rN">N 20%</span>（${JUNK_IDS.map(i=>JUNK[i].name).join("、")}；白卡只能遣散換 🪙${JUNK_PRICE}，不能組隊、升星、合成）<br>
+    <span class="rN">N 20%</span>（${JUNK_IDS.map(i=>JUNK[i].name).join("、")}；白卡可遣散換 🪙${JUNK_PRICE}，或 ${JUNK_COST} 張合成 1 名 R；不能組隊、升星）<br>
     <span class="dim">重複抽到不會自動升星，會記成「重複卡」，到角色頁手動升星（每星全能力+10%，3星起防禦+1）；已經5星再抽到，每張退還🪙5。</span>
   </div>
   <h3>賺金條</h3>
@@ -1602,10 +1602,30 @@ function cardTile(id,onclick,extraCls=""){
 function junkPanel(){
   if(!junkCount())return "";
   return `<div class="panel"><div class="row"><b style="margin-right:auto"><span class="rN">N</span> 白卡雜物（${junkCount()} 張）</b>
+    <button class="mini gold" onclick="synthJunk()" ${junkCount()>=JUNK_COST?"":"disabled"}>🔮 ${JUNK_COST} 張合成 R</button>
+    <button class="mini gold" onclick="synthJunk(true)" ${junkCount()>=JUNK_COST?"":"disabled"}>⚡ 全部合成（${Math.floor(junkCount()/JUNK_COST)} 次）</button>
     <button class="mini" onclick="sellJunk()">💰 一鍵遣散全部（🪙${junkCount()*JUNK_PRICE}）</button></div>
-    <div class="small dim" style="margin:4px 0 8px">白卡只能遣散，每張 🪙${JUNK_PRICE}；不能組隊、升星、合成或熔煉。</div>
+    <div class="small dim" style="margin:4px 0 8px">白卡可以遣散（每張 🪙${JUNK_PRICE}），或任意 ${JUNK_COST} 張（可混搭）合成 1 名隨機 R 角色；不能組隊、升星或熔煉。</div>
     <div class="row">${JUNK_IDS.filter(k=>SAVE.junk[k]).map(k=>`<div class="ccard N" style="min-width:90px;cursor:default"><div class="av">${avatar(k)}</div><div class="nm">${JUNK[k].name}</div>
       <div class="small">×${SAVE.junk[k]}</div><button class="mini" onclick="sellJunk('${k}')">遣散 🪙${SAVE.junk[k]*JUNK_PRICE}</button></div>`).join("")}</div></div>`;
+}
+// 合成：任意 5 張白卡（可混搭）換 1 名隨機 R 角色（每名機率相同）；材料優先用張數多的
+const JUNK_COST=5;
+function synthJunk(all){
+  let times=all?Math.floor(junkCount()/JUNK_COST):1;
+  if(junkCount()<JUNK_COST||times<1){toast(`白卡不夠 ${JUNK_COST} 張`);return;}
+  const res=[];
+  while(times-->0){
+    let need=JUNK_COST;
+    JUNK_IDS.slice().sort((a,b)=>(SAVE.junk[b]||0)-(SAVE.junk[a]||0)).forEach(k=>{const n=Math.min(SAVE.junk[k]||0,need);SAVE.junk[k]-=n;need-=n;});
+    const id=pick(POOL.R);
+    res.push({id,gr:grant(id)});
+  }
+  save();SFX.sr();render();
+  openModal(`<h3>🔮 白卡合成${res.length>1?`（${res.length} 次）`:""}</h3>
+    <div class="cardgrid">${res.map(({id,gr})=>`<div class="ccard R"><div class="av">${avatar(id)}</div><div class="nm">${CARDS[id].name}</div>
+      <div class="small" style="color:var(--gold)">${gr.isNew?"NEW!":gr.dupe?`重複卡 ×${gr.dupe}`:`滿星 🪙+${gr.refund}`}</div></div>`).join("")}</div>
+    <div class="row" style="margin-top:12px"><button onclick="closeModal()">關閉</button></div>`);
 }
 function sellJunk(id){
   const ids=id?[id]:JUNK_IDS;let n=0;

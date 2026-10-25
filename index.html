@@ -1350,7 +1350,7 @@ function closeModal(){$("#modal").classList.remove("show");}
 const GUIDE=[
   {ic:"⛓",t:"這是什麼遊戲？",b:["你和同伴被關在禁閉室，要一路往上爬、搶上只有 <b>三個座位</b> 的直升機。","玩法只有三件事：<b>抽角色 → 組隊 → 出發遠征</b>。"]},
   {ic:"🎴",t:"① 抽角色",b:["到「招募」花金條抽卡。<b>第一次十連必出 SSR</b>，開局的金條剛好夠。","抽到重複的角色會記成「重複卡」，到角色頁手動升星（最多 5★），每 1 星能力 +10%。","5★ 後可以用 💎突破石「突破」（隊伍頁點角色 →「✨突破」，最多 10 次）：星星回到 1★ 再升，能力保留並再 +1.5%，突破後每升 1 星 +2.5%。","第 n 次突破要 💎×2n，成功率 30% 起每次 ×0.85（30→26→22→…→7%）。失敗突破石消失，但不會降星。","突破石來源：商店、主線魔王、深淵守門者、練功房、成就。已突破的角色不會被一鍵合成當材料。"]},
-  {ic:"👥",t:"② 組隊",b:["到「隊伍」點角色 →「加入隊伍」，最多 3 人。","每個角色有 <b>職業</b>（🛡坦克／⚔戰士／🗡刺客／🎯射手／✚輔助／🔮術士），各有不同加成。","不要的角色可以「遣散」換金條、「合成」成更高稀有度，或「🔥熔煉」：2 名同稀有度 → 1 名同稀有度的其他角色（等級取較低的）。"]},
+  {ic:"👥",t:"② 組隊",b:["到「隊伍」點角色 →「加入隊伍」，最多 3 人。","每個角色有 <b>職業</b>（🛡坦克／⚔戰士／🗡刺客／🎯射手／✚輔助／🔮術士），各有不同加成。","不要的角色可以「遣散」換金條、「合成」成更高稀有度（<b>5 張 N 白卡 → 1 名 R</b>、6★ 份的 R → 1 名 SR、6★ 份的 SR → 1 名 SSR），或「🔥熔煉」：2 名同稀有度 → 1 名同稀有度的其他角色（等級取較低的）。"]},
   {ic:"🛒",t:"③ 裝備與商店",b:["「商店」可以買裝備、強化符和遠征物資（下一次遠征自動帶上）。","在角色卡片點 <b>武器／防具／飾品</b> 欄位就能穿上。武器有職業限制。","「裝備」頁可以強化到 +10。<b>強化可能失敗</b>：+5 以上失敗會掉 1 級（裝備不會碎），用 🧿保護符 可以保住等級。"]},
   {ic:"🪜",t:"④ 出發遠征",b:["每一層選一扇門進去：可能是物資、敵人、或其他逃殺者。","注意 <b>🥫補給</b>（每層吃 1 份）和 <b>☣毒氣</b>（從底層往上淹）。","遇到人可以結盟、交易或開打。打倒最上層的魔王就逃出了！"]},
   {ic:"⚔️",t:"⑤ 戰鬥",b:["輪到你的角色時，按「普通攻擊」或「技能」，再點目標。","懶得操作就按「自動」，讓 AI 幫你打。"]},
@@ -1617,31 +1617,14 @@ function cardTile(id,onclick,extraCls=""){
 function junkPanel(){
   if(!junkCount())return "";
   return `<div class="panel"><div class="row"><b style="margin-right:auto"><span class="rN">N</span> 白卡雜物（${junkCount()} 張）</b>
-    <button class="mini gold" onclick="synthJunk()" ${junkCount()>=JUNK_COST?"":"disabled"}>🔮 ${JUNK_COST} 張合成 R</button>
-    <button class="mini gold" onclick="synthJunk(true)" ${junkCount()>=JUNK_COST?"":"disabled"}>⚡ 全部合成（${Math.floor(junkCount()/JUNK_COST)} 次）</button>
+    <button class="mini gold" onclick="openSynth('N')">🔮 ${JUNK_COST} 張合成 R</button>
+    <button class="mini gold" onclick="quickSynth('N')">⚡ 一鍵合成 N 卡</button>
     <button class="mini" onclick="sellJunk()">💰 一鍵遣散全部（🪙${junkCount()*JUNK_PRICE}）</button></div>
     <div class="small dim" style="margin:4px 0 8px">白卡可以遣散（每張 🪙${JUNK_PRICE}），或任意 ${JUNK_COST} 張（可混搭）合成 1 名隨機 R 角色；不能組隊、升星或熔煉。</div>
     <div class="cardgrid">${JUNK_IDS.filter(k=>SAVE.junk[k]).map(k=>`<div class="ccard N" style="cursor:default"><div class="av">${avatar(k)}</div><div class="nm">${JUNK[k].name}</div>
       <div class="small">×${SAVE.junk[k]}</div><button class="mini" onclick="sellJunk('${k}')">遣散 🪙${SAVE.junk[k]*JUNK_PRICE}</button></div>`).join("")}</div></div>`;
 }
-// 合成：任意 5 張白卡（可混搭）換 1 名隨機 R 角色（每名機率相同）；材料優先用張數多的
-const JUNK_COST=5;
-function synthJunk(all){
-  let times=all?Math.floor(junkCount()/JUNK_COST):1;
-  if(junkCount()<JUNK_COST||times<1){toast(`白卡不夠 ${JUNK_COST} 張`);return;}
-  const res=[];
-  while(times-->0){
-    let need=JUNK_COST;
-    JUNK_IDS.slice().sort((a,b)=>(SAVE.junk[b]||0)-(SAVE.junk[a]||0)).forEach(k=>{const n=Math.min(SAVE.junk[k]||0,need);SAVE.junk[k]-=n;need-=n;});
-    const id=pick(POOL.R);
-    res.push({id,gr:grant(id)});
-  }
-  save();SFX.sr();render();
-  openModal(`<h3>🔮 白卡合成${res.length>1?`（${res.length} 次）`:""}</h3>
-    <div class="cardgrid">${res.map(({id,gr})=>`<div class="ccard R"><div class="av">${avatar(id)}</div><div class="nm">${CARDS[id].name}</div>
-      <div class="small" style="color:var(--gold)">${gr.isNew?"NEW!":`重複卡 ×${gr.dupe}`}</div></div>`).join("")}</div>
-    <div class="row" style="margin-top:12px"><button onclick="closeModal()">關閉</button></div>`);
-}
+const JUNK_COST=5; // N 白卡合成：5 張（可混搭）→ 1 名隨機 R，每名 R 機率相同
 function sellJunk(id){
   const ids=id?[id]:JUNK_IDS;let n=0;
   ids.forEach(k=>{n+=SAVE.junk[k]||0;SAVE.junk[k]=0;});
@@ -1657,13 +1640,14 @@ function viewTeam(){
   const ids=sortedIds().filter(id=>(SHOW_LOCKED||SAVE.owned[id])&&(!TEAM_CLS||CARDS[id].cls===TEAM_CLS));
   return `<div class="row"><h2 style="margin-right:auto">出戰隊伍</h2></div>
   <div class="teamslots">${[0,1,2].map(i=>{const id=SAVE.team[i];return id?cardTile(id,`showCard('${id}')`):`<div class="slot">空位</div>`;}).join("")}</div>
-  <p class="dim small">點卡片查看技能、加入或移出隊伍。遠征與競技場都使用這支隊伍。不要的角色可以在卡片裡「遣散」換金條（R 🪙3／SR 🪙10／SSR 🪙30，每星計算），或用「合成」把 6★ 份的 R 換成 1 名 SR、6★ 份的 SR 換成 1 名 SSR，或用「熔煉」把 2 名同稀有度角色熔成 1 名同稀有度的其他角色（等級、星數、突破取較低的）。</p>
+  <p class="dim small">點卡片查看技能、加入或移出隊伍。遠征與競技場都使用這支隊伍。不要的角色可以在卡片裡「遣散」換金條（R 🪙3／SR 🪙10／SSR 🪙30，每星計算），或用「合成」把 <b>5 張 N 白卡</b>換成 1 名 R、6★ 份的 R 換成 1 名 SR、6★ 份的 SR 換成 1 名 SSR，或用「熔煉」把 2 名同稀有度角色熔成 1 名同稀有度的其他角色（等級、星數、突破取較低的）。</p>
   ${shardPanel()}
   ${junkPanel()}
   <div class="row"><h3 style="margin-right:auto">收藏（${ownedCount()}/${CARD_IDS.length}）</h3>
   <button class="mini gold" onclick="openSynth()">🔮 合成</button>
   <button class="mini gold" onclick="openSmelt()">🔥 熔煉</button>
   <button class="mini gold" onclick="openShards()">🧩 碎片兌換</button>
+  <button class="mini gold" onclick="quickSynth('N')">⚡ 一鍵合成 N 卡</button>
   <button class="mini gold" onclick="quickSynth('R')">⚡ 一鍵合成 R 卡</button>
   <button class="mini gold" onclick="quickSynth('SR')">⚡ 一鍵合成 SR 卡</button>
   <button class="mini" onclick="sellAllR()">💰 一鍵遣散 R 卡</button>
@@ -1827,8 +1811,9 @@ function sellAllR(go){
     <div class="row"><button class="pri" onclick="sellAllR(true)">遣散</button><button onclick="closeModal()">取消</button></div>`);
   list.forEach(id=>delete SAVE.owned[id]);SAVE.gold+=g;save();closeModal();toast(`遣散 ${list.length} 張，🪙+${g}`);render();
 }
-// 合成：投入 6 星份的同稀有度角色（可混搭、可只拆部分星數），換 1 名高一階的隨機角色，60% 優先給還沒擁有的
-const SYN_COST=6,SYN_UP={R:"SR",SR:"SSR"};
+// 合成：N 白卡投入 5 張（可混搭）換 1 名 R；R、SR 投入 6 星份的同稀有度角色（可混搭、可只拆部分星數），換 1 名高一階的隨機角色，60% 優先給還沒擁有的
+const SYN_COST=6,SYN_UP={N:"R",R:"SR",SR:"SSR"};
+const synCost=t=>t==="N"?JUNK_COST:SYN_COST;
 let SYN={tier:"R",pick:{}};
 function synBlock(id){
   if(storyOn(id))return "劇情角色";
@@ -1841,28 +1826,35 @@ function synBlock(id){
 function synTotal(){return Object.values(SYN.pick).reduce((a,b)=>a+b,0);}
 function openSynth(tier){
   if(tier&&tier!==SYN.tier)SYN={tier,pick:{}};
-  const t=SYN.tier,ids=sortedIds().filter(id=>SAVE.owned[id]&&CARDS[id].r===t),n=synTotal();
+  const t=SYN.tier,n=synTotal(),cost=synCost(t),unit=t==="N"?"張":"★",isN=t==="N";
+  const ids=isN?JUNK_IDS.filter(k=>SAVE.junk[k]>0):sortedIds().filter(id=>SAVE.owned[id]&&CARDS[id].r===t);
   openModal(`<h3>🔮 合成</h3>
-    <div class="row" style="margin-bottom:8px">${Object.keys(SYN_UP).map(k=>`<button class="mini ${k===t?"pri":""}" onclick="openSynth('${k}')">${SYN_COST}★ ${k} → 1 名 ${SYN_UP[k]}</button>`).join("")}</div>
-    <p class="dim small">點角色投入 1 星（再點會繼續加，最多到該角色的星數）。星數全部投入的角色會從收藏移除。隊伍中、遠征中的角色不能投入。</p>
-    <div class="cardgrid">${ids.map(id=>{const o=SAVE.owned[id],u=SYN.pick[id]||0,b=synBlock(id);
+    <div class="row" style="margin-bottom:8px">${Object.keys(SYN_UP).map(k=>`<button class="mini ${k===t?"pri":""}" onclick="openSynth('${k}')">${k==="N"?`${JUNK_COST} 張`:`${SYN_COST}★`} ${k} → 1 名 ${SYN_UP[k]}</button>`).join("")}</div>
+    <p class="dim small">${isN?`點白卡投入 1 張（再點會繼續加，最多到持有的張數），任意 ${JUNK_COST} 張（可混搭）換 1 名隨機 R 角色，每名 R 的機率相同。`:`點角色投入 1 星（再點會繼續加，最多到該角色的星數）。星數全部投入的角色會從收藏移除。隊伍中、遠征中的角色不能投入。`}</p>
+    <div class="cardgrid">${ids.map(id=>{const u=SYN.pick[id]||0;
+      if(isN)return `<div class="ccard N" onclick="synAdd('${id}')"><div class="av">${avatar(id)}</div><div class="nm">${JUNK[id].name}</div>
+        <div class="small">持有 ×${SAVE.junk[id]}</div><div class="small" style="color:var(--gold)">${u?`投入 ${u}張`:"&nbsp;"}</div></div>`;
+      const o=SAVE.owned[id],b=synBlock(id);
       return `<div class="ccard ${t} ${b?"locked":""}" ${b?"":`onclick="synAdd('${id}')"`}><div class="av">${avatar(id)}</div><div class="nm">${CARDS[id].name}</div>
-        <div class="stars">${starStr(o.stars)}</div><div class="small" style="color:var(--gold)">${b||(u?`投入 ${u}★`:"&nbsp;")}</div></div>`;}).join("")||`<span class="dim">沒有 ${t} 角色</span>`}</div>
-    <div class="row" style="margin-top:10px"><b style="margin-right:auto;color:${n>=SYN_COST?"var(--gold)":"inherit"}">已投入 ${n}/${SYN_COST}★</b>
+        <div class="stars">${starStr(o.stars)}</div><div class="small" style="color:var(--gold)">${b||(u?`投入 ${u}★`:"&nbsp;")}</div></div>`;}).join("")||`<span class="dim">沒有 ${isN?"白卡":t+" 角色"}</span>`}</div>
+    <div class="row" style="margin-top:10px"><b style="margin-right:auto;color:${n>=cost?"var(--gold)":"inherit"}">已投入 ${n}/${cost}${unit}</b>
       <button onclick="SYN.pick={};openSynth()">清除</button>
       <button class="gold" onclick="confirmAutoSynth()">⚡ 一鍵合成</button>
-      <button class="pri" onclick="doSynth()" ${n===SYN_COST?"":"disabled"}>合成</button><button onclick="closeModal()">關閉</button></div>`);
+      <button class="pri" onclick="doSynth()" ${n===cost?"":"disabled"}>合成</button><button onclick="closeModal()">關閉</button></div>`);
 }
 function synAdd(id){
-  const u=SYN.pick[id]||0;
-  if(synTotal()>=SYN_COST){toast(`已經滿 ${SYN_COST}★ 了`);return;}
-  if(u>=SAVE.owned[id].stars){toast("這名角色的星數已經全部投入");return;}
+  const u=SYN.pick[id]||0,t=SYN.tier,cost=synCost(t);
+  if(synTotal()>=cost){toast(`已經滿 ${cost}${t==="N"?"張":"★"} 了`);return;}
+  if(t==="N"){if(u>=(SAVE.junk[id]||0)){toast("這種白卡已經全部投入");return;}}
+  else if(u>=SAVE.owned[id].stars){toast("這名角色的星數已經全部投入");return;}
   SYN.pick[id]=u+1;SFX.click();openSynth();
 }
 function doSynth(){
-  if(synTotal()!==SYN_COST)return;
-  const gone=Object.keys(SYN.pick).filter(id=>SYN.pick[id]>=SAVE.owned[id].stars);
-  if(Object.keys(SAVE.owned).length-gone.length<2){toast("合成後至少要保留 2 名其他角色");return;}
+  if(synTotal()!==synCost(SYN.tier))return;
+  if(SYN.tier!=="N"){
+    const gone=Object.keys(SYN.pick).filter(id=>SYN.pick[id]>=SAVE.owned[id].stars);
+    if(Object.keys(SAVE.owned).length-gone.length<2){toast("合成後至少要保留 2 名其他角色");return;}
+  }
   const {id,gr}=synthCore(SYN.pick,SYN.tier),up=SYN_UP[SYN.tier];
   SYN.pick={};save();up==="SSR"?SFX.ssr():SFX.sr();render();
   openModal(`<h3>🔮 合成成功</h3><div class="detail"><div class="av">${avatar(id)}</div><div>
@@ -1872,6 +1864,11 @@ function doSynth(){
 }
 // 合成一次：扣掉投入的星數，給 1 名高一階的隨機角色（60% 優先沒有的）
 function synthCore(pk,tier){
+  if(tier==="N"){
+    Object.entries(pk).forEach(([id,n])=>{SAVE.junk[id]-=n;});
+    const id=pick(POOL.R);
+    return {id,gr:grant(id)};
+  }
   Object.entries(pk).forEach(([id,n])=>{const o=SAVE.owned[id];o.stars-=n;if(o.stars<=0){SAVE.gold+=SELL_PRICE[CARDS[id].r]*(o.dup||0);delete SAVE.owned[id];}});
   const up=SYN_UP[tier],pool=POOL[up].filter(id=>id!=="fatty"),fresh=pool.filter(id=>!SAVE.owned[id]);
   const id=fresh.length&&rnd()<.6?pick(fresh):pick(pool);
@@ -1879,6 +1876,16 @@ function synthCore(pk,tier){
 }
 // 一鍵合成：自動挑材料、能合幾次就合幾次。優先用等級低、星數少的角色；隊伍中、遠征中、已突破的不會被用到
 function synthPlan(t){
+  if(t==="N"){ // 白卡：每次取 5 張，優先用張數多的種類
+    const left={};JUNK_IDS.forEach(k=>left[k]=SAVE.junk[k]||0);const plan=[];
+    for(;;){
+      const pk={};let need=JUNK_COST;
+      JUNK_IDS.slice().sort((a,b)=>left[b]-left[a]).forEach(k=>{const n=Math.min(left[k],need);if(n>0){pk[k]=n;need-=n;}});
+      if(need>0)break;
+      Object.entries(pk).forEach(([k,n])=>left[k]-=n);plan.push(pk);
+    }
+    return plan;
+  }
   const left={};let total=Object.keys(SAVE.owned).length;
   Object.keys(SAVE.owned).forEach(id=>left[id]=SAVE.owned[id].stars);
   const elig=Object.keys(SAVE.owned).filter(id=>CARDS[id].r===t&&!synBlock(id))
@@ -1901,13 +1908,13 @@ function quickSynth(t){
 }
 function confirmAutoSynth(){
   const t=SYN.tier,plan=synthPlan(t);
-  if(!plan.length){toast(`可用的 ${t} 角色不夠 ${SYN_COST}★（隊伍中、遠征中、已突破的不算）`);return;}
+  if(!plan.length){toast(t==="N"?`白卡不夠 ${JUNK_COST} 張`:`可用的 ${t} 角色不夠 ${SYN_COST}★（隊伍中、遠征中、已突破的不算）`);return;}
   const use={};plan.forEach(pk=>Object.entries(pk).forEach(([id,n])=>use[id]=(use[id]||0)+n));
-  const list=Object.entries(use).map(([id,n])=>`${CARDS[id].name} ${n}★${n>=SAVE.owned[id].stars?"（整張）":""}`).join("、");
+  const list=Object.entries(use).map(([id,n])=>t==="N"?`${JUNK[id].name} ${n}張`:`${CARDS[id].name} ${n}★${n>=SAVE.owned[id].stars?"（整張）":""}`).join("、");
   openModal(`<h3>⚡ 一鍵合成 ${t} → ${SYN_UP[t]}</h3>
     <p>可以合成 <b style="color:var(--gold)">${plan.length} 次</b>，得到 ${plan.length} 名隨機 ${SYN_UP[t]} 角色。</p>
     <p class="small">會用掉：${list}</p>
-    <p class="dim small">優先用等級低、星數少的角色。隊伍中、遠征中、已突破的角色不會被用到，標「整張」的角色會從收藏移除（裝備自動卸下）。</p>
+    <p class="dim small">${t==="N"?"優先用張數多的白卡，每 5 張換 1 名隨機 R 角色，每名 R 的機率相同。":"優先用等級低、星數少的角色。隊伍中、遠征中、已突破的角色不會被用到，標「整張」的角色會從收藏移除（裝備自動卸下）。"}</p>
     <div class="row"><button class="pri" onclick="doAutoSynth()">⚡ 開始合成</button><button onclick="openSynth()">返回</button></div>`);
 }
 function doAutoSynth(){

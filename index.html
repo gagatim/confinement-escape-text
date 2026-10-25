@@ -1308,11 +1308,11 @@ function toggleBgm(){
 
 /* ===================== VIEW ROUTER ===================== */
 let VIEW="home";
-const NAV=[["home","主頁"],["gacha","招募"],["team","整備室"],["dex","檔案室"],["shop","商店"],["boss","魔王討伐"],["run","遠征"],["train","練功房"],["arena","競技場"],["duel","雙人對決"]];
+const NAV=[["home","主頁"],["gacha","招募"],["team","整備室"],["story","檔案室"],["shop","商店"],["boss","魔王討伐"],["run","遠征"],["train","練功房"],["arena","競技場"],["duel","雙人對決"]];
 // 合併頁：一個導覽按鈕對應多個分頁（各頁的代號、內容、背景音樂維持原樣，只是共用上方的分頁列）
 //   檔案室＝圖鑑／故事／成就；整備室＝隊伍／裝備／轉換
 const PAGE_GROUPS=[
-  {nav:"dex",title:"🗄 檔案室",tabs:[["dex","📖 圖鑑"],["story","👑 故事"],["ach","🏆 成就"]]},
+  {nav:"story",title:"🗄 檔案室",tabs:[["story","👑 故事"],["ach","🏆 成就"],["dex","📖 圖鑑"]]},
   {nav:"team",title:"🛠 整備室",tabs:[["team","👥 隊伍"],["gear","🛡 裝備"],["convert","🔁 轉換"]]}
 ];
 const groupOf=v=>PAGE_GROUPS.find(g=>g.tabs.some(([k])=>k===v));

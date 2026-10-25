@@ -882,11 +882,11 @@ const GEAR={
   doomrifle:{name:"滅世狙擊槍",icon:"🎯",slot:"weapon",q:"EX",st:{atk:13,spd:1}},
   reaperscythe:{name:"死神之鐮",icon:"⚰️",slot:"weapon",q:"EX",st:{atk:12,hp:12}},
   fatecompass:{name:"命運羅盤",icon:"🧭",slot:"weapon",q:"EX",st:{atk:10,def:3,hp:10}},
-  endchain:{name:"終焉鎖鏈",icon:"⛓️",slot:"weapon",q:"EX",st:{atk:11,spd:2}},
+  endchain:{name:"終焉鎖鏈",icon:"⛓️",slot:"weapon",q:"EX",set:"throne",st:{atk:11,spd:2}},
   nightrobe:{name:"永夜王袍",icon:"🦇",slot:"armor",q:"EX",st:{hp:30,def:5,atk:3}},
-  overlordmantle:{name:"霸主金袍",icon:"🌟",slot:"armor",q:"EX",st:{hp:26,def:6,atk:2}},
+  overlordmantle:{name:"霸主金袍",icon:"🌟",slot:"armor",q:"EX",set:"throne",st:{hp:35,def:7,atk:4}},
   voidterm:{name:"虛空終端",icon:"💠",slot:"acc",q:"EX",st:{atk:5,spd:3,hp:8}},
-  abysscrown:{name:"深淵王冠",icon:"👑",slot:"acc",q:"EX",st:{atk:6,hp:14,def:2}}
+  abysscrown:{name:"深淵王冠",icon:"👑",slot:"acc",q:"EX",set:"throne",st:{atk:6,hp:14,def:2}}
 };
 // 稀有度（由低到高）、穿戴等級、隨機詞條、套裝
 const GQ=["N","R","SR","SSR","UR","EX"];
@@ -944,8 +944,11 @@ const SETS={
   SR:{name:"特勤套裝",2:{def:2,hp:6},3:{atk:2,crit:6}},
   SSR:{name:"主辦人套裝",2:{atk:3,hp:10},3:{crit:5,steal:10}},
   UR:{name:"審判套裝",2:{atk:5,def:2,hp:15},3:{crit:10,steal:12,dodge:6}},
-  EX:{name:"魔王套裝",2:{atk:6,hp:20,def:2},3:{crit:12,steal:15,dodge:8}}
+  EX:{name:"魔王套裝",2:{atk:6,hp:20,def:2},3:{crit:12,steal:15,dodge:8}},
+  // 有 set 標記的裝備不算進稀有度套裝，改算進自己的套裝：深淵王冠＋霸主金袍＋終焉鎖鏈（來自最後三位強王，各部位一件）
+  throne:{name:"終焉王座套裝",cls:"EX",2:{atk:11,hp:20,def:2},3:{crit:12,steal:15,dodge:8,dr:10}} // ＝魔王套裝 ＋攻擊+5（2件）＋減傷+10%（3件）
 };
+const setKeyOf=base=>GEAR[base].set||GEAR[base].q;
 const SLOTS={weapon:"武器",armor:"防具",acc:"飾品"};
 // 有插圖的裝備（images/equipment/{代號}.webp，256×256 透明底）。沒有插圖的（目前只有狗牌）、或圖片載入失敗時，退回用表情符號
 // 裝備箱插圖（images/boxes/{箱子代號}.webp），載入失敗時退回表情符號
@@ -2130,7 +2133,7 @@ function dropGear(q){return gearName(addGear(rollGear(q)))+`（${q}）`;}
 // 身上生效的裝備（等級不足的不算）
 // eq 是「欄位→裝備 uid」的對照；預覽時可以傳入假設的組合
 function wornOf(id,eq){return Object.values(eq||{}).map(gearById).filter(g=>g&&lvOk(id,g.base));}
-function setCountsOf(id,eq){const c={};wornOf(id,eq).forEach(g=>{const q=GEAR[g.base].q;c[q]=(c[q]||0)+1;});return c;}
+function setCountsOf(id,eq){const c={};wornOf(id,eq).forEach(g=>{const q=setKeyOf(g.base);c[q]=(c[q]||0)+1;});return c;}
 function bonusOf(id,eq){
   const s={hp:0,atk:0,def:0,spd:0,crit:0,steal:0,dodge:0,dr:0};
   wornOf(id,eq).forEach(g=>{const t=gearStats(g);for(const k in t)s[k]+=t[k];});
@@ -2144,7 +2147,7 @@ function equipBonus(id){const o=SAVE.owned[id];return bonusOf(id,o&&o.eq);}
 function setHtml(id){
   const c=setCounts(id),qs=Object.keys(c).filter(q=>c[q]>=1);
   if(!qs.length)return "";
-  return `<div class="setb">${qs.map(q=>`<div><b class="r${q}">${SETS[q].name}</b> ${c[q]}/3　<span class="${c[q]>=2?"on":"off"}">2件：${statStr(SETS[q][2])}</span>　<span class="${c[q]>=3?"on":"off"}">3件：${statStr(SETS[q][3])}</span></div>`).join("")}</div>`;
+  return `<div class="setb">${qs.map(q=>`<div><b class="r${SETS[q].cls||q}">${SETS[q].name}</b> ${c[q]}/3　<span class="${c[q]>=2?"on":"off"}">2件：${statStr(SETS[q][2])}</span>　<span class="${c[q]>=3?"on":"off"}">3件：${statStr(SETS[q][3])}</span></div>`).join("")}</div>`;
 }
 function unequip(uid){const w=gearOwner(uid);if(w)Object.keys(SAVE.owned[w].eq).forEach(sl=>{if(SAVE.owned[w].eq[sl]===uid)delete SAVE.owned[w].eq[sl];});}
 function equipTo(id,uid){
@@ -2253,7 +2256,8 @@ function viewDex(){
       <div class="small dim">${GQ_NAME[G.q]}・${SLOTS[G.slot]}・${gearCls(k)} ${reqTag(null,k)}</div>${o.n?"":`<div class="small dim">未擁有</div>`}</div>`;}).join("")}</div>
   <h3 style="margin-top:18px">🧩 套裝效果</h3>
   <p class="dim small" style="margin-top:0">同稀有度的武器、防具、飾品穿 2 件、3 件有額外效果（3 件會同時拿到 2 件的效果）。</p>
-  <div class="panel small">${GQ.map(q=>`<div style="margin-bottom:6px"><b class="r${q}">${GQ_NAME[q]}・${SETS[q].name}</b>　2 件：${statStr(SETS[q][2])}　3 件：${statStr(SETS[q][3])}</div>`).join("")}</div>
+  <div class="panel small">${GQ.map(q=>`<div style="margin-bottom:6px"><b class="r${q}">${GQ_NAME[q]}・${SETS[q].name}</b>　2 件：${statStr(SETS[q][2])}　3 件：${statStr(SETS[q][3])}${q==="EX"?`<div class="small dim">不含深淵王冠、霸主金袍、終焉鎖鏈（這三件算「${SETS.throne.name}」）</div>`:""}</div>`).join("")}
+    <div style="margin-bottom:6px"><b class="rEX">魔王專屬・${SETS.throne.name}</b>　2 件：${statStr(SETS.throne[2])}　3 件：${statStr(SETS.throne[3])}<div class="small dim">深淵王冠（飾品）＋霸主金袍（防具）＋終焉鎖鏈（武器），來自深淵君王、天命霸主、終焉行者</div></div></div>
   <h3 style="margin-top:18px">📖 裝備素質說明</h3>
   <div class="panel small">${STAT_HELP.map(([l,t])=>`<div style="margin-bottom:6px"><b>${l}</b>　${t}</div>`).join("")}</div>
   <h3 style="margin-top:18px">🎲 裝備浮動屬性說明</h3>
@@ -2291,7 +2295,7 @@ function openDex(k){
     <div class="small dim">可裝備：${gearCls(k)}・穿戴等級 Lv.${GEAR_REQ[G.q]}</div></div></div>
     <div class="sk"><b>📊 數值</b><br>基礎：${statStr(G.st)}<br>品質浮動（${lo}%～${hi}%）：${rng}<br>強化到 +${ENH_MAX}：${max}（以 100% 品質計）</div>
     <div class="sk"><b>✦ 隨機詞條</b>（${cnt}）<br><span class="small">${aff}</span></div>
-    <div class="sk"><b>🧩 套裝</b>：${SETS[G.q].name}<br>2 件：${statStr(SETS[G.q][2])}　3 件：${statStr(SETS[G.q][3])}</div>
+    <div class="sk"><b>🧩 套裝</b>：${SETS[setKeyOf(k)].name}<br>2 件：${statStr(SETS[setKeyOf(k)][2])}　3 件：${statStr(SETS[setKeyOf(k)][3])}</div>
     <div class="sk"><b>🎁 怎麼取得</b><br>${GET_HOW[G.q]}${boss?`<br><b class="rEX">掉落自：${MONSTERS[boss].name}</b>`:""}</div>
     <div class="row" style="margin-top:12px">${GEAR_PRICE[G.q]?`<button class="gold" onclick="closeModal();SHOP_TAB='gear';go('shop')">🛒 去商店</button>`:""}<button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
 }
@@ -2366,7 +2370,7 @@ function openGear(uid){
     <div class="small dim">品質 ${g.roll||100}%（同種裝備數值會浮動）</div>
     ${g.fx&&g.fx.length?`<div class="gfx">隨機詞條：${fxStr(g)}</div>`:`<div class="small dim">沒有隨機詞條</div>`}
     <div class="small dim">可裝備：${gearCls(g.base)}・穿戴等級 Lv.${GEAR_REQ[G.q]}</div>
-    <div class="small dim">套裝：${SETS[G.q].name}（2件 ${statStr(SETS[G.q][2])}／3件 ${statStr(SETS[G.q][3])}）</div>
+    <div class="small dim">套裝：${SETS[setKeyOf(g.base)].name}（2件 ${statStr(SETS[setKeyOf(g.base)][2])}／3件 ${statStr(SETS[setKeyOf(g.base)][3])}）</div>
     ${w?`<div class="small" style="color:var(--green)">👤 ${CARDS[w].name} 正在使用</div>`:""}</div></div>
     <div class="row" style="margin-top:12px">
       <button class="pri" onclick="openEnhance(${uid})" ${g.lv>=enhCap(g)?"disabled":""}>🔨 強化${g.lv>=enhCap(g)?"（已滿）":""}</button>
@@ -2481,7 +2485,7 @@ const GEAR_HELP=`<div class="sk small"><b>📖 裝備說明</b><ul style="paddin
   <li><b>數值浮動</b>：每件裝備有自己的「品質 %」，同一種裝備數值會有高低。</li>
   <li><b>⚡超頻區</b>：SSR 以上的裝備強化到 +10 後可以繼續衝到 +20。每級只加 3.5%、成功率從 10% 降到 1%、每次 🪙1000 起跳，失敗一定掉 1 級（🧿保護符可擋）。🍀幸運符只能用在 +12 以下。強化到 +20 時會額外增加 1 條隨機詞條，裝備卡也會出現「⚡超頻」特效。</li>
   <li><b>隨機詞條</b>：稀有度越高詞條越多（稀有 0～1、精良 1、史詩 1～2、傳說 2～3），可能是攻擊、生命、防禦、速度、暴擊、吸血、閃避、減傷（總減傷上限 30%）。詞條不吃強化。骰到該欄最大值會顯示 🌟 發光；另有 1% 機率出現 💎 <b>稀有詞條</b>，數值為最大值再 +1（百分比 +1%、數字 +1）。完整範圍見「裝備圖鑑」的詞條數值表。</li>
-  <li><b>套裝</b>：同一稀有度的武器／防具／飾品穿 2 件、3 件會有額外效果（例如史詩 3 件：暴擊+5%、吸血+10%）。</li>
+  <li><b>套裝</b>：同一稀有度的武器／防具／飾品穿 2 件、3 件會有額外效果（例如史詩 3 件：暴擊+5%、吸血+10%）。深淵王冠、霸主金袍、終焉鎖鏈三件是獨立的「終焉王座套裝」。</li>
   <li><b>EX 魔王專屬</b>：只會從「魔王討伐（支線）」的 8 位魔王掉落，每位一件，需 Lv.12，固定 3 條詞條，有自己的「魔王套裝」。</li></ul></div>`;
 const CHARMS={stone:{name:"突破石",icon:"💎",price:15,desc:"角色 5★ 突破用的材料（成功率 30% 起遞減，失敗會消失）"},protect:{name:"保護符",icon:"🧿",price:20,desc:"強化失敗時不掉級（失敗才消耗）"},luck:{name:"幸運符",icon:"🍀",price:12,desc:"強化成功率 +10%（每次強化消耗）"}};
 const SUPPLY={pill:6,adrenaline:8,wine:4,rope:9,gasmask:7,rocket:12,knife:8,pistol:12};

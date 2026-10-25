@@ -111,7 +111,7 @@ button,.door,.ccard,.ucard,.gcard,.chap,.bosscard,.item,.pull{touch-action:manip
 .pull{perspective:600px;aspect-ratio:.72;cursor:pointer}
 .pull .in{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d}
 .pull.flip .in{transform:rotateY(180deg)}
-.pull .f,.pull .b{position:absolute;inset:0;backface-visibility:hidden;border-radius:10px;overflow:hidden}
+.pull .f,.pull .b{position:absolute;inset:0;-webkit-backface-visibility:hidden;backface-visibility:hidden;border-radius:10px;overflow:hidden}
 .pull .b{background:repeating-linear-gradient(45deg,#1a1d22 0 8px,#14161a 8px 16px);border:2px solid #333;display:flex;align-items:center;justify-content:center;font-size:28px;color:#555}
 .pull .f{transform:rotateY(180deg);background:var(--panel);border:2px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:5px}
 .pull .f .av{width:100%;aspect-ratio:1;border-radius:7px;overflow:hidden}
@@ -455,6 +455,15 @@ footer.credit a{color:var(--gold)}
   .blog{height:130px}
   .pullgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
   .pullgrid.wide{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  /* 手機抽卡：不用 3D 翻轉（部分手機瀏覽器會翻到一半只剩卡背），改成直接換面；卡面高度跟著內容走，字才不會被切掉 */
+  .pull{aspect-ratio:auto;perspective:none}
+  .pull .in,.pull.flip .in{transform:none;transition:none;transform-style:flat;height:auto}
+  .pull .b{position:relative;aspect-ratio:.72}
+  .pull .f{position:relative;transform:none;display:none;min-height:100%}
+  .pull.flip .b{display:none}
+  .pull.flip .f{display:flex}
+  .pull .f .nm{font-size:12px;text-align:center}
+  .pull .badge{text-align:center}
   .detail{flex-direction:column}
   .detail .av{width:100%;max-width:200px}
   .teamslots,.teamslots.five{grid-template-columns:repeat(3,minmax(0,1fr))}

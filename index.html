@@ -5680,6 +5680,25 @@ function applyOutItem(mi){
   else if(id==="wine"){const k=ri(1,3);if(k===1){m.hp=Math.min(m.maxHp,m.hp+6);toast("好酒！恢復6");}else if(k===2){m.hp=Math.min(m.maxHp,m.hp+2);toast("微醺，恢復2");}else{m.hp=Math.max(1,m.hp-2);toast("……酒壞了，-2");}}
   render();
 }
+// 一鍵補血：從隊伍最前面開始，每人補到滿血為止；先用藥片（穩定），藥片用完才用酒（隨機）
+function autoHeal(){
+  if(!RUN||!RUN.active)return;
+  let pills=0,wines=0;
+  RUN.party.forEach(m=>{
+    if(!m.alive)return;
+    while(m.hp<m.maxHp){
+      let i=RUN.items.indexOf("pill");const isPill=i>=0;
+      if(!isPill)i=RUN.items.indexOf("wine");
+      if(i<0)break;
+      const id=RUN.items.splice(i,1)[0];
+      if(id==="pill"){m.hp=Math.min(m.maxHp,m.hp+pillHeal());pills++;}
+      else{const k=ri(1,3);m.hp=k===1?Math.min(m.maxHp,m.hp+6):k===2?Math.min(m.maxHp,m.hp+2):Math.max(1,m.hp-2);wines++;}
+    }
+  });
+  RUN.sel=null;
+  if(!pills&&!wines){toast("沒有需要補血的隊員，或背包裡沒有藥片／酒");return;}
+  SFX.heal();toast(`一鍵補血：用了${pills?` 💊×${pills}`:""}${wines?` 🍷×${wines}`:""}`);render();
+}
 function shareFood(){
   const al=allyMember();if(!al||RUN.food<1)return;
   RUN.food--;al.trust=Math.min(100,al.trust+20);al.hp=Math.min(al.maxHp,al.hp+3);SFX.heal();toast(`${al.name} 接過補給，表情緩和了一點（信任+20）`);render();
@@ -5776,7 +5795,7 @@ function viewRun(){
     <div class="gasbar">☣ 毒氣：${g<0?"尚未出現":"已淹到 "+FL()[clamp(g,0,FL().length-1)].label}</div>
     <h3>隊伍</h3>${party}
     ${al&&r.food>0&&r.active?`<button class="mini" onclick="shareFood()">🥫 分補給給盟友（信任+20）</button>`:""}
-    <h3>背包</h3><div class="items">${r.items.map((id,i)=>`<span class="item ${r.sel===i?"sel":""}" title="${ITEMS[id].desc}" onclick="useOutItem(${i})">${ITEMS[id].icon}${ITEMS[id].name}</span>`).join("")||"<span class='dim small'>空</span>"}</div>
+    <h3>背包</h3>${r.active&&r.items.some(i=>i==="pill"||i==="wine")&&r.party.some(m=>m.alive&&m.hp<m.maxHp)?`<button class="mini gold" onclick="autoHeal()">💊 一鍵補血（前面優先）</button>`:""}<div class="items">${r.items.map((id,i)=>`<span class="item ${r.sel===i?"sel":""}" title="${ITEMS[id].desc}" onclick="useOutItem(${i})">${ITEMS[id].icon}${ITEMS[id].name}</span>`).join("")||"<span class='dim small'>空</span>"}</div>
     ${r.sel!=null?`<div class="small" style="color:var(--gold);margin-top:6px">選擇要使用／裝備的隊員 →</div>`:""}
     ${r.active?`<div class="row" style="margin-top:14px"><button class="mini" onclick="abandonRun()">放棄遠征</button><button class="mini" onclick="openStuck()">🐞 卡住了／回報問題</button></div>`:""}
   </div>`;

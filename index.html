@@ -124,13 +124,13 @@ button,.door,.ccard,.ucard,.gcard,.chap,.bosscard,.item,.pull{touch-action:manip
 @keyframes ssrpop{0%{transform:scale(1)}40%{transform:scale(1.15)}100%{transform:scale(1)}}
 
 /* battle */
-.btop{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0}
+.btop{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0}
 .btop .ttl{font-weight:800;font-size:17px;flex:1}
-.side{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:10px;border-radius:12px}
+.side{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:6px;border-radius:12px}
 .side.B{background:linear-gradient(#2a1416,transparent)}
 .side.A{background:linear-gradient(transparent,#122030)}
 .vs{text-align:center;color:var(--dim);font-size:12px;letter-spacing:6px;margin:2px 0}
-.ucard{width:128px;background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:6px;position:relative;transition:transform .15s,border-color .15s}
+.ucard{width:112px;background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:6px;position:relative;transition:transform .15s,border-color .15s}
 .ucard .uav{width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#090a0c;display:flex;align-items:center;justify-content:center}
 .ucard .uname{font-weight:700;font-size:13px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ucard.sA .uname{color:var(--sideA)} .ucard.sB .uname{color:var(--sideB)}
@@ -155,11 +155,17 @@ button,.door,.ccard,.ucard,.gcard,.chap,.bosscard,.item,.pull{touch-action:manip
 .apanel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;margin:10px 0;min-height:60px}
 .apanel .who{font-weight:700;margin-bottom:6px}
 .apanel .btns{display:flex;flex-wrap:wrap;gap:8px}
-.apanel .btns button,.apanel>button{font-size:17px;font-weight:700;padding:14px 18px;min-height:54px;flex:1 1 130px;border-radius:12px}
-.apanel .btns button.atk{background:#3a1416;border-color:var(--red);color:#fff;font-size:19px;flex-grow:1.4}
+.apanel .btns button,.apanel>button{font-size:16px;font-weight:700;padding:10px 14px;min-height:46px;flex:1 1 110px;border-radius:12px}
+.apanel .btns button.atk{background:#3a1416;border-color:var(--red);color:#fff;font-size:18px;flex-grow:1.4}
 .apanel .btns button.atk:hover{background:#561a1e}
 .apanel .skdesc{font-size:12px;color:var(--dim);margin-top:6px}
-.blog{background:#090b0d;border:1px solid var(--line);border-radius:12px;padding:10px;height:220px;overflow:auto;font-size:13px}
+.blog{background:#090b0d;border:1px solid var(--line);border-radius:12px;padding:10px;height:170px;overflow:auto;font-size:13px}
+/* 行動按鈕＋自動／快速固定在畫面下方：不用捲動就能操作，戰鬥中也能隨時切換自動、快速 */
+.bdock{position:sticky;bottom:0;z-index:15;background:linear-gradient(transparent,var(--bg) 12px);padding-top:12px;margin-top:4px}
+.bdock .apanel{margin:0;box-shadow:0 -4px 14px rgba(0,0,0,.55)}
+.bctl{display:flex;gap:6px;justify-content:flex-end;align-items:center;margin-bottom:6px}
+.bctl button{padding:5px 14px;font-size:14px}
+#app.inbattle nav,#app.inbattle .menuBtn{display:none}
 .blog div{animation:fadein .3s}
 .blog .rnd{color:var(--dim);border-top:1px dashed var(--line);margin-top:4px;padding-top:2px}
 .blog .big{color:var(--gold);font-weight:700}
@@ -432,6 +438,13 @@ footer.credit a{color:var(--gold)}
 }
 @media (max-width:560px){
   .ucard{width:31%;min-width:96px;padding:4px}
+  .side{gap:6px;padding:4px}
+  .apanel{padding:8px}
+  .apanel .btns{gap:6px}
+  .apanel .btns button,.apanel>button{font-size:15px;padding:8px;min-height:44px;flex:1 1 40%}
+  .apanel .btns button.atk{font-size:16px}
+  .apanel .skdesc{font-size:11px;margin-top:4px}
+  .blog{height:130px}
   .pullgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
   .pullgrid.wide{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
   .detail{flex-direction:column}
@@ -1306,6 +1319,7 @@ function go(v){
 let NAV_OPEN=false;
 function toggleNav(){NAV_OPEN=!NAV_OPEN;SFX.click();renderHeader();}
 function renderHeader(){
+  $("#app").classList.toggle("inbattle",VIEW==="battle"); // 戰鬥中收起導覽列（本來就不能離開），多留空間給戰場
   $("#nav").innerHTML=NAV.map(([k,l])=>`<button class="${VIEW===k||(VIEW==="battle"&&k===BATTLE_HOME)?"on":""}" onclick="go('${k}')">${l}</button>`).join("");
   $("#nav").className=NAV_OPEN?"open":"";
   const cur=NAV.find(([k])=>k===VIEW||(VIEW==="battle"&&k===BATTLE_HOME));
@@ -3224,14 +3238,15 @@ const KB_HINT=`<div class="kbhint">⌨ ←→（A D）選行動　↑ 換目標�
 function viewBattle(){
   const B=CUR_B;if(!B)return "";
   const me=B.mySide||"A",op=me==="A"?"B":"A";
-  return `<div class="btop"><div class="ttl">${B.title}　<span class="dim small">第 ${B.round} 回合</span></div>
+  const ctl=B.over?"":`<div class="bctl">
     ${B.ctrl.A==="human"&&B.ctrl.B!=="human"?`<button data-kb="auto" onclick="act('auto')" class="${B.auto?"ok":""}">${B.auto?"自動中":"自動"}</button>`:""}
     ${B.guest?"":`<button data-kb="fast" onclick="CUR_B.fast=!CUR_B.fast;render()" class="${B.fast?"ok":""}">${B.fast?"⏩ 快速":"▶ 正常"}</button>`}
-    <button class="mini" data-kb="stuck" onclick="openStuck()" title="畫面卡住時用">🐞 卡住了</button></div>
+    <button class="mini" data-kb="stuck" onclick="openStuck()" title="畫面卡住時用">🐞 卡住了</button></div>`;
+  return `<div class="btop"><div class="ttl">${B.title}　<span class="dim small">第 ${B.round} 回合</span></div></div>
     <div class="side B">${B.units.filter(u=>u.side===op).map(u=>unitCard(B,u)).join("")}</div>
     <div class="vs">— ${B.labels[op]} ／ ${B.labels[me]} —</div>
     <div class="side A">${B.units.filter(u=>u.side===me).map(u=>unitCard(B,u)).join("")}</div>
-    ${actionPanel(B)}
+    <div class="bdock">${ctl}${actionPanel(B)}</div>
     <div class="blog" id="blog">${B.log.map(l=>`<div class="${l.cls}">${l.html}</div>`).join("")}</div>`;
 }
 function finishBattle(){

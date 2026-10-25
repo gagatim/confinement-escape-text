@@ -1308,13 +1308,17 @@ function toggleBgm(){
 
 /* ===================== VIEW ROUTER ===================== */
 let VIEW="home";
-const NAV=[["home","主頁"],["gacha","招募"],["team","隊伍"],["convert","轉換"],["dex","檔案室"],["gear","裝備"],["shop","商店"],["boss","魔王討伐"],["run","遠征"],["train","練功房"],["arena","競技場"],["duel","雙人對決"]];
-// 檔案室：圖鑑、故事、成就合併成一頁，用上方分頁切換（各頁的代號、背景音樂維持原樣）
-const ARCHIVE=[["dex","📖 圖鑑"],["story","👑 故事"],["ach","🏆 成就"]];
-const inArchive=v=>ARCHIVE.some(([k])=>k===v);
-function archiveTabs(){
-  return `<div class="row" style="align-items:center;gap:10px;margin-top:6px"><b style="font-size:18px">🗄 檔案室</b>
-    <div class="filters" style="margin:0">${ARCHIVE.map(([k,l])=>`<button class="${VIEW===k?"on":""}" onclick="go('${k}')">${l}</button>`).join("")}</div></div>`;
+const NAV=[["home","主頁"],["gacha","招募"],["team","整備室"],["dex","檔案室"],["shop","商店"],["boss","魔王討伐"],["run","遠征"],["train","練功房"],["arena","競技場"],["duel","雙人對決"]];
+// 合併頁：一個導覽按鈕對應多個分頁（各頁的代號、內容、背景音樂維持原樣，只是共用上方的分頁列）
+//   檔案室＝圖鑑／故事／成就；整備室＝隊伍／裝備／轉換
+const PAGE_GROUPS=[
+  {nav:"dex",title:"🗄 檔案室",tabs:[["dex","📖 圖鑑"],["story","👑 故事"],["ach","🏆 成就"]]},
+  {nav:"team",title:"🛠 整備室",tabs:[["team","👥 隊伍"],["gear","🛡 裝備"],["convert","🔁 轉換"]]}
+];
+const groupOf=v=>PAGE_GROUPS.find(g=>g.tabs.some(([k])=>k===v));
+function groupTabs(g){
+  return `<div class="row" style="align-items:center;gap:10px;margin-top:6px"><b style="font-size:18px">${g.title}</b>
+    <div class="filters" style="margin:0">${g.tabs.map(([k,l])=>`<button class="${VIEW===k?"on":""}" onclick="go('${k}')">${l}</button>`).join("")}</div></div>`;
 }
 function locked(){return (RUN&&RUN.active)||(CUR_B&&!CUR_B.done)||(DUEL&&DUEL.phase==="battle")||!!NET;}
 function go(v){
@@ -1327,9 +1331,9 @@ let NAV_OPEN=false;
 function toggleNav(){NAV_OPEN=!NAV_OPEN;SFX.click();renderHeader();}
 function renderHeader(){
   $("#app").classList.toggle("inbattle",VIEW==="battle"); // 戰鬥中收起導覽列（本來就不能離開），多留空間給戰場
-  $("#nav").innerHTML=NAV.map(([k,l])=>`<button class="${VIEW===k||(k==="dex"&&inArchive(VIEW))||(VIEW==="battle"&&k===BATTLE_HOME)?"on":""}" onclick="go('${k}')">${l}</button>`).join("");
+  $("#nav").innerHTML=NAV.map(([k,l])=>`<button class="${VIEW===k||(groupOf(VIEW)&&groupOf(VIEW).nav===k)||(VIEW==="battle"&&k===BATTLE_HOME)?"on":""}" onclick="go('${k}')">${l}</button>`).join("");
   $("#nav").className=NAV_OPEN?"open":"";
-  const cur=NAV.find(([k])=>k===VIEW||(k==="dex"&&inArchive(VIEW))||(VIEW==="battle"&&k===BATTLE_HOME));
+  const cur=NAV.find(([k])=>k===VIEW||(groupOf(VIEW)&&groupOf(VIEW).nav===k)||(VIEW==="battle"&&k===BATTLE_HOME));
   $("#menuBtn").textContent=(NAV_OPEN?"✕ ":"☰ ")+(cur?cur[1]:"選單");
   $("#wallet").textContent="🪙 "+SAVE.gold;
   $("#muteBtn").textContent=SAVE.muted?"🔇":"🔊";
@@ -1351,7 +1355,7 @@ function render(){
 function renderInner(){
   renderHeader();
   const f={home:viewHome,gacha:viewGacha,team:viewTeam,convert:viewConvert,dex:viewCodex,gear:viewGear,shop:viewShop,run:viewRun,boss:viewBossPage,train:viewTrain,arena:viewArena,ach:viewAch,story:viewStory,duel:viewDuel,battle:viewBattle}[VIEW]||viewHome;
-  $("#view").innerHTML=(inArchive(VIEW)?archiveTabs():"")+f();
+  $("#view").innerHTML=(groupOf(VIEW)?groupTabs(groupOf(VIEW)):"")+f();
   if(VIEW==="battle"){const l=$("#blog");if(l)l.scrollTop=l.scrollHeight;kbApply();}
   if(CUR_B&&CUR_B.online&&!CUR_B.guest)pushSnap(CUR_B);
   syncBgm();
@@ -1371,8 +1375,8 @@ function closeModal(){$("#modal").classList.remove("show");}
 const GUIDE=[
   {ic:"⛓",t:"這是什麼遊戲？",b:["你和同伴被關在禁閉室，要一路往上爬、搶上只有 <b>三個座位</b> 的直升機。","玩法只有三件事：<b>抽角色 → 組隊 → 出發遠征</b>。"]},
   {ic:"🎴",t:"① 抽角色",b:["到「招募」花金條抽卡。<b>第一次十連必出 SSR</b>，開局的金條剛好夠。","抽到重複的角色會記成「重複卡」，到角色頁手動升星（最多 5★），每 1 星能力 +10%。","5★ 後可以用 💎突破石「突破」（隊伍頁點角色 →「✨突破」，最多 10 次）：星星回到 1★ 再升，能力保留並再 +1.5%，突破後每升 1 星 +2.5%。","第 n 次突破要 💎×2n，成功率 30% 起每次 ×0.85（30→26→22→…→7%）。失敗突破石消失，但不會降星。","突破石來源：商店、主線魔王、深淵守門者、練功房、成就。已突破的角色不會被一鍵合成當材料。"]},
-  {ic:"👥",t:"② 組隊",b:["到「隊伍」點角色 →「加入隊伍」，最多 3 人。","每個角色有 <b>職業</b>（🛡坦克／⚔戰士／🗡刺客／🎯射手／✚輔助／🔮術士），各有不同加成。","不要的角色可以「遣散」換金條、「合成」成更高稀有度（<b>5 張 N 白卡 → 1 名 R</b>、6★ 份的 R → 1 名 SR、6★ 份的 SR → 1 名 SSR），或「🔥熔煉」：2 名同稀有度 → 1 名同稀有度的其他角色（等級取較低的）。"]},
-  {ic:"🛒",t:"③ 裝備與商店",b:["「商店」可以買裝備、強化符和遠征物資（下一次遠征自動帶上）。","在角色卡片點 <b>武器／防具／飾品</b> 欄位就能穿上。武器有職業限制。","「裝備」頁可以強化到 +10。<b>強化可能失敗</b>：+5 以上失敗會掉 1 級（裝備不會碎），用 🧿保護符 可以保住等級。"]},
+  {ic:"👥",t:"② 組隊",b:["到「整備室」的「隊伍」點角色 →「加入隊伍」，最多 3 人。","每個角色有 <b>職業</b>（🛡坦克／⚔戰士／🗡刺客／🎯射手／✚輔助／🔮術士），各有不同加成。","不要的角色可以「遣散」換金條、「合成」成更高稀有度（<b>5 張 N 白卡 → 1 名 R</b>、6★ 份的 R → 1 名 SR、6★ 份的 SR → 1 名 SSR），或「🔥熔煉」：2 名同稀有度 → 1 名同稀有度的其他角色（等級取較低的）。"]},
+  {ic:"🛒",t:"③ 裝備與商店",b:["「商店」可以買裝備、強化符和遠征物資（下一次遠征自動帶上）。","在角色卡片點 <b>武器／防具／飾品</b> 欄位就能穿上。武器有職業限制。","「整備室」的「裝備」分頁可以強化到 +10。<b>強化可能失敗</b>：+5 以上失敗會掉 1 級（裝備不會碎），用 🧿保護符 可以保住等級。"]},
   {ic:"🪜",t:"④ 出發遠征",b:["每一層選一扇門進去：可能是物資、敵人、或其他逃殺者。","注意 <b>🥫補給</b>（每層吃 1 份）和 <b>☣毒氣</b>（從底層往上淹）。","遇到人可以結盟、交易或開打。打倒最上層的魔王就逃出了！"]},
   {ic:"⚔️",t:"⑤ 戰鬥",b:["輪到你的角色時，按「普通攻擊」或「技能」，再點目標。","懶得操作就按「自動」，讓 AI 幫你打。"]},
   {ic:"🏆",t:"⑥ 然後呢？",b:["主線共 12 章，逃出一章解鎖下一章；逃出第 1 章後解鎖 <b>🕳 無盡深淵</b>。","「練功房」重複打怪練等級（每級全能力 +2%）；「競技場」打 AI 賺金條；「雙人對決」可以和朋友網路對戰。","進度會自動存檔，換裝置用主頁的「匯出／匯入存檔」。"]}

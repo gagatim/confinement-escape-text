@@ -95,13 +95,18 @@ button,.door,.ccard,.ucard,.gcard,.chap,.bosscard,.item,.pull{touch-action:manip
 .banner h2{margin:0 0 4px;position:relative}
 .banner .feat{display:flex;gap:8px;margin:14px 0;position:relative}
 .banner .feat .av{width:64px;height:64px;border-radius:10px;overflow:hidden;border:2px solid var(--gold)}
-#gacha{position:fixed;inset:0;z-index:60;background:#050607;display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px;overflow:auto}
+#gacha{position:fixed;inset:0;z-index:60;background:#050607;display:none;flex-direction:column;align-items:center;justify-content:center;justify-content:safe center;padding:16px;overflow:auto}
 #gacha.show{display:flex}
 .pod{width:180px;height:240px;border-radius:18px;border:3px solid #444;background:linear-gradient(#22262d,#0e1013);position:relative;animation:podshake .12s infinite;box-shadow:0 0 60px var(--glow,#4aa3ff)}
 .pod::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:4px;margin-left:-2px;background:var(--glow,#4aa3ff);box-shadow:0 0 30px 8px var(--glow,#4aa3ff);animation:podlight 1.4s ease-in forwards}
 @keyframes podshake{0%{transform:translate(1px,0)}50%{transform:translate(-1px,1px)}100%{transform:translate(0,-1px)}}
 @keyframes podlight{from{opacity:.2}to{opacity:1;width:120px;margin-left:-60px}}
 .pullgrid{display:grid;grid-template-columns:repeat(5,minmax(0,120px));gap:10px;margin:16px 0}
+.pullgrid.wide{grid-template-columns:repeat(8,minmax(0,110px));gap:14px}
+.pull{position:relative}
+.pull .lay{position:absolute;inset:0;border-radius:10px;background:#1b1e23;border:2px solid #333}
+.pull .lay.l1{transform:translate(4px,4px)} .pull .lay.l2{transform:translate(8px,8px);opacity:.7}
+.pull .cnt{position:absolute;top:-8px;right:-6px;z-index:3;background:#c9302c;color:#fff;font-weight:700;font-size:13px;line-height:1;padding:4px 7px;border-radius:12px;border:1px solid #000;pointer-events:none}
 .pull{perspective:600px;aspect-ratio:.72;cursor:pointer}
 .pull .in{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d}
 .pull.flip .in{transform:rotateY(180deg)}
@@ -428,6 +433,7 @@ footer.credit a{color:var(--gold)}
 @media (max-width:560px){
   .ucard{width:31%;min-width:96px;padding:4px}
   .pullgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .pullgrid.wide{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
   .detail{flex-direction:column}
   .detail .av{width:100%;max-width:200px}
   .teamslots{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -1438,7 +1444,7 @@ function resetSave(){
 }
 
 /* ===================== GACHA ===================== */
-const PULL_COST=10,TEN_COST=90;
+const PULL_COST=10,TEN_COST=90,FIFTY_COST=450; // 十連、50 連都是 9 折
 function viewGacha(){
   const feat=gachaPool("SSR");
   return `<h2>招募所</h2>
@@ -1449,6 +1455,7 @@ function viewGacha(){
     <div class="row" style="position:relative">
       <button class="gold" onclick="doPull(1)">單抽 🪙${PULL_COST}</button>
       <button class="pri" onclick="doPull(10)">十連 🪙${TEN_COST}${SAVE.firstTen?"（首次必出SSR）":""}</button>
+      <button class="pri" onclick="doPull(50)">50 連 🪙${FIFTY_COST}</button>
       <span class="dim small">距離保底 SSR：${60-SAVE.pity} 抽</span>
     </div>
   </div>
@@ -1547,18 +1554,27 @@ function doBreak(id){
 }
 function doPull(n){
   if($("#gacha").classList.contains("show")||!tapOk())return;
-  const cost=n===10?TEN_COST:PULL_COST;
+  const cost=n===50?FIFTY_COST:n===10?TEN_COST:PULL_COST;
   if(SAVE.gold<cost){toast("金條不足！去遠征或競技場賺一些吧");return;}
   SAVE.gold-=cost;SAVE.pulls+=n;
   const rs=[];for(let i=0;i<n;i++)rs.push(rollRarity());
   if(n===10&&SAVE.firstTen){SAVE.firstTen=false;if(!rs.includes("SSR")){rs[9]="SSR";SAVE.pity=0;}}
-  if(n===10&&!rs.some(r=>r==="SR"||r==="SSR"))rs[9]="SR";
+  if(n>=10)for(let b=0;b<n;b+=10)if(!rs.slice(b,b+10).some(r=>r==="SR"||r==="SSR"))rs[b+9]="SR"; // 每 10 張一組，至少 1 張 SR 以上
   const res=rs.map(r=>r==="N"?grantJunk(pick(JUNK_IDS)):grant(pick(gachaPool(r))));
   save();renderHeader();
   showGacha(res);
 }
 let GACHA_RES=null;
+// 同一張卡合併成一格（×n），依稀有度由高到低排
+function groupPulls(res){
+  const m={};
+  res.forEach(x=>{const g=m[x.id]||(m[x.id]={id:x.id,junk:!!x.junk,n:0,isNew:false,dup:0,rf:0,gold:0,sh:0});
+    g.n++;if(x.isNew)g.isNew=true;if(x.dupe)g.dup++;if(x.refund){g.rf++;g.gold+=x.refund;g.sh+=x.sh;}});
+  const ord=x=>x.junk?3:R_ORDER[CARDS[x.id].r];
+  return Object.values(m).sort((a,b)=>ord(a)-ord(b));
+}
 function showGacha(res){
+  res=groupPulls(res);
   GACHA_RES=res;
   const rOf=x=>x.junk?"N":CARDS[x.id].r;
   const best=res.some(x=>rOf(x)==="SSR")?"SSR":res.some(x=>rOf(x)==="SR")?"SR":res.some(x=>rOf(x)==="R")?"R":"N";
@@ -1569,12 +1585,12 @@ function showGacha(res){
   tone(120,1.2,"sawtooth",.03,200);
   setTimeout(()=>{
     g.innerHTML=`<h2>招募結果</h2>
-    <div class="pullgrid" style="${res.length===1?"grid-template-columns:140px":""}">
-      ${res.map((x,i)=>{const c=x.junk?JUNK[x.id]:CARDS[x.id];return `<div class="pull ${c.r}" id="pull${i}" onclick="flipCard(${i})"><div class="in">
+    <div class="pullgrid ${res.length>10?"wide":""}" style="${res.length===1?"grid-template-columns:140px":""}">
+      ${res.map((x,i)=>{const c=x.junk?JUNK[x.id]:CARDS[x.id];return `<div class="pull ${c.r}" id="pull${i}" onclick="flipCard(${i})">${x.n>1?`<i class="lay l2"></i><i class="lay l1"></i><span class="cnt">×${x.n}</span>`:""}<div class="in">
         <div class="b">?</div>
         <div class="f"><div class="av">${avatar(x.id)}</div><div class="nm r${c.r}">${c.name}</div>
           <div class="small r${c.r}">${c.r}</div>
-          <div class="badge">${x.junk?`<span class="dim">只能遣散（持有 ${SAVE.junk[x.id]}）</span>`:x.isNew?"NEW!":x.dupe?"重複卡 ×"+x.dupe+"（可手動升星）":"🪙+"+x.refund+" 💎+1 🧩+"+x.sh}</div></div>
+          <div class="badge">${x.junk?`<span class="dim">持有 ${SAVE.junk[x.id]}・只能遣散</span>`:[x.isNew?"NEW!":"",x.dup?`重複卡 +${x.dup}（可手動升星）`:"",x.rf?`🪙+${x.gold} 💎+${x.rf} 🧩+${x.sh}`:""].filter(Boolean).join("<br>")}</div></div>
       </div></div>`;}).join("")}
     </div>
     <div class="row"><button onclick="flipAll()">全部翻開</button><button class="pri" onclick="closeGacha()">完成</button></div>`;
@@ -1586,7 +1602,7 @@ function flipCard(i){
   const r=GACHA_RES[i].junk?"N":CARDS[GACHA_RES[i].id].r;
   if(r==="SSR")SFX.ssr();else if(r==="SR")SFX.sr();else SFX.flip();
 }
-function flipAll(){GACHA_RES.forEach((_,i)=>setTimeout(()=>flipCard(i),i*140));}
+function flipAll(){GACHA_RES.forEach((_,i)=>setTimeout(()=>flipCard(i),i*Math.min(140,1200/GACHA_RES.length)));}
 function closeGacha(){$("#gacha").classList.remove("show");render();}
 
 /* ===================== TEAM ===================== */

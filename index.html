@@ -74,6 +74,7 @@ h3{margin:14px 0 8px;font-size:16px;color:#c9ced5}
 .stars{color:var(--gold);font-size:11px;letter-spacing:-1px}
 .brk{color:#ff9cf0;letter-spacing:0;text-shadow:0 0 6px rgba(255,120,230,.6)}
 .teamslots{display:grid;grid-template-columns:repeat(3,minmax(0,140px));gap:10px}
+.teamslots.five{grid-template-columns:repeat(5,minmax(0,140px))}
 .slot{border:2px dashed var(--line);border-radius:12px;min-height:150px;display:flex;align-items:center;justify-content:center;color:var(--dim)}
 
 /* modal */
@@ -439,6 +440,13 @@ footer.credit a{color:var(--gold)}
 @media (max-width:560px){
   .ucard{width:31%;min-width:96px;padding:4px}
   .side{gap:6px;padding:4px}
+  /* 一方超過 3 人（5 人出戰）：縮成單排，才不會被下方的操作區蓋住 */
+  .side.big{flex-wrap:nowrap;gap:3px}
+  .side.big .ucard{width:auto;min-width:0;flex:1 1 0;padding:2px;border-width:1px}
+  .side.big .uname{font-size:10px}
+  .side.big .ustat,.side.big .ust{display:none}
+  .side.big .hpbar{height:11px}
+  .side.big .hpbar span{font-size:8px;line-height:11px}
   .apanel{padding:8px}
   .apanel .btns{gap:6px}
   .apanel .btns button,.apanel>button{font-size:15px;padding:8px;min-height:44px;flex:1 1 40%}
@@ -449,7 +457,7 @@ footer.credit a{color:var(--gold)}
   .pullgrid.wide{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
   .detail{flex-direction:column}
   .detail .av{width:100%;max-width:200px}
-  .teamslots{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .teamslots,.teamslots.five{grid-template-columns:repeat(3,minmax(0,1fr))}
   .logo small{display:none}
 }
 </style>
@@ -1023,7 +1031,7 @@ function cardStats(id,stars=1,scale=1,br=0){
 const SAVE_KEY="jbts_textgame_v1";
 // 遊戲版本（存檔格式有新增內容、舊頁面可能誤判時加 1）。存檔會記錄是哪個版本寫的；
 // 舊頁面讀到比自己新的存檔時，不做作弊檢查、不清空、也不寫回，只提示玩家重新整理頁面
-const APP_V=7;
+const APP_V=8;
 let STALE=false;
 const isNewerSave=s=>!!s&&(s.appv||0)>APP_V;
 function staleNotice(){
@@ -1069,6 +1077,11 @@ function loadSave(){
   return newSave();
 }
 const isInt=(v,a,b)=>Number.isInteger(v)&&v>=a&&v<=b;
+// 出戰人數：平常最多 3 人；主線 15 章（簡單難度即可）＋肥宅物語通關＋無盡深淵到達 D150，三個都達成後一次解鎖到 5 人
+const TEAM_BASE=3,TEAM_BIG=5,FIVE_ABYSS=150;
+const fiveOk=p=>!!p&&(p.cleared||0)>=ABYSS&&(p.fatty||0)>=5&&(p.abyssBest||0)>=FIVE_ABYSS;
+const teamMax=()=>fiveOk(SAVE.prog)?TEAM_BIG:TEAM_BASE;
+const extraFoes=()=>Math.max(0,SAVE.team.length-TEAM_BASE); // 隊伍比 3 人多幾人，敵人就跟著多幾隻
 // 檢查存檔裡有沒有遊戲規則不可能出現的數值，有的話回傳原因
 function validSave(s){
   if(!isInt(s.gold,0,5000000))return "金條數量異常";
@@ -1083,7 +1096,7 @@ function validSave(s){
     if(o.gfruit!=null&&!["atk","def","spd"].every(k=>isInt((o.gfruit||{})[k]||0,0,GFRUIT_MAX)))return `${CARDS[id].name} 金色果實異常`;
     if(o.exp!=null&&!isInt(o.exp,0,lvNeed(o.lv||1)))return `${CARDS[id].name} 經驗值異常`;
   }
-  if(!Array.isArray(s.team)||s.team.length>3||s.team.some(id=>!s.owned[id]))return "隊伍資料異常";
+  if(!Array.isArray(s.team)||s.team.length>(fiveOk(s.prog)?TEAM_BIG:TEAM_BASE)||s.team.some(id=>!s.owned[id]))return "隊伍資料異常";
   const uids=new Set();
   for(const g of s.gear||[]){
     const G=GEAR[g.base];if(!G)return "出現不存在的裝備";
@@ -1222,6 +1235,7 @@ function save(){
   SAVE.appv=APP_V;
   if(SAVE_READY&&!checkIntegrity())return;
   if(SAVE_READY)checkAch();
+  if(SAVE_READY&&fiveOk(SAVE.prog)&&!SAVE.fiveSeen){SAVE.fiveSeen=1;glog("👥FIVE","解鎖 5 人出戰");setTimeout(()=>toast("🎉 出戰人數解鎖！現在最多可以 5 人出戰"),0);}
   SAVE.updatedAt=Date.now();
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(packSave(SAVE)));}catch(e){}
   if(SAVE_READY)scheduleUpload();
@@ -1378,7 +1392,7 @@ function closeModal(){$("#modal").classList.remove("show");}
 const GUIDE=[
   {ic:"⛓",t:"這是什麼遊戲？",b:["你和同伴被關在禁閉室，要一路往上爬、搶上只有 <b>三個座位</b> 的直升機。","玩法只有三件事：<b>抽角色 → 組隊 → 出發遠征</b>。"]},
   {ic:"🎴",t:"① 抽角色",b:["到「招募」花金條抽卡。<b>第一次十連必出 SSR</b>，開局的金條剛好夠。","抽到重複的角色會記成「重複卡」，到角色頁手動升星（最多 5★），每 1 星能力 +10%。","5★ 後可以用 💎突破石「突破」（隊伍頁點角色 →「✨突破」，最多 10 次）：星星回到 1★ 再升，能力保留並再 +1.5%，突破後每升 1 星 +2.5%。","第 n 次突破要 💎×2n，成功率 30% 起每次 ×0.85（30→26→22→…→7%）。失敗突破石消失，但不會降星。","突破石來源：商店、主線魔王、深淵守門者、練功房、成就。已突破的角色不會被一鍵合成當材料。"]},
-  {ic:"👥",t:"② 組隊",b:["到「整備室」的「隊伍」點角色 →「加入隊伍」，最多 3 人。","每個角色有 <b>職業</b>（🛡坦克／⚔戰士／🗡刺客／🎯射手／✚輔助／🔮術士），各有不同加成。","不要的角色可以「遣散」換金條、「合成」成更高稀有度（<b>5 張 N 白卡 → 1 名 R</b>、6★ 份的 R → 1 名 SR、6★ 份的 SR → 1 名 SSR），或「🔥熔煉」：2 名同稀有度 → 1 名同稀有度的其他角色（等級取較低的）。"]},
+  {ic:"👥",t:"② 組隊",b:["到「整備室」的「隊伍」點角色 →「加入隊伍」，平常最多 3 人（通關後期內容可解鎖 5 人）。","每個角色有 <b>職業</b>（🛡坦克／⚔戰士／🗡刺客／🎯射手／✚輔助／🔮術士），各有不同加成。","不要的角色可以「遣散」換金條、「合成」成更高稀有度（<b>5 張 N 白卡 → 1 名 R</b>、6★ 份的 R → 1 名 SR、6★ 份的 SR → 1 名 SSR），或「🔥熔煉」：2 名同稀有度 → 1 名同稀有度的其他角色（等級取較低的）。"]},
   {ic:"🛒",t:"③ 裝備與商店",b:["「商店」可以買裝備、強化符和遠征物資（下一次遠征自動帶上）。","在角色卡片點 <b>武器／防具／飾品</b> 欄位就能穿上。武器有職業限制。","「整備室」的「裝備」分頁可以強化到 +10。<b>強化可能失敗</b>：+5 以上失敗會掉 1 級（裝備不會碎），用 🧿保護符 可以保住等級。"]},
   {ic:"🪜",t:"④ 出發遠征",b:["每一層選一扇門進去：可能是物資、敵人、或其他逃殺者。","注意 <b>🥫補給</b>（每層吃 1 份）和 <b>☣毒氣</b>（從底層往上淹）。","遇到人可以結盟、交易或開打。打倒最上層的魔王就逃出了！"]},
   {ic:"⚔️",t:"⑤ 戰鬥",b:["輪到你的角色時，按「普通攻擊」或「技能」，再點目標。","懶得操作就按「自動」，讓 AI 幫你打。"]},
@@ -1444,7 +1458,7 @@ function viewHome(){
   ${(h=>`<div class="nexthint"><span>👉 ${h[0]}</span><button class="pri mini" style="margin-left:auto" onclick="go('${h[1]}')">${h[2]}</button></div>`)(nextHint())}
   <div class="modes">
     <div class="mode" onclick="go('gacha')"><div class="ic">🎴</div><b>招募所</b><p>花金條抽取職業卡。SSR 3.1%・十連保底 SR・60 抽保底 SSR</p></div>
-    <div class="mode" onclick="go('team')"><div class="ic">👥</div><b>隊伍</b><p>已收集 ${ownedCount()}/${CARD_IDS.length} 名職業，挑 3 人出戰</p></div>
+    <div class="mode" onclick="go('team')"><div class="ic">👥</div><b>隊伍</b><p>已收集 ${ownedCount()}/${CARD_IDS.length} 名職業，挑 ${teamMax()} 人出戰</p></div>
     <div class="mode" onclick="go('shop')"><div class="ic">🛒</div><b>商店・裝備</b><p>買裝備、強化到 +10（可能失敗！），還能買遠征物資帶上路</p></div>
     <div class="mode" onclick="go('run')"><div class="ic">🪜</div><b>逃殺遠征</b><p>文字冒險主線 ${ABYSS} 章＋無盡深淵：選房間、搜物資、躲毒氣、結盟或背叛。目前進度：${progText()}</p></div>
     <div class="mode" onclick="go('train')"><div class="ic">🏋</div><b>練功房</b><p>重複打怪物練等級（每級全能力+2%），已解鎖到第 ${Math.min(TRAIN_MAX,trainBest()+1)} 關</p></div>
@@ -1641,6 +1655,17 @@ function cardTile(id,onclick,extraCls=""){
     <div class="av">${avatar(id)}</div><div class="nm">${c.name}</div>
     <div class="stars ${o&&o.stars>=5?"max":""}">${o?starStr(o.stars,o.br):"未獲得"}</div>${o&&canBreak(id)?`<div class="small" style="color:var(--gold)">✨可突破</div>`:""}<div class="small"><span class="r${c.r}">${c.r}</span>${o?` <b>Lv.${lvOf(id)}</b>`:""} ${clsTag(id)}</div></div>`;
 }
+// 還沒解鎖 5 人出戰時，顯示三個條件的進度
+function fiveHtml(){
+  if(fiveOk(SAVE.prog))return "";
+  const P=SAVE.prog,row=(ok,t,v)=>`<li>${ok?"✅":"⬜"} ${t}　<span class="dim">${v}</span></li>`;
+  return `<div class="panel small" style="margin:10px 0"><b>🔒 5 人出戰</b>　<span class="dim">平常最多 3 人；下面三個條件都達成後，一次解鎖到 5 人。</span>
+    <ul style="margin:6px 0 0;padding-left:20px;list-style:none">
+      ${row((P.cleared||0)>=ABYSS,"主線 15 章全破（簡單難度即可）",`${Math.min(P.cleared||0,ABYSS)}／${ABYSS} 章`)}
+      ${row((P.fatty||0)>=5,"通關肥宅物語",`${P.fatty||0}／5 章`)}
+      ${row((P.abyssBest||0)>=FIVE_ABYSS,`無盡深淵到達 D${FIVE_ABYSS}`,`目前最深 D${P.abyssBest||0}`)}
+    </ul></div>`;
+}
 // N 白卡：只能遣散。沒有任何白卡時不顯示這一區
 function junkPanel(){
   if(!junkCount())return "";
@@ -1667,8 +1692,9 @@ function setTeamCls(k){TEAM_CLS=k;render();}
 function viewTeam(){
   const ids=sortedIds().filter(id=>(SHOW_LOCKED||SAVE.owned[id])&&(!TEAM_CLS||CARDS[id].cls===TEAM_CLS));
   return `<div class="row"><h2 style="margin-right:auto">出戰隊伍</h2></div>
-  <div class="teamslots">${[0,1,2].map(i=>{const id=SAVE.team[i];return id?cardTile(id,`showCard('${id}')`):`<div class="slot">空位</div>`;}).join("")}</div>
+  <div class="teamslots ${teamMax()>3?"five":""}">${Array.from({length:teamMax()},(_,i)=>i).map(i=>{const id=SAVE.team[i];return id?cardTile(id,`showCard('${id}')`):`<div class="slot">空位</div>`;}).join("")}</div>
   <p class="dim small">點卡片查看技能、加入或移出隊伍。遠征與競技場都使用這支隊伍。不要的角色可以在卡片裡「遣散」換金條（R 🪙3／SR 🪙10／SSR 🪙30，每星計算），或用「合成」把 <b>5 張 N 白卡</b>換成 1 名 R、6★ 份的 R 換成 1 名 SR、6★ 份的 SR 換成 1 名 SSR，或用「熔煉」把 2 名同稀有度角色熔成 1 名同稀有度的其他角色（等級、星數、突破取較低的）。</p>
+  ${fiveHtml()}
   ${shardPanel()}
   ${junkPanel()}
   <div class="row"><h3 style="margin-right:auto">收藏（${ownedCount()}/${CARD_IDS.length}）</h3>
@@ -1735,7 +1761,7 @@ function showCard(id){
     ${c.story&&!c.evolveFrom?`<div class="sk small"><b>📖 劇情角色</b><br>《名冊》故事線的同伴。通關第 ${c.gachaCh} 章後可以在招募所抽到。<b>無法合成、熔煉、遣散</b>，不能當「轉換」的來源（可以當轉換的目標）。</div>`:""}
     ${o&&fruitVisible(id)?fruitHtml(id):""}
     <div class="row" style="margin-top:12px">
-      ${o?(inT?`<button onclick="toggleTeam('${id}')">移出隊伍</button>`:`<button class="pri" onclick="toggleTeam('${id}')" ${SAVE.team.length>=3?"disabled":""}>加入隊伍${SAVE.team.length>=3?"（已滿）":""}</button>`):`<span class="dim">尚未獲得</span>`}
+      ${o?(inT?`<button onclick="toggleTeam('${id}')">移出隊伍</button>`:`<button class="pri" onclick="toggleTeam('${id}')" ${SAVE.team.length>=teamMax()?"disabled":""}>加入隊伍${SAVE.team.length>=teamMax()?"（已滿）":""}</button>`):`<span class="dim">尚未獲得</span>`}
       ${o&&o.dup&&o.stars<5?`<button class="pri" onclick="starUp('${id}')">⭐ 升星（重複卡 ×${o.dup}）</button>`:""}
       ${o&&o.dup>1&&o.stars<4?`<button class="gold" onclick="starUp('${id}',true)">⭐ 全部升星</button>`:""}
       ${o&&o.stars<5?`<button class="gold" onclick="openShards('${CARDS[id].r}')">🧩 碎片補星（${SHARD_STAR[CARDS[id].r]}）</button>`:""}
@@ -2110,7 +2136,7 @@ function doConvert(){
 
 function toggleTeam(id){
   if(SAVE.team.includes(id))SAVE.team=SAVE.team.filter(x=>x!==id);
-  else if(SAVE.team.length<3)SAVE.team.push(id);
+  else if(SAVE.team.length<teamMax())SAVE.team.push(id);
   save();closeModal();render();
 }
 
@@ -2625,7 +2651,7 @@ const TRAIN_MOBS=["ghost","mutant","guard","drone","deepone","mirror","echo","do
 let TRAIN_SEL=1;
 function trainBest(){return SAVE.train.best||0;}
 function trainFoes(s){
-  const pool=TRAIN_MOBS.slice(0,s<=30?Math.min(6,2+Math.floor(s/5)):Math.min(TRAIN_MOBS.length,6+Math.ceil((s-30)/2.5))),n=s<3?2:3;
+  const pool=TRAIN_MOBS.slice(0,s<=30?Math.min(6,2+Math.floor(s/5)):Math.min(TRAIN_MOBS.length,6+Math.ceil((s-30)/2.5))),n=(s<3?2:3)+extraFoes();
   return Array.from({length:n},()=>({id:pick(pool),stars:1,scale:.55+s*.07}));
 }
 // 經驗：6+3×關卡（第 45 關 141），沿用原本的公式
@@ -3258,9 +3284,9 @@ function viewBattle(){
     ${B.guest?"":`<button data-kb="fast" onclick="CUR_B.fast=!CUR_B.fast;render()" class="${B.fast?"ok":""}">${B.fast?"⏩ 快速":"▶ 正常"}</button>`}
     <button class="mini" data-kb="stuck" onclick="openStuck()" title="畫面卡住時用">🐞 卡住了</button></div>`;
   return `<div class="btop"><div class="ttl">${B.title}　<span class="dim small">第 ${B.round} 回合</span></div></div>
-    <div class="side B">${B.units.filter(u=>u.side===op).map(u=>unitCard(B,u)).join("")}</div>
+    <div class="side B ${B.units.filter(u=>u.side===op).length>3?"big":""}">${B.units.filter(u=>u.side===op).map(u=>unitCard(B,u)).join("")}</div>
     <div class="vs">— ${B.labels[op]} ／ ${B.labels[me]} —</div>
-    <div class="side A">${B.units.filter(u=>u.side===me).map(u=>unitCard(B,u)).join("")}</div>
+    <div class="side A ${B.units.filter(u=>u.side===me).length>3?"big":""}">${B.units.filter(u=>u.side===me).map(u=>unitCard(B,u)).join("")}</div>
     <div class="bdock">${ctl}${actionPanel(B)}</div>
     <div class="blog" id="blog">${B.log.map(l=>`<div class="${l.cls}">${l.html}</div>`).join("")}</div>`;
 }
@@ -3276,11 +3302,11 @@ let ARENA_FOES=null;
 function genArenaFoes(){
   const t=SAVE.arenaTier,stars=clamp(1+Math.floor(t/3),1,5);
   const pool=t<4?POOL.R:t<8?POOL.R.concat(POOL.SR):CARD_IDS;
-  ARENA_FOES=shuffle(pool).slice(0,3).map(id=>({id,stars,scale:.82+.06*t}));
+  ARENA_FOES=shuffle(pool).slice(0,Math.max(3,SAVE.team.length)).map(id=>({id,stars,scale:.82+.06*t}));
 }
 function arenaReward(){return 8+SAVE.arenaTier*2;}
 function viewArena(){
-  if(!ARENA_FOES)genArenaFoes();
+  if(!ARENA_FOES||ARENA_FOES.length!==Math.max(3,SAVE.team.length))genArenaFoes();
   return `<h2>競技場・第 ${SAVE.arenaTier} 層</h2>
   <p class="dim">地下格鬥場。觀眾席上的看守們正在下注。贏了晉級，獎勵 🪙${arenaReward()}。</p>
   <h3>對手</h3><div class="cardgrid">${ARENA_FOES.map(f=>{const c=CARDS[f.id],s=cardStats(f.id,f.stars,f.scale);
@@ -5082,11 +5108,11 @@ function rivalUnit(fi){
   return {id,stars,scale,name:CARDS[id].name+PRISONER_NO()};
 }
 function rivalGroup(fi){
-  const r=rnd(),n=fi<2?1:r<.5?1:r<.85?2:3;
+  const r=rnd(),n0=fi<2?1:r<.5?1:r<.85?2:3,n=n0+(n0>1?extraFoes():0);
   return Array.from({length:n},()=>rivalUnit(fi));
 }
 function rivalEncounter(ch,L,group,opt={}){
-  const where=loc(ch),solo=group.length===1,g=group[0],al=allyMember(),full=RUN.party.filter(m=>m.alive).length>=4;
+  const where=loc(ch),solo=group.length===1,g=group[0],al=allyMember(),full=RUN.party.filter(m=>m.alive).length>=teamMax()+1;
   const desc=group.map(x=>`${x.name}（${CARDS[x.id].r} ${"★".repeat(x.stars)}）`).join("、");
   const lines=L.concat([`<div class="row" style="gap:6px;margin:6px 0">${group.map(x=>`<div style="width:56px;height:56px;border-radius:8px;overflow:hidden;border:2px solid var(--sideB)">${avatar(x.id)}</div>`).join("")}</div>`,
     `遭遇：<b style="color:var(--sideB)">${desc}</b>`,
@@ -5136,6 +5162,7 @@ function allyBetrays(al,lines,ch){
 function shadeAmbush(ch,L,n){
   const fi=RUN.fi,c=effCh(),id=c===ABYSS?pick(["ghost","mutant","guard","drone","deepone","mirror","echo","doppel","cameraman","fanatic","rookie","guardian"]):CH().minion,M=MONSTERS[id];
   const scale=c===0?.8+fi*.07:c===ABYSS?1+fi*.04:.8+fi*.05+c*.08;
+  n+=n>1?extraFoes():0;
   const g=Array.from({length:n},()=>({id,stars:1,scale}));
   setScene(loc(ch),`${M.emoji} ${M.name}`,L,[
     {label:"⚔️ 迎戰",cls:"pri",act:()=>runBattle(ch,g,null,`${M.name}${n>1?"們":""}撲了過來！`)},
@@ -5243,7 +5270,7 @@ function qingFree(ch,pre){
 function qingJoin(ch){
   RUN.party.push(storyMate("qing"));SAVE.lore=SAVE.lore||{};SAVE.lore.s_qing=1;save();SFX.sr();
   aliveMembers().forEach(m=>m.hp=Math.min(m.maxHp,m.hp+Math.ceil(m.maxHp*.3)));
-  const g=Array.from({length:2+(RUN.party.length>=5?1:0)},()=>({id:CH().minion,stars:1,scale:.8+RUN.fi*.05+effCh()*.08}));
+  const g=Array.from({length:2+extraFoes()},()=>({id:CH().minion,stars:1,scale:.8+RUN.fi*.05+effCh()*.08}));
   setScene(loc(ch),"✨ 名字不會消失",["晴把羽毛筆插回髮間，翻開名冊。「我跟你們走。……我也想看看，外面有沒有天亮。」","她替每個人包紮了傷口，動作很輕。全隊恢復了一些體力。","白色的人影圍了上來，沒有五官，卻有一雙很大的、空白的手。"],[
     {label:"⚔️ 迎戰",cls:"pri",act:()=>runBattle(ch,g,null,"「站我後面。」——阿燼橫劍擋在晴的前面。",()=>qingAfter(ch))}]);
   RUN.scene.npc=QING_NPC(["治愈之光，與你同在。","……請多指教。"]);
@@ -5274,7 +5301,7 @@ function qingLastPage(ch,L){
   render();
 }
 function whisperRoom(ch,L){
-  const where=loc(ch),g=Array.from({length:3},()=>({id:CH().minion,stars:1,scale:.8+RUN.fi*.05+effCh()*.08}));
+  const where=loc(ch),g=Array.from({length:3+extraFoes()},()=>({id:CH().minion,stars:1,scale:.8+RUN.fi*.05+effCh()*.08}));
   setScene(where,"👥 無名的低語",L.concat([
     "一排影子轉過頭來。它們沒有嘴，聲音卻從四面八方傳來：「……我是誰？」",
     "晴往前一步，翻開名冊。她看著其中一個影子，一個字一個字，念出了一個名字。影子停住了，肩膀輕輕顫了一下。",
@@ -5435,7 +5462,7 @@ function ashenTalk(ch,pre){
 }
 function ashenJoin(ch){
   RUN.party.push(storyMate("ashen"));SAVE.lore=SAVE.lore||{};SAVE.lore.s_ashen=1;save();SFX.sr();
-  const g=Array.from({length:2},()=>({id:CH().minion,stars:1,scale:.8+RUN.fi*.05+effCh()*.08}));
+  const g=Array.from({length:2+extraFoes()},()=>({id:CH().minion,stars:1,scale:.8+RUN.fi*.05+effCh()*.08}));
   aliveMembers().forEach(m=>m.hp=Math.min(m.maxHp,m.hp+Math.ceil(m.maxHp*.3))); // 營火的暖意：先恢復一些體力
   setScene(loc(ch),"🛡 守夜",["他點了一下頭。很輕，但你們看見了。","營火的暖意讓大家恢復了一些體力。","遠處傳來履帶碾過廢鐵的聲音，越來越近。火堆後的人開始發抖。","阿燼把重劍從地上拔起來，走到所有人的最前面。"],[
     {label:"⚔️ 迎戰",cls:"pri",act:()=>runBattle(ch,g,null,"「站我後面。」——阿燼橫劍擋在最前面。",()=>ashenAfter(ch))}]);
@@ -5517,10 +5544,12 @@ function seats(){
             B.units.filter(u=>u.ref).forEach(u=>{u.ref.hp=Math.max(0,u.hp);u.ref.alive=u.alive;});
             CUR_B=null;VIEW="run";
             if(!win||runLost())return endRun(false,["你們沒能登上直升機。"]);
+            if(aliveMembers().length>3)return seats(); // 還是超過 3 個座位，繼續選誰留下
             endRun(true,[`${m.name} 倒在停機坪上。你們登機，誰也沒有回頭。`]);
           }});
       }else{
         m.alive=false;m.left=true;
+        if(aliveMembers().length>3)return seats(); // 5 人隊伍：還要再留下一個人
         endRun(true,[`${m.name} 苦笑著退後一步：「去吧。」艙門關上的那一刻，你看見他朝毒霧走去。`]);
       }}})),
     {label:"🎲 全部擠上去（50%機率超載墜機）",act(){

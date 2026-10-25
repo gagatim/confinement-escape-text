@@ -64,7 +64,7 @@ h3{margin:14px 0 8px;font-size:16px;color:#c9ced5}
 .ccard:hover{transform:translateY(-2px)}
 .ccard.SSR{border-color:var(--gold);box-shadow:0 0 14px rgba(245,196,81,.25)}
 .ccard.SR{border-color:var(--purple)}
-.ccard.R{border-color:#2c5a86}
+.ccard.R{border-color:#2c5a86} .ccard.N{border-color:#4a4f55}
 .ccard.locked{filter:grayscale(1) brightness(.35)}
 .ccard.inteam::after{content:"出戰";position:absolute;top:4px;right:4px;background:var(--red);color:#fff;font-size:11px;padding:0 6px;border-radius:6px}
 .ccard .av{width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#0a0b0d;display:flex;align-items:center;justify-content:center}
@@ -521,8 +521,8 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 // run 欄位是「遠征中」生效的被動標籤。
 const CARDS={
   boss:{name:"黑社會老大",r:"SSR",hp:36,atk:6,def:2,spd:3,
-    skill:{name:"一呼百應",cd:4,t:"none",kind:"buff",desc:"冷卻4回合。除自己以外的每名活著的隊友，攻擊提高6%（依各自當下的攻擊計算，至少+1），持續3回合；自己防禦+4，持續3回合。效果結束後恢復原狀。",
-      use(B,u){mates(B,u).forEach(m=>{if(m!==u)buff(B,m,"atk",Math.max(1,Math.round(stat(m,"atk")*.06)),3);});buff(B,u,"def",4,3);blog(B,`${nm(u)} 一聲令下，小弟們士氣大振！`);}},
+    skill:{name:"一呼百應",cd:3,t:"none",kind:"buff",desc:"冷卻3回合。全體隊友（包含自己）防禦提高10%（至少+1），持續2回合，並立刻治療12%最大生命。效果結束後恢復原狀。",
+      use(B,u){mates(B,u).forEach(m=>{buff(B,m,"def",Math.max(1,Math.round(stat(m,"def")*.1)),2);heal(B,m,Math.max(1,Math.round(m.maxHp*.12)));});blog(B,`${nm(u)} 一聲令下，小弟們士氣大振！`);}},
     passive:{name:"你們先上",desc:"自己被攻擊時，有35%機率改由一名隨機的活著的隊友代為承受，代受的傷害只算原本的60%。沒有其他隊友可代時不會觸發。"}},
   exorcist:{name:"還魂師",r:"SSR",hp:28,atk:5,def:1,spd:4,
     skill:{name:"安魂儀式",cd:5,t:"none",kind:"heal",desc:"冷卻5回合。有隊友倒下時：復活其中最大生命最高的一名，復活後恢復40%最大生命。沒人倒下時：改為全隊活著的成員各恢復8%最大生命（至少4）。",
@@ -787,6 +787,17 @@ const DEF=id=>CARDS[id]||MONSTERS[id];
 ["ghost","guard","drone","mutant","doppel","echo","deepone","mirror","cameraman","fanatic","rookie","guardian","warden","zero","chief","host","kraken","judge","loopkeeper","origin","producer","audience","castingdir","pastchamp","scrapbot","reclaimer","eraser","editor","shadowling","nameless"].forEach(k=>{if(MONSTERS[k])MONSTERS[k].pic=true;});
 const POOL={SSR:[],SR:[],R:[]};
 Object.keys(CARDS).forEach(id=>{if(!CARDS[id].story)POOL[CARDS[id].r].push(id);});
+// N 白卡（雜物）：只能遣散換金條，不能組隊、升星、合成、熔煉；用數量堆疊在 SAVE.junk。圖片放 images/avatars/{代號}.webp，沒圖時用表情符號
+const JUNK={
+  tin:{name:"過期罐頭",emoji:"🥫",r:"N"},
+  chair:{name:"斷腿椅子",emoji:"🪑",r:"N"},
+  quilt:{name:"發霉棉被",emoji:"🛏️",r:"N"},
+  torch:{name:"壞掉的手電筒",emoji:"🔦",r:"N"},
+  sock:{name:"一隻襪子",emoji:"🧦",r:"N"},
+  locker:{name:"空的鐵櫃",emoji:"🗄️",r:"N"}
+};
+const JUNK_IDS=Object.keys(JUNK),JUNK_PRICE=1;
+const junkCount=()=>JUNK_IDS.reduce((a,k)=>a+((SAVE.junk&&SAVE.junk[k])||0),0);
 const storyOn=id=>!!CARDS[id].story;
 // 抽卡實際用的池子：一般角色＋已解鎖（通關到 gachaCh 章）的劇情角色。合成、熔煉的結果池不含劇情角色
 function gachaPool(r){return POOL[r].concat(Object.keys(CARDS).filter(id=>CARDS[id].story&&CARDS[id].r===r&&SAVE.prog.cleared>=CARDS[id].gachaCh));}
@@ -962,6 +973,7 @@ function gearName(g){return `${GEAR[g.base].icon}${GEAR[g.base].name}${g.lv?" +"
 function gearCls(base){const c=GEAR[base].cls;return c?c.map(k=>CLASSES[k].icon+CLASSES[k].name).join("／"):"全職業";}
 
 function avatar(id,p2){
+  if(JUNK[id])return `<img class="avimg" src="images/avatars/${id}.webp" alt="" draggable="false" onerror="this.outerHTML='<span class=emo>${JUNK[id].emoji}</span>'">`;
   const d=DEF(id);
   if(d.img) return `<img class="avimg" src="images/bosses/${id}_${p2?2:1}.webp" alt="" draggable="false">`;
   if(d.pic) return `<img class="avimg" src="images/monsters/${id}.webp" alt="" draggable="false" onerror="this.outerHTML='<span class=emo>${d.emoji}</span>'">`;
@@ -1042,6 +1054,7 @@ function validSave(s){
     const o=s.owned[id];
     if(!CARDS[id])return "出現不存在的角色";
     if(!isInt(o.stars,1,5))return `${CARDS[id].name} 星數異常`;
+    if(o.dup!=null&&!isInt(o.dup,0,99999))return `${CARDS[id].name} 重複卡數量異常`;
     if(o.lv!=null&&!isInt(o.lv,1,LV_MAX))return `${CARDS[id].name} 等級異常`;
     if(o.br!=null&&!isInt(o.br,0,BR_MAX))return `${CARDS[id].name} 突破次數異常`;
     if(o.fruit!=null&&!["atk","def","spd"].every(k=>isInt((o.fruit||{})[k]||0,0,FRUIT_MAX)))return `${CARDS[id].name} 能力果實異常`;
@@ -1067,6 +1080,7 @@ function validSave(s){
   if(!isInt(s.prog.cleared,0,ABYSS))return "主線進度異常";
   if(s.prog.fatty!=null&&!isInt(s.prog.fatty,0,5))return "肥宅物語進度異常";
   if(s.fattyCopies!=null&&!isInt(s.fattyCopies,0,99999))return "肥宅卡片數量異常";
+  if(s.junk)for(const k in s.junk)if(!isInt(s.junk[k],0,99999))return "白卡數量異常";
   if(s.run&&!(isInt(s.run.gold,0,5000000)&&isInt(s.run.food,0,9999)))return "遠征資料異常";
   return "";
 }
@@ -1120,6 +1134,7 @@ function exportBackup(i){
 function checkIntegrity(){if(!SAVE||STALE)return true;const why=validSave(SAVE);if(why){wipeTampered(why);return false;}return true;}
 // 舊存檔補欄位：已逃出過禁閉室就算通關第1章
 function migrate(s){
+  if(!s.junk)s.junk={}; // N 白卡數量 {代號:張數}
   if(s.prog&&s.prog.fatty==null)s.prog.fatty=0; // 《肥宅物語》進度（0～5）
   if(s.fattyCopies==null)s.fattyCopies=s.owned&&s.owned.fatty?s.owned.fatty.stars:0; // 抽到的 SR 肥宅張數（舊存檔用現有星數估）
   if(!s.prog)s.prog={cleared:s.stats&&s.stats.escapes>0?1:0,clears:{},abyssBest:0};
@@ -1441,9 +1456,10 @@ function viewGacha(){
   <h3>機率</h3>
   <div class="panel small">
     <span class="rSSR">SSR 3%</span>（${gachaPool("SSR").map(i=>CARDS[i].name).join("、")}）<br>
-    <span class="rSR">SR 17%</span>（${gachaPool("SR").map(i=>CARDS[i].name).join("、")}）<br>
-    <span class="rR">R 80%</span>（其他 ${gachaPool("R").length} 名）<br>
-    <span class="dim">重複抽到會升星（每星全能力+10%，3星起防禦+1），滿5星後每張退還🪙5。</span>
+    <span class="rSR">SR 15%</span>（${gachaPool("SR").map(i=>CARDS[i].name).join("、")}）<br>
+    <span class="rR">R 62%</span>（其他 ${gachaPool("R").length} 名）<br>
+    <span class="rN">N 20%</span>（${JUNK_IDS.map(i=>JUNK[i].name).join("、")}；白卡只能遣散換 🪙${JUNK_PRICE}，不能組隊、升星、合成）<br>
+    <span class="dim">重複抽到不會自動升星，會記成「重複卡」，到角色頁手動升星（每星全能力+10%，3星起防禦+1）；已經5星再抽到，每張退還🪙5。</span>
   </div>
   <h3>賺金條</h3>
   <div class="panel small dim">逃殺遠征（逃出時全額帶走、陣亡帶走一半）・競技場勝利</div>`;
@@ -1484,13 +1500,15 @@ function rollRarity(){
   if(SAVE.pity>=60){SAVE.pity=0;return "SSR";}
   const x=rnd();
   if(x<.03){SAVE.pity=0;return "SSR";}
-  return x<.20?"SR":"R";
+  return x<.18?"SR":x<.80?"R":"N"; // SSR 3%／SR 15%／R 62%／N 20%
 }
+function grantJunk(id){SAVE.junk[id]=(SAVE.junk[id]||0)+1;return {id,junk:true};}
 function grant(id){
   if(id==="fatty")SAVE.fattyCopies=(SAVE.fattyCopies||0)+1; // 抽到幾張 SR 肥宅（10 張可換 1 張 SSR 肥宅）
   const o=SAVE.owned[id];
   if(!o){SAVE.owned[id]={stars:1};return {id,isNew:true};}
-  if(o.stars<5){o.stars++;return {id,up:o.stars};}
+  // 不會自動升星：沒滿 5★ 的重複卡記成「多餘張數」，到角色頁手動升星；已經 5★ 才直接退還
+  if(o.stars<5){o.dup=(o.dup||0)+1;return {id,dupe:o.dup};}
   const sh=SHARD_DUP[CARDS[id].r];
   SAVE.gold+=5;SAVE.charms.stone++;SAVE.shards[CARDS[id].r]+=sh;return {id,refund:5,sh};
 }
@@ -1534,16 +1552,17 @@ function doPull(n){
   SAVE.gold-=cost;SAVE.pulls+=n;
   const rs=[];for(let i=0;i<n;i++)rs.push(rollRarity());
   if(n===10&&SAVE.firstTen){SAVE.firstTen=false;if(!rs.includes("SSR")){rs[9]="SSR";SAVE.pity=0;}}
-  if(n===10&&!rs.some(r=>r!=="R"))rs[9]="SR";
-  const res=rs.map(r=>grant(pick(gachaPool(r))));
+  if(n===10&&!rs.some(r=>r==="SR"||r==="SSR"))rs[9]="SR";
+  const res=rs.map(r=>r==="N"?grantJunk(pick(JUNK_IDS)):grant(pick(gachaPool(r))));
   save();renderHeader();
   showGacha(res);
 }
 let GACHA_RES=null;
 function showGacha(res){
   GACHA_RES=res;
-  const best=res.some(x=>CARDS[x.id].r==="SSR")?"SSR":res.some(x=>CARDS[x.id].r==="SR")?"SR":"R";
-  const glow={SSR:"#f5c451",SR:"#b07cff",R:"#4aa3ff"}[best];
+  const rOf=x=>x.junk?"N":CARDS[x.id].r;
+  const best=res.some(x=>rOf(x)==="SSR")?"SSR":res.some(x=>rOf(x)==="SR")?"SR":res.some(x=>rOf(x)==="R")?"R":"N";
+  const glow={SSR:"#f5c451",SR:"#b07cff",R:"#4aa3ff",N:"#9aa0a6"}[best];
   const g=$("#gacha");
   g.innerHTML=`<div class="pod" style="--glow:${glow}"></div><p class="dim">鐵櫃正在開啟……</p>`;
   g.classList.add("show");
@@ -1551,11 +1570,11 @@ function showGacha(res){
   setTimeout(()=>{
     g.innerHTML=`<h2>招募結果</h2>
     <div class="pullgrid" style="${res.length===1?"grid-template-columns:140px":""}">
-      ${res.map((x,i)=>{const c=CARDS[x.id];return `<div class="pull ${c.r}" id="pull${i}" onclick="flipCard(${i})"><div class="in">
+      ${res.map((x,i)=>{const c=x.junk?JUNK[x.id]:CARDS[x.id];return `<div class="pull ${c.r}" id="pull${i}" onclick="flipCard(${i})"><div class="in">
         <div class="b">?</div>
         <div class="f"><div class="av">${avatar(x.id)}</div><div class="nm r${c.r}">${c.name}</div>
           <div class="small r${c.r}">${c.r}</div>
-          <div class="badge">${x.isNew?"NEW!":x.up?"升至"+x.up+"★":"🪙+"+x.refund+" 💎+1 🧩+"+x.sh}</div></div>
+          <div class="badge">${x.junk?`<span class="dim">只能遣散（持有 ${SAVE.junk[x.id]}）</span>`:x.isNew?"NEW!":x.dupe?"重複卡 ×"+x.dupe+"（可手動升星）":"🪙+"+x.refund+" 💎+1 🧩+"+x.sh}</div></div>
       </div></div>`;}).join("")}
     </div>
     <div class="row"><button onclick="flipAll()">全部翻開</button><button class="pri" onclick="closeGacha()">完成</button></div>`;
@@ -1564,7 +1583,7 @@ function showGacha(res){
 function flipCard(i){
   const el=$("#pull"+i);if(!el||el.classList.contains("flip"))return;
   el.classList.add("flip");
-  const r=CARDS[GACHA_RES[i].id].r;
+  const r=GACHA_RES[i].junk?"N":CARDS[GACHA_RES[i].id].r;
   if(r==="SSR")SFX.ssr();else if(r==="SR")SFX.sr();else SFX.flip();
 }
 function flipAll(){GACHA_RES.forEach((_,i)=>setTimeout(()=>flipCard(i),i*140));}
@@ -1579,6 +1598,21 @@ function cardTile(id,onclick,extraCls=""){
     <div class="av">${avatar(id)}</div><div class="nm">${c.name}</div>
     <div class="stars ${o&&o.stars>=5?"max":""}">${o?starStr(o.stars,o.br):"未獲得"}</div>${o&&canBreak(id)?`<div class="small" style="color:var(--gold)">✨可突破</div>`:""}<div class="small"><span class="r${c.r}">${c.r}</span>${o?` <b>Lv.${lvOf(id)}</b>`:""} ${clsTag(id)}</div></div>`;
 }
+// N 白卡：只能遣散。沒有任何白卡時不顯示這一區
+function junkPanel(){
+  if(!junkCount())return "";
+  return `<div class="panel"><div class="row"><b style="margin-right:auto"><span class="rN">N</span> 白卡雜物（${junkCount()} 張）</b>
+    <button class="mini" onclick="sellJunk()">💰 一鍵遣散全部（🪙${junkCount()*JUNK_PRICE}）</button></div>
+    <div class="small dim" style="margin:4px 0 8px">白卡只能遣散，每張 🪙${JUNK_PRICE}；不能組隊、升星、合成或熔煉。</div>
+    <div class="row">${JUNK_IDS.filter(k=>SAVE.junk[k]).map(k=>`<div class="ccard N" style="min-width:90px;cursor:default"><div class="av">${avatar(k)}</div><div class="nm">${JUNK[k].name}</div>
+      <div class="small">×${SAVE.junk[k]}</div><button class="mini" onclick="sellJunk('${k}')">遣散 🪙${SAVE.junk[k]*JUNK_PRICE}</button></div>`).join("")}</div></div>`;
+}
+function sellJunk(id){
+  const ids=id?[id]:JUNK_IDS;let n=0;
+  ids.forEach(k=>{n+=SAVE.junk[k]||0;SAVE.junk[k]=0;});
+  if(!n)return;
+  SAVE.gold+=n*JUNK_PRICE;save();SFX.click();toast(`遣散白卡 ${n} 張，🪙+${n*JUNK_PRICE}`);render();
+}
 let TEAM_CLS="";
 function clsFilter(cur,fn){
   return `<div class="filters"><button class="${cur?"":"on"}" onclick="${fn}('')">全部</button>${Object.keys(CLASSES).map(k=>`<button class="${cur===k?"on":""}" onclick="${fn}('${k}')">${CLASSES[k].icon}${CLASSES[k].name}</button>`).join("")}</div>`;
@@ -1590,6 +1624,7 @@ function viewTeam(){
   <div class="teamslots">${[0,1,2].map(i=>{const id=SAVE.team[i];return id?cardTile(id,`showCard('${id}')`):`<div class="slot">空位</div>`;}).join("")}</div>
   <p class="dim small">點卡片查看技能、加入或移出隊伍。遠征與競技場都使用這支隊伍。不要的角色可以在卡片裡「遣散」換金條（R 🪙3／SR 🪙10／SSR 🪙30，每星計算），或用「合成」把 6★ 份的 R 換成 1 名 SR、6★ 份的 SR 換成 1 名 SSR，或用「熔煉」把 2 名同稀有度角色熔成 1 名同稀有度的其他角色（等級、星數、突破取較低的）。</p>
   ${shardPanel()}
+  ${junkPanel()}
   <div class="row"><h3 style="margin-right:auto">收藏（${ownedCount()}/${CARD_IDS.length}）</h3>
   <button class="mini gold" onclick="openSynth()">🔮 合成</button>
   <button class="mini gold" onclick="openSmelt()">🔥 熔煉</button>
@@ -1654,6 +1689,8 @@ function showCard(id){
     ${o&&fruitVisible(id)?fruitHtml(id):""}
     <div class="row" style="margin-top:12px">
       ${o?(inT?`<button onclick="toggleTeam('${id}')">移出隊伍</button>`:`<button class="pri" onclick="toggleTeam('${id}')" ${SAVE.team.length>=3?"disabled":""}>加入隊伍${SAVE.team.length>=3?"（已滿）":""}</button>`):`<span class="dim">尚未獲得</span>`}
+      ${o&&o.dup&&o.stars<5?`<button class="pri" onclick="starUp('${id}')">⭐ 升星（重複卡 ×${o.dup}）</button>`:""}
+      ${o&&o.dup>1&&o.stars<4?`<button class="gold" onclick="starUp('${id}',true)">⭐ 全部升星</button>`:""}
       ${o&&o.stars<5?`<button class="gold" onclick="openShards('${CARDS[id].r}')">🧩 碎片補星（${SHARD_STAR[CARDS[id].r]}）</button>`:""}
       ${canBreak(id)?`<button class="gold" onclick="BR_RES=null;confirmBreak('${id}')">✨ 突破（${brOf(id)}→${brOf(id)+1}）</button>`:""}
       <button onclick="closeModal()" style="margin-left:auto">關閉</button></div>
@@ -1673,11 +1710,25 @@ function sellBlock(id){
   if(Object.keys(SAVE.owned).length<=3)return "至少要保留 3 名角色";
   return "";
 }
-function cardWorth(id){const o=SAVE.owned[id];return o.stars+brOf(id)*5;}
+function cardWorth(id){const o=SAVE.owned[id];return o.stars+brOf(id)*5+(o.dup||0);}
+// 手動升星：每張重複卡可以換 1★（升到 5★ 為止）。突破後星數回到 1★，沒用完的重複卡可以繼續用
+function starUp(id,all){
+  const o=SAVE.owned[id];if(!o||!o.dup||o.stars>=5)return;
+  let n=0;
+  do{o.dup--;o.stars++;n++;}while(all&&o.dup>0&&o.stars<5);
+  save();SFX.ssr();toast(`${CARDS[id].name} 升至 ${o.stars}★${o.dup?`（剩 ${o.dup} 張重複卡）`:""}`);showCard(id);render();
+}
+// 遣散多餘的重複卡（不影響星數）
+function sellDup(id){
+  const o=SAVE.owned[id];if(!o||!o.dup)return;
+  const p=SELL_PRICE[CARDS[id].r],sh=SHARD_SELL[CARDS[id].r];
+  o.dup--;SAVE.gold+=p;SAVE.shards[CARDS[id].r]+=sh;save();SFX.click();toast(`遣散重複卡，🪙+${p}${sh?` 🧩+${sh}`:""}`);showCard(id);render();
+}
 function sellHtml(id){
   const o=SAVE.owned[id],p=SELL_PRICE[CARDS[id].r],why=sellBlock(id);
   return `<div class="sk"><b>💰 遣散</b> <span class="dim small">每 1 星可換 🪙${p}</span>
     ${why?`<div class="dim small">${why}</div>`:`<div class="row" style="margin-top:6px">
+      ${o.dup?`<button class="mini" onclick="sellDup('${id}')">遣散 1 張重複卡（🪙+${p}）</button>`:""}
       ${o.stars>1?`<button class="mini" onclick="sellCard('${id}',1)">降 1 星（🪙+${p}）</button>`:""}
       <button class="mini" onclick="confirmSell('${id}')">全部遣散（🪙+${p*cardWorth(id)}）</button></div>`}</div>`;
 }
@@ -1701,7 +1752,7 @@ function confirmSell(id){
 function sellAllR(go){
   const ids=Object.keys(SAVE.owned).filter(id=>CARDS[id].r==="R"&&!sellBlock(id)&&!brOf(id));
   const keep=Math.max(0,3-(Object.keys(SAVE.owned).length-ids.length)),list=ids.slice(keep);
-  const g=list.reduce((a,id)=>a+SELL_PRICE.R*SAVE.owned[id].stars,0);
+  const g=list.reduce((a,id)=>a+SELL_PRICE.R*(SAVE.owned[id].stars+(SAVE.owned[id].dup||0)),0);
   if(!list.length){toast("沒有可以遣散的 R 卡");return;}
   if(!go)return openModal(`<h3>一鍵遣散 R 卡？</h3><p class="dim">會遣散 ${list.length} 張不在隊伍中的 R 卡：${list.map(id=>CARDS[id].name).join("、")}。共換得 🪙${g}。</p>
     <div class="row"><button class="pri" onclick="sellAllR(true)">遣散</button><button onclick="closeModal()">取消</button></div>`);
@@ -1747,12 +1798,12 @@ function doSynth(){
   SYN.pick={};save();up==="SSR"?SFX.ssr():SFX.sr();render();
   openModal(`<h3>🔮 合成成功</h3><div class="detail"><div class="av">${avatar(id)}</div><div>
     <div class="r${up}">${up}</div><h2 style="margin:2px 0">${CARDS[id].name}</h2>
-    <div>${gr.isNew?"NEW!":gr.up?`升至 ${gr.up}★`:`已滿星，🪙+${gr.refund}、💎+1`}</div></div></div>
+    <div>${gr.isNew?"NEW!":gr.dupe?`重複卡 ×${gr.dupe}（可手動升星）`:`已滿星，🪙+${gr.refund}、💎+1`}</div></div></div>
     <div class="row" style="margin-top:12px"><button class="pri" onclick="openSynth()">繼續合成</button><button onclick="showCard('${id}')">查看角色</button><button onclick="closeModal()">關閉</button></div>`);
 }
 // 合成一次：扣掉投入的星數，給 1 名高一階的隨機角色（60% 優先沒有的）
 function synthCore(pk,tier){
-  Object.entries(pk).forEach(([id,n])=>{SAVE.owned[id].stars-=n;if(SAVE.owned[id].stars<=0)delete SAVE.owned[id];});
+  Object.entries(pk).forEach(([id,n])=>{const o=SAVE.owned[id];o.stars-=n;if(o.stars<=0){SAVE.gold+=SELL_PRICE[CARDS[id].r]*(o.dup||0);delete SAVE.owned[id];}});
   const up=SYN_UP[tier],pool=POOL[up].filter(id=>id!=="fatty"),fresh=pool.filter(id=>!SAVE.owned[id]);
   const id=fresh.length&&rnd()<.6?pick(fresh):pick(pool);
   return {id,gr:grant(id)};
@@ -1797,7 +1848,7 @@ function doAutoSynth(){
   glog("🔮SYNTH",`一鍵合成 ${t}×${res.length}：${res.map(r=>CARDS[r.id].name).join("、")}`);
   openModal(`<h3>⚡ 一鍵合成完成（${res.length} 次）</h3>
     <div class="cardgrid">${res.map(({id,gr})=>`<div class="ccard ${CARDS[id].r}" onclick="showCard('${id}')"><div class="av">${avatar(id)}</div><div class="nm">${CARDS[id].name}</div>
-      <div class="small" style="color:var(--gold)">${gr.isNew?"NEW!":gr.up?`升至 ${gr.up}★`:`滿星 🪙+${gr.refund}`}</div></div>`).join("")}</div>
+      <div class="small" style="color:var(--gold)">${gr.isNew?"NEW!":gr.dupe?`重複卡 ×${gr.dupe}`:`滿星 🪙+${gr.refund}`}</div></div>`).join("")}</div>
     <div class="row" style="margin-top:12px"><button class="pri" onclick="openSynth()">回到合成</button><button onclick="closeModal()">關閉</button></div>`);
 }
 // 熔煉：兩名同稀有度角色（整張卡）→ 1 名同稀有度的其他角色，優先給還沒擁有的。
@@ -1854,7 +1905,7 @@ function doSmelt(){
   const fresh=pool.filter(id=>!SAVE.owned[id]),nid=fresh.length?pick(fresh):pick(pool);
   if(Object.keys(SAVE.owned).length-2+(SAVE.owned[nid]?0:1)<3){toast("熔煉後至少要保留 3 名角色");return;}
   const r=smeltResult(),gone=SMELT.pick.map(id=>CARDS[id].name);
-  SMELT.pick.forEach(id=>delete SAVE.owned[id]);
+  SMELT.pick.forEach(id=>{SAVE.gold+=SELL_PRICE[CARDS[id].r]*(SAVE.owned[id].dup||0);delete SAVE.owned[id];});
   const old=SAVE.owned[nid];let note;
   if(!old){SAVE.owned[nid]={stars:r.stars,lv:r.lv,exp:r.exp,br:r.br};note="NEW!";}
   else{
@@ -5408,7 +5459,7 @@ function endRun(escaped,lines=[]){
     const al=r.party.find(m=>m.ally&&m.alive);
     if(al){
       const gr=grant(al.id);
-      out.push(`🤝 ${al.name} 跟你交換了聯絡方式。<b>獲得職業卡：${CARDS[al.id].name}</b>${gr.isNew?"（NEW!）":gr.up?`（升至${gr.up}★）`:`（滿星，🪙+${gr.refund}、💎+1）`}`);
+      out.push(`🤝 ${al.name} 跟你交換了聯絡方式。<b>獲得職業卡：${CARDS[al.id].name}</b>${gr.isNew?"（NEW!）":gr.dupe?`（重複卡 ×${gr.dupe}，可手動升星）`:`（滿星，🪙+${gr.refund}、💎+1）`}`);
       SFX.ssr();
     }else SFX.win();
     if(!abyss)SAVE.stats.escapes++;

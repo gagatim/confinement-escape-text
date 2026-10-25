@@ -1349,7 +1349,7 @@ function closeModal(){$("#modal").classList.remove("show");}
 // 超簡單導引：第一次進來自動打開，之後按右上角 ❓ 重看
 const GUIDE=[
   {ic:"⛓",t:"這是什麼遊戲？",b:["你和同伴被關在禁閉室，要一路往上爬、搶上只有 <b>三個座位</b> 的直升機。","玩法只有三件事：<b>抽角色 → 組隊 → 出發遠征</b>。"]},
-  {ic:"🎴",t:"① 抽角色",b:["到「招募」花金條抽卡。<b>第一次十連必出 SSR</b>，開局的金條剛好夠。","抽到重複的角色會升星（最多 5★），每 1 星能力 +10%。","5★ 後可以用 💎突破石「突破」（隊伍頁點角色 →「✨突破」，最多 10 次）：星星回到 1★ 再升，能力保留並再 +1.5%，突破後每升 1 星 +2.5%。","第 n 次突破要 💎×2n，成功率 30% 起每次 ×0.85（30→26→22→…→7%）。失敗突破石消失，但不會降星。","突破石來源：商店、5★ 後抽到重複卡、主線魔王、深淵守門者、練功房、成就。已突破的角色不會被一鍵合成當材料。"]},
+  {ic:"🎴",t:"① 抽角色",b:["到「招募」花金條抽卡。<b>第一次十連必出 SSR</b>，開局的金條剛好夠。","抽到重複的角色會記成「重複卡」，到角色頁手動升星（最多 5★），每 1 星能力 +10%。","5★ 後可以用 💎突破石「突破」（隊伍頁點角色 →「✨突破」，最多 10 次）：星星回到 1★ 再升，能力保留並再 +1.5%，突破後每升 1 星 +2.5%。","第 n 次突破要 💎×2n，成功率 30% 起每次 ×0.85（30→26→22→…→7%）。失敗突破石消失，但不會降星。","突破石來源：商店、主線魔王、深淵守門者、練功房、成就。已突破的角色不會被一鍵合成當材料。"]},
   {ic:"👥",t:"② 組隊",b:["到「隊伍」點角色 →「加入隊伍」，最多 3 人。","每個角色有 <b>職業</b>（🛡坦克／⚔戰士／🗡刺客／🎯射手／✚輔助／🔮術士），各有不同加成。","不要的角色可以「遣散」換金條、「合成」成更高稀有度，或「🔥熔煉」：2 名同稀有度 → 1 名同稀有度的其他角色（等級取較低的）。"]},
   {ic:"🛒",t:"③ 裝備與商店",b:["「商店」可以買裝備、強化符和遠征物資（下一次遠征自動帶上）。","在角色卡片點 <b>武器／防具／飾品</b> 欄位就能穿上。武器有職業限制。","「裝備」頁可以強化到 +10。<b>強化可能失敗</b>：+5 以上失敗會掉 1 級（裝備不會碎），用 🧿保護符 可以保住等級。"]},
   {ic:"🪜",t:"④ 出發遠征",b:["每一層選一扇門進去：可能是物資、敵人、或其他逃殺者。","注意 <b>🥫補給</b>（每層吃 1 份）和 <b>☣毒氣</b>（從底層往上淹）。","遇到人可以結盟、交易或開打。打倒最上層的魔王就逃出了！"]},
@@ -1459,25 +1459,25 @@ function viewGacha(){
       <span class="dim small">距離保底 SSR：${60-SAVE.pity} 抽</span>
     </div>
   </div>
-  <div class="panel small dim" style="margin-top:10px">🧩 5★ 後重複抽到的角色會變成碎片，到「隊伍」頁按「🧩 碎片兌換」可以指定換角色或補星。</div>
+  <div class="panel small dim" style="margin-top:10px">🧩 遣散 SSR 角色可以得到碎片，到「隊伍」頁按「🧩 碎片兌換」可以指定換角色或補星。</div>
   <h3>機率</h3>
   <div class="panel small">
     <span class="rSSR">SSR 3.1%</span>（${gachaPool("SSR").map(i=>CARDS[i].name).join("、")}）<br>
     <span class="rSR">SR 15%</span>（${gachaPool("SR").map(i=>CARDS[i].name).join("、")}）<br>
     <span class="rR">R 30%</span>（其他 ${gachaPool("R").length} 名）<br>
     <span class="rN">N 51.9%</span>（${JUNK_IDS.map(i=>JUNK[i].name).join("、")}；白卡可遣散換 🪙${JUNK_PRICE}，或 ${JUNK_COST} 張合成 1 名 R；不能組隊、升星）<br>
-    <span class="dim">重複抽到不會自動升星，會記成「重複卡」，到角色頁手動升星（每星全能力+10%，3星起防禦+1）；已經5星再抽到，每張退還🪙5。</span>
+    <span class="dim">重複抽到不會自動升星，會記成「重複卡」，到角色頁手動升星（每星全能力+10%，3星起防禦+1）；5星的重複卡也會留著，突破後可以再用，或遣散換金條。</span>
   </div>
   <h3>賺金條</h3>
   <div class="panel small dim">逃殺遠征（逃出時全額帶走、陣亡帶走一半）・競技場勝利</div>`;
 }
 function shardPanel(){
-  return `<div class="panel small" style="margin:10px 0"><b>🧩 碎片</b>：${["R","SR","SSR"].map(r=>`<span class="r${r}">${r} ×${SAVE.shards[r]}</span>`).join("　")}
+  return `<div class="panel small" style="margin:10px 0"><b>🧩 碎片</b>：${["R","SR","SSR"].filter(r=>r==="SSR"||SAVE.shards[r]>0).map(r=>`<span class="r${r}">${r} ×${SAVE.shards[r]}</span>`).join("　")}
     <button class="mini gold" style="margin-left:8px" onclick="openShards('SSR')">兌換角色</button>
     <div class="dim small" style="margin-top:6px;line-height:1.7">
-      <b>怎麼取得</b>：① 角色已經 5★ 後又重複抽到：R +1／SR +3／SSR +10。② 遣散 SR／SSR 角色：每星 SR +1／SSR +3（R 角色不給）。其他地方不會掉。<br>
+      <b>怎麼取得</b>：只有遣散 SSR 角色（包含重複卡）會得到，每張／每星 +3。R、SR 不會產生碎片，其他地方也不會掉。<br>
       <b>怎麼用</b>：碎片分稀有度，R 碎片只能換 R 角色，SR、SSR 同理。沒有的角色：R 25／SR 80／SSR 200 換 1★。已擁有但未滿 5★ 的角色：R 8／SR 25／SSR 70 補 1★。<br>
-      <b>提醒</b>：價格故意訂得很高，指定換 SSR 約要 20 張 5★ 的重複 SSR，抽卡仍是主要的取得方式。</div></div>`;
+      <b>提醒</b>：價格故意訂得很高，抽卡仍是主要的取得方式。</div></div>`;
 }
 let SHARD_TAB="SSR";
 function openShards(t){
@@ -1514,10 +1514,8 @@ function grant(id){
   if(id==="fatty")SAVE.fattyCopies=(SAVE.fattyCopies||0)+1; // 抽到幾張 SR 肥宅（10 張可換 1 張 SSR 肥宅）
   const o=SAVE.owned[id];
   if(!o){SAVE.owned[id]={stars:1};return {id,isNew:true};}
-  // 不會自動升星：沒滿 5★ 的重複卡記成「多餘張數」，到角色頁手動升星；已經 5★ 才直接退還
-  if(o.stars<5){o.dup=(o.dup||0)+1;return {id,dupe:o.dup};}
-  const sh=SHARD_DUP[CARDS[id].r];
-  SAVE.gold+=5;SAVE.charms.stone++;SAVE.shards[CARDS[id].r]+=sh;return {id,refund:5,sh};
+  // 不會自動升星，也不退款：重複的卡一律記成「重複卡」張數，到角色頁手動升星（5★ 的留到突破後再用），或遣散換金條
+  o.dup=(o.dup||0)+1;return {id,dupe:o.dup};
 }
 // 突破：5★ 時消耗突破石嘗試突破。成功率從 30% 起每次 ×0.85 指數下降。
 // 成功：星星回到 1★ 重新累積，之前的能力保留，另外全能力 +1.5%。失敗：突破石消失，星數不變（不會降星）。
@@ -1534,7 +1532,7 @@ function confirmBreak(id){
     <p class="small">成功：星星回到 <b>1★</b> 重新累積，目前的能力<b>全部保留</b>，另外全能力 <b style="color:var(--gold)">+1.5%</b>（突破後每升 1 星 +2.5%）。<br>
     <span style="color:#ff8a8a">失敗：突破石消失，但<b>不會降星</b>。</span></p>
     <p class="small">突破 ${b} 5★：❤${cur.maxHp} ⚔${cur.atk} → 突破 ${b+1} 1★：<span style="color:var(--green)">❤${nx.maxHp} ⚔${nx.atk}</span></p>
-    <p class="dim small">突破石：商店購買、5★ 後抽到重複卡、主線魔王、深淵守門者、練功房掉落。突破越多次，需要的突破石越多、成功率越低（最多 ${BR_MAX} 次）。</p>
+    <p class="dim small">突破石：商店購買、主線魔王、深淵守門者、練功房掉落。突破越多次，需要的突破石越多、成功率越低（最多 ${BR_MAX} 次）。</p>
     <div class="row"><button class="pri" onclick="doBreak('${id}')" ${have<need?"disabled":""}>✨ 突破（💎×${need}）</button>
     ${have<need?`<button class="gold" onclick="SHOP_TAB='charm';closeModal();go('shop')">🛒 去買突破石</button>`:""}
     <button onclick="BR_RES=null;showCard('${id}')">返回</button></div>`);
@@ -1568,8 +1566,8 @@ let GACHA_RES=null;
 // 同一張卡合併成一格（×n），依稀有度由高到低排
 function groupPulls(res){
   const m={};
-  res.forEach(x=>{const g=m[x.id]||(m[x.id]={id:x.id,junk:!!x.junk,n:0,isNew:false,dup:0,rf:0,gold:0,sh:0});
-    g.n++;if(x.isNew)g.isNew=true;if(x.dupe)g.dup++;if(x.refund){g.rf++;g.gold+=x.refund;g.sh+=x.sh;}});
+  res.forEach(x=>{const g=m[x.id]||(m[x.id]={id:x.id,junk:!!x.junk,n:0,isNew:false,dup:0});
+    g.n++;if(x.isNew)g.isNew=true;if(x.dupe)g.dup++;});
   const ord=x=>x.junk?3:R_ORDER[CARDS[x.id].r];
   return Object.values(m).sort((a,b)=>ord(a)-ord(b));
 }
@@ -1590,7 +1588,7 @@ function showGacha(res){
         <div class="b">?</div>
         <div class="f"><div class="av">${avatar(x.id)}</div><div class="nm r${c.r}">${c.name}</div>
           <div class="small r${c.r}">${c.r}</div>
-          <div class="badge">${x.junk?`<span class="dim">持有 ${SAVE.junk[x.id]}・只能遣散</span>`:[x.isNew?"NEW!":"",x.dup?`重複卡 +${x.dup}（可手動升星）`:"",x.rf?`🪙+${x.gold} 💎+${x.rf} 🧩+${x.sh}`:""].filter(Boolean).join("<br>")}</div></div>
+          <div class="badge">${x.junk?`<span class="dim">持有 ${SAVE.junk[x.id]}・只能遣散</span>`:[x.isNew?"NEW!":"",x.dup?`重複卡 +${x.dup}`:""].filter(Boolean).join("<br>")}</div></div>
       </div></div>`;}).join("")}
     </div>
     <div class="row"><button onclick="flipAll()">全部翻開</button><button class="pri" onclick="closeGacha()">完成</button></div>`;
@@ -1640,7 +1638,7 @@ function synthJunk(all){
   save();SFX.sr();render();
   openModal(`<h3>🔮 白卡合成${res.length>1?`（${res.length} 次）`:""}</h3>
     <div class="cardgrid">${res.map(({id,gr})=>`<div class="ccard R"><div class="av">${avatar(id)}</div><div class="nm">${CARDS[id].name}</div>
-      <div class="small" style="color:var(--gold)">${gr.isNew?"NEW!":gr.dupe?`重複卡 ×${gr.dupe}`:`滿星 🪙+${gr.refund}`}</div></div>`).join("")}</div>
+      <div class="small" style="color:var(--gold)">${gr.isNew?"NEW!":`重複卡 ×${gr.dupe}`}</div></div>`).join("")}</div>
     <div class="row" style="margin-top:12px"><button onclick="closeModal()">關閉</button></div>`);
 }
 function sellJunk(id){
@@ -1731,12 +1729,13 @@ function showCard(id){
       ${canBreak(id)?`<button class="gold" onclick="BR_RES=null;confirmBreak('${id}')">✨ 突破（${brOf(id)}→${brOf(id)+1}）</button>`:""}
       <button onclick="closeModal()" style="margin-left:auto">關閉</button></div>
     ${o&&o.stars>=5&&!canBreak(id)?`<div class="dim small" style="margin-top:6px">已突破到上限（${BR_MAX}）。</div>`:o&&!brOf(id)&&o.stars<5?`<div class="dim small" style="margin-top:6px">升到 5★ 後可以「突破」，讓角色變得更強。</div>`:""}
+    ${o&&o.dup&&o.stars>=5?`<div class="dim small" style="margin-top:6px">重複卡 ×${o.dup}：已經 5★，突破後星數回到 1★ 就能用來升星，也可以在下面遣散換金條。</div>`:""}
     ${o?sellHtml(id):""}`);
 }
 // 遣散：每顆星算一張卡的價值。期望值低於抽卡價（約5／抽），不會變成刷錢手段
 const SELL_PRICE={R:3,SR:10,SSR:30};
-// 碎片：5★ 後重複抽到、遣散 SR／SSR 才會有。故意很難湊：SSR 新角色要約 20 張 5★ 重複卡的量
-const SHARD_DUP={R:1,SR:3,SSR:10},SHARD_SELL={R:0,SR:1,SSR:3};
+// 碎片：只有遣散 SSR 角色（含重複卡）才會有；R、SR 不再產生碎片
+const SHARD_SELL={R:0,SR:0,SSR:3};
 const SHARD_NEW={R:25,SR:80,SSR:200},SHARD_STAR={R:8,SR:25,SSR:70};
 const SHARD_NAME={R:"R 碎片",SR:"SR 碎片",SSR:"SSR 碎片"};
 function sellBlock(id){
@@ -1834,7 +1833,7 @@ function doSynth(){
   SYN.pick={};save();up==="SSR"?SFX.ssr():SFX.sr();render();
   openModal(`<h3>🔮 合成成功</h3><div class="detail"><div class="av">${avatar(id)}</div><div>
     <div class="r${up}">${up}</div><h2 style="margin:2px 0">${CARDS[id].name}</h2>
-    <div>${gr.isNew?"NEW!":gr.dupe?`重複卡 ×${gr.dupe}（可手動升星）`:`已滿星，🪙+${gr.refund}、💎+1`}</div></div></div>
+    <div>${gr.isNew?"NEW!":`重複卡 ×${gr.dupe}（可手動升星）`}</div></div></div>
     <div class="row" style="margin-top:12px"><button class="pri" onclick="openSynth()">繼續合成</button><button onclick="showCard('${id}')">查看角色</button><button onclick="closeModal()">關閉</button></div>`);
 }
 // 合成一次：扣掉投入的星數，給 1 名高一階的隨機角色（60% 優先沒有的）
@@ -1884,7 +1883,7 @@ function doAutoSynth(){
   glog("🔮SYNTH",`一鍵合成 ${t}×${res.length}：${res.map(r=>CARDS[r.id].name).join("、")}`);
   openModal(`<h3>⚡ 一鍵合成完成（${res.length} 次）</h3>
     <div class="cardgrid">${res.map(({id,gr})=>`<div class="ccard ${CARDS[id].r}" onclick="showCard('${id}')"><div class="av">${avatar(id)}</div><div class="nm">${CARDS[id].name}</div>
-      <div class="small" style="color:var(--gold)">${gr.isNew?"NEW!":gr.dupe?`重複卡 ×${gr.dupe}`:`滿星 🪙+${gr.refund}`}</div></div>`).join("")}</div>
+      <div class="small" style="color:var(--gold)">${gr.isNew?"NEW!":`重複卡 ×${gr.dupe}`}</div></div>`).join("")}</div>
     <div class="row" style="margin-top:12px"><button class="pri" onclick="openSynth()">回到合成</button><button onclick="closeModal()">關閉</button></div>`);
 }
 // 熔煉：兩名同稀有度角色（整張卡）→ 1 名同稀有度的其他角色，優先給還沒擁有的。
@@ -4510,7 +4509,7 @@ function confirmFattyExchange(){
   const have=SAVE.owned.fatty2;
   openModal(`<h3>🔁 兌換 SSR 肥宅</h3><div class="detail"><div class="av fx-SSR">${avatar("fatty2")}</div><div style="flex:1">
     <div class="rSSR">SSR</div><h2 style="margin:2px 0">肥宅</h2></div></div>
-    <p>用 <b>${FATTY_EXCHANGE} 張</b> SR 肥宅換 1 張 SSR 肥宅（目前 ${fattyCopies()} 張）。${have?`你已經有 SSR 肥宅，兌換會讓他 <b>升 1★</b>${have.stars>=5?"（已滿星，改換成金條、突破石和碎片）":""}。`:"他會以 1★、Lv.1 加入收藏。"}</p>
+    <p>用 <b>${FATTY_EXCHANGE} 張</b> SR 肥宅換 1 張 SSR 肥宅（目前 ${fattyCopies()} 張）。${have?`你已經有 SSR 肥宅，兌換會讓他 <b>升 1★</b>${have.stars>=5?"（已滿星，改記成 1 張重複卡）":""}。`:"他會以 1★、Lv.1 加入收藏。"}</p>
     <p class="dim small">只會扣掉「抽到的張數」，你手上的 SR 肥宅不會消失。</p>
     <div class="row"><button class="pri" onclick="fattyExchange()">🔁 兌換</button><button onclick="closeModal()" style="margin-left:auto">取消</button></div>`);
 }
@@ -4520,7 +4519,7 @@ function fattyExchange(){
   const o=SAVE.owned.fatty2;
   if(!o)SAVE.owned.fatty2={stars:1};
   else if(o.stars<5)o.stars++;
-  else{SAVE.gold+=5;SAVE.charms.stone++;SAVE.shards.SSR+=SHARD_DUP.SSR;}
+  else o.dup=(o.dup||0)+1; // 已經滿星：記成重複卡，突破後可以用
   save();SFX.ssr();glog("🔁EXCHANGE","10 張 SR 肥宅換 SSR 肥宅");
   render();showCard("fatty2");toast("🔁 兌換成功！");
 }
@@ -5495,7 +5494,7 @@ function endRun(escaped,lines=[]){
     const al=r.party.find(m=>m.ally&&m.alive);
     if(al){
       const gr=grant(al.id);
-      out.push(`🤝 ${al.name} 跟你交換了聯絡方式。<b>獲得職業卡：${CARDS[al.id].name}</b>${gr.isNew?"（NEW!）":gr.dupe?`（重複卡 ×${gr.dupe}，可手動升星）`:`（滿星，🪙+${gr.refund}、💎+1）`}`);
+      out.push(`🤝 ${al.name} 跟你交換了聯絡方式。<b>獲得職業卡：${CARDS[al.id].name}</b>${gr.isNew?"（NEW!）":`（重複卡 ×${gr.dupe}，可手動升星）`}`);
       SFX.ssr();
     }else SFX.win();
     if(!abyss)SAVE.stats.escapes++;

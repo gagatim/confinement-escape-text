@@ -1324,7 +1324,7 @@ function bgmWant(){
   if(VIEW==="duel")return "duel";
   if(VIEW==="run"&&RUN&&RUN.active)return RUN.ch===ABYSS?"abyss":"run";
   if(VIEW==="story")return "story"; // 老國王的故事頁：莊嚴的合唱曲
-  if(VIEW==="gacha"||VIEW==="team"||VIEW==="dex"||VIEW==="gear")return "town"; // 招募、隊伍、裝備：中世紀風
+  if(VIEW==="gacha"||VIEW==="team"||VIEW==="dex"||VIEW==="gear"||VIEW==="log"||VIEW==="qa")return "town"; // 招募、隊伍、裝備、更新說明、Q&A：輕鬆的中世紀風
   return "main";
 }
 function syncBgm(){
@@ -1347,6 +1347,7 @@ const NAV=[["home","主頁"],["gacha","招募"],["team","整備室"],["story","�
 const PAGE_GROUPS=[
   {nav:"story",title:"🗄 檔案室",tabs:[["story","👑 故事"],["ach","🏆 成就"],["dex","📖 圖鑑"]]},
   {nav:"team",title:"🛠 整備室",tabs:[["team","👥 隊伍"],["gear","🛡 裝備"],["convert","🔁 轉換"]]},
+  {nav:"log",title:"📝 更新說明",tabs:[["log","📝 更新紀錄"],["qa","❓ Q&A 問答"]]},
   {nav:"arena",title:"🏟 競技場",tabs:[["arena","⚔ 競技場"],["duel","🆚 雙人對決"]]}
 ];
 const groupOf=v=>PAGE_GROUPS.find(g=>g.tabs.some(([k])=>k===v));
@@ -1390,7 +1391,7 @@ function render(){
 }
 function renderInner(){
   renderHeader();
-  const f={home:viewHome,gacha:viewGacha,team:viewTeam,convert:viewConvert,dex:viewCodex,gear:viewGear,shop:viewShop,run:viewRun,boss:viewBossPage,train:viewTrain,arena:viewArena,ach:viewAch,story:viewStory,log:viewChangelog,duel:viewDuel,battle:viewBattle}[VIEW]||viewHome;
+  const f={home:viewHome,gacha:viewGacha,team:viewTeam,convert:viewConvert,dex:viewCodex,gear:viewGear,shop:viewShop,run:viewRun,boss:viewBossPage,train:viewTrain,arena:viewArena,ach:viewAch,story:viewStory,log:viewChangelog,qa:viewQA,duel:viewDuel,battle:viewBattle}[VIEW]||viewHome;
   $("#view").innerHTML=(groupOf(VIEW)?groupTabs(groupOf(VIEW)):"")+f();
   if(VIEW==="battle"){const l=$("#blog");if(l)l.scrollTop=l.scrollHeight;kbApply();}
   if(CUR_B&&CUR_B.online&&!CUR_B.guest)pushSnap(CUR_B);
@@ -4736,7 +4737,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
-  {d:"2026-10-26",t:["雙人對決移到「競技場」底下，競技場頁面上方可以切換","遠征新增「一鍵補血」：從隊伍最前面開始補滿，先用藥片再用酒","背包裡相同的道具合併顯示（例如 🚀火箭筒×2）","檔案室新增「分析」：列出所有角色的初始素質，可點表頭排序","新增「更新說明」，放在導覽列最右邊，並補上 10-22 起的歷史更新"]},
+  {d:"2026-10-26",t:["更新說明底下新增「Q&A 問答」分頁，整理常見問題","雙人對決移到「競技場」底下，競技場頁面上方可以切換","遠征新增「一鍵補血」：從隊伍最前面開始補滿，先用藥片再用酒","背包裡相同的道具合併顯示（例如 🚀火箭筒×2）","檔案室新增「分析」：列出所有角色的初始素質，可點表頭排序","新增「更新說明」，放在導覽列最右邊，並補上 10-22 起的歷史更新"]},
   {d:"2026-10-25",t:["每日登入獎勵調整為原來的 5 倍","魔王討伐頁面也會播放魔王戰配樂","修正手機抽卡結果看不到的問題（改用直接換面，不再用 3D 翻牌）",
     "肥宅物語的魔王血量改為只乘章節強度（和第 15 章同級），額外倍率只加在攻擊與防禦；小弟比照",
     "修正魔王開場血量：魔王現在滿血開打（原本只剩約一半）",
@@ -4762,6 +4763,28 @@ const CHANGELOG=[
     "新增角色碎片：重複卡與遣散取得，可指定兌換角色或補星","等級上限開放到 100，50 級後經驗 ×5、每級加成 0.8%","新增網路對戰養成賽：兩人帶自己的隊伍 PK，無獎勵",
     "新增修改密碼功能與戰鬥鍵盤操作；SSR 角色與支線魔王技能改為比例計算","更換各頁面音樂，競技場、雙人對決、練功房都有專屬配樂"]}
 ];
+/* ---- Q&A：常見問題。規則有改動時，記得同步修改這裡的答案 ---- */
+const QA=[
+  ["招募的機率是多少？有保底嗎？","SSR 3.1%、SR 15%、R 30%、N 白卡 51.9%。累計 60 抽沒出 SSR，第 60 抽必出 SSR；十連（每 10 張一組）至少 1 張 SR 以上；第一次十連必出 SSR。"],
+  ["抽到重複的角色會怎樣？","不會自動升星，會記成「重複卡」。到角色頁手動升星，最多 5★；每 1★ 生命與攻擊 +10%，3★ 起防禦 +1。已經 5★ 的重複卡會留著，突破後可以再用，或遣散換金條。"],
+  ["突破是什麼？怎麼突破？","角色升到 5★ 後，到隊伍頁點角色按「突破」，最多 10 次。第 n 次要 💎突破石 ×2n，成功率 30% 起每次 ×0.85。成功：星星回到 1★、能力保留並再 +1.5%，之後每升 1★ 只 +2.5%；失敗：突破石消失，但不會降星。"],
+  ["突破石哪裡拿？","商店、主線魔王、深淵守門者、練功房、成就，以及每日登入獎勵。"],
+  ["SR、SSR 升級比較快嗎？","不會。升星加成、等級加成、升級所需經驗都不分稀有度，差別只在初始素質與技能。"],
+  ["等級與經驗怎麼算？","戰鬥勝利後，參戰角色獲得經驗。每級全能力 +2%；Lv.50 之後經驗需求 ×5、每級只 +0.8%，上限 Lv.100。遠征中已經倒下的角色只拿一半經驗，遠征中升級的能力要下次出戰才生效。"],
+  ["每日登入獎勵怎麼領？","7 天一輪，連續登入才會往下一天，斷掉就從第 1 天重來。每天在主頁領一次。"],
+  ["N 白卡有什麼用？","只能遣散換金條；5 張（可以混搭）可以合成 1 名隨機 R 角色。"],
+  ["劇情角色（阿燼、晴）和一般角色有什麼不同？","通關主線第 15 章後會進入招募池。不能合成、熔煉、遣散，也不能當「轉換」的來源（可以當轉換的目標）。"],
+  ["遠征中怎麼補血？","背包的藥片、酒可以一個一個選隊員使用，也可以按「一鍵補血」：從隊伍最前面開始補滿，先用藥片，藥片用完才用酒。酒的效果是隨機的，可能補 6、補 2，也可能扣 2。"],
+  ["遠征中放棄會怎樣？","視同全隊覆沒，只帶回一半的金條。"],
+  ["魔王討伐一定要打嗎？","不用，是支線。8 位魔王打倒一位才會出現下一位；打倒第一條命後魔王會爆氣進入第二階段。打贏有機會掉落魔王專屬的 EX 裝備。"],
+  ["畫面提示「請重新整理」是什麼意思？","遊戲更新後，舊頁面讀到新版存檔時會提示。重新整理頁面載入新版即可，存檔不會消失。"],
+  ["存檔被清掉了怎麼辦？","遊戲偵測到存檔異常而清空時，會先自動備份，跳出的提示裡有「♻ 還原備份」按鈕可以還原（還原時會再檢查一次）。"],
+  ["遊戲卡住或畫面出錯怎麼辦？","按右下角 🆘（或遠征畫面的「🐞 卡住了／回報問題」）複製紀錄回報；遠征卡住可以先試「重置這一層」。"]
+];
+function viewQA(){
+  return `<h2>❓ Q&amp;A</h2><p class="dim small">常見問題。點問題展開答案。</p>
+  ${QA.map(([q,a])=>`<details class="lorech"><summary><b>${q}</b></summary><div class="kingrow"><p>${a}</p></div></details>`).join("")}`;
+}
 function viewChangelog(){
   return `<h2>📝 更新說明</h2><p class="dim small">每次更新的內容都會記在這裡，新的在最上面。</p>
   ${CHANGELOG.map(e=>`<div class="panel"><b style="color:var(--gold)">${e.d}</b><ul style="margin:6px 0 0;padding-left:20px">${e.t.map(x=>`<li>${x}</li>`).join("")}</ul></div>`).join("")}`;

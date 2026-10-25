@@ -1474,8 +1474,9 @@ function viewGacha(){
 function shardPanel(){
   return `<div class="panel small" style="margin:10px 0"><b>🧩 碎片</b>：${["R","SR","SSR"].filter(r=>r==="SSR"||SAVE.shards[r]>0).map(r=>`<span class="r${r}">${r} ×${SAVE.shards[r]}</span>`).join("　")}
     <button class="mini gold" style="margin-left:8px" onclick="openShards('SSR')">兌換角色</button>
+    <button class="mini" onclick="openDismantle()">🔨 拆解 SSR</button>
     <div class="dim small" style="margin-top:6px;line-height:1.7">
-      <b>怎麼取得</b>：只有遣散 SSR 角色（包含重複卡）會得到，每張／每星 +3。R、SR 不會產生碎片，其他地方也不會掉。<br>
+      <b>怎麼取得</b>：只有拆解 SSR 角色（點「🔨 拆解 SSR」，或到角色頁遣散）會得到，每張重複卡／每星 +3。R、SR 不會產生碎片，其他地方也不會掉。<br>
       <b>怎麼用</b>：碎片分稀有度，R 碎片只能換 R 角色，SR、SSR 同理。沒有的角色：R 25／SR 80／SSR 200 換 1★。已擁有但未滿 5★ 的角色：R 8／SR 25／SSR 70 補 1★。<br>
       <b>提醒</b>：價格故意訂得很高，抽卡仍是主要的取得方式。</div></div>`;
 }
@@ -1753,6 +1754,39 @@ function starUp(id,all){
   do{o.dup--;o.stars++;n++;}while(all&&o.dup>0&&o.stars<5);
   save();SFX.ssr();toast(`${CARDS[id].name} 升至 ${o.stars}★${o.dup?`（剩 ${o.dup} 張重複卡）`:""}`);showCard(id);render();
 }
+// 拆解 SSR：集中處理 SSR 的重複卡與多餘星數，換金條和碎片（不會拆掉整張角色）
+function dismantleBlock(id){
+  if(SAVE.team.includes(id))return "出戰隊伍中";
+  if(SAVE.run&&SAVE.run.party.some(m=>!m.ally&&m.id===id))return "遠征中";
+  return "";
+}
+function dismantleIds(){return Object.keys(SAVE.owned).filter(id=>CARDS[id].r==="SSR"&&!CARDS[id].story&&((SAVE.owned[id].dup||0)>0||SAVE.owned[id].stars>1));}
+function dmReward(n){return `🪙+${SELL_PRICE.SSR*n} 🧩+${SHARD_SELL.SSR*n}`;}
+function openDismantle(){
+  const ids=dismantleIds(),dupAll=ids.reduce((a,id)=>a+(SAVE.owned[id].dup||0),0);
+  openModal(`<h3>🔨 拆解 SSR</h3>
+    <p class="dim small">拆解 SSR 的<b>重複卡</b>或<b>多餘的星數</b>，每張／每 1 星可得 🪙${SELL_PRICE.SSR}＋🧩${SHARD_SELL.SSR} 碎片。角色本身不會被拆掉（要整張遣散請到角色頁）。目前碎片：<b class="rSSR">🧩 ${SAVE.shards.SSR}</b></p>
+    ${ids.length?ids.map(id=>{const o=SAVE.owned[id],d=o.dup||0,why=dismantleBlock(id),extra=o.stars-1+d;
+      return `<div class="row" style="margin:6px 0;align-items:center;gap:8px"><div class="av" style="width:44px;height:44px;border-radius:6px;overflow:hidden">${avatar(id)}</div>
+        <div style="flex:1;min-width:120px"><b class="rSSR">${CARDS[id].name}</b> <span class="small dim">${o.stars}★${d?`・重複卡 ×${d}`:""}</span></div>
+        ${d?`<button class="mini gold" onclick="doDismantle('${id}','dup')">拆重複卡 ×${d}（${dmReward(d)}）</button>`:""}
+        ${o.stars>1?(why?`<span class="small dim">降星：${why}</span>`:`<button class="mini" onclick="doDismantle('${id}','one')">拆到 1★（${dmReward(extra)}）</button>`):""}
+      </div>`;}).join(""):`<p class="dim">目前沒有可以拆解的 SSR（沒有重複卡，也沒有 2★ 以上的 SSR）。</p>`}
+    <div class="row" style="margin-top:12px">${dupAll?`<button class="pri" onclick="doDismantle(null,'all')">🔨 拆全部 SSR 重複卡（${dupAll} 張・${dmReward(dupAll)}）</button>`:""}<button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
+}
+// mode：dup＝這張的重複卡；one＝拆到只剩 1★（星數和重複卡都換成碎片）；all＝全部 SSR 的重複卡
+function doDismantle(id,mode){
+  let n=0;
+  if(mode==="all")dismantleIds().forEach(k=>{const o=SAVE.owned[k];n+=o.dup||0;o.dup=0;});
+  else{
+    const o=SAVE.owned[id];if(!o||CARDS[id].r!=="SSR"||CARDS[id].story)return;
+    if(mode==="dup"){n=o.dup||0;o.dup=0;}
+    else if(mode==="one"){if(dismantleBlock(id))return;n=o.stars-1+(o.dup||0);o.stars=1;o.dup=0;}
+  }
+  if(!n)return;
+  SAVE.gold+=SELL_PRICE.SSR*n;SAVE.shards.SSR+=SHARD_SELL.SSR*n;save();SFX.click();toast(`拆解完成，${dmReward(n)}`);
+  openDismantle();render();
+}
 // 遣散多餘的重複卡（不影響星數）
 function sellDup(id){
   const o=SAVE.owned[id];if(!o||!o.dup)return;
@@ -1763,9 +1797,9 @@ function sellHtml(id){
   const o=SAVE.owned[id],p=SELL_PRICE[CARDS[id].r],why=sellBlock(id);
   return `<div class="sk"><b>💰 遣散</b> <span class="dim small">每 1 星可換 🪙${p}</span>
     ${why?`<div class="dim small">${why}</div>`:`<div class="row" style="margin-top:6px">
-      ${o.dup?`<button class="mini" onclick="sellDup('${id}')">遣散 1 張重複卡（🪙+${p}）</button>`:""}
-      ${o.stars>1?`<button class="mini" onclick="sellCard('${id}',1)">降 1 星（🪙+${p}）</button>`:""}
-      <button class="mini" onclick="confirmSell('${id}')">全部遣散（🪙+${p*cardWorth(id)}）</button></div>`}</div>`;
+      ${o.dup?`<button class="mini" onclick="sellDup('${id}')">遣散 1 張重複卡（🪙+${p}${SHARD_SELL[CARDS[id].r]?` 🧩+${SHARD_SELL[CARDS[id].r]}`:""}）</button>`:""}
+      ${o.stars>1?`<button class="mini" onclick="sellCard('${id}',1)">降 1 星（🪙+${p}${SHARD_SELL[CARDS[id].r]?` 🧩+${SHARD_SELL[CARDS[id].r]}`:""}）</button>`:""}
+      <button class="mini" onclick="confirmSell('${id}')">全部遣散（🪙+${p*cardWorth(id)}${SHARD_SELL[CARDS[id].r]?` 🧩+${SHARD_SELL[CARDS[id].r]*cardWorth(id)}`:""}）</button></div>`}</div>`;
 }
 function sellCard(id,n){
   const o=SAVE.owned[id];if(!o||sellBlock(id))return;

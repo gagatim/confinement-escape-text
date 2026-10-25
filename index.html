@@ -1409,7 +1409,7 @@ function viewHome(){
   ${loginPanel()}
   ${(h=>`<div class="nexthint"><span>👉 ${h[0]}</span><button class="pri mini" style="margin-left:auto" onclick="go('${h[1]}')">${h[2]}</button></div>`)(nextHint())}
   <div class="modes">
-    <div class="mode" onclick="go('gacha')"><div class="ic">🎴</div><b>招募所</b><p>花金條抽取職業卡。SSR 3%・十連保底 SR・60 抽保底 SSR</p></div>
+    <div class="mode" onclick="go('gacha')"><div class="ic">🎴</div><b>招募所</b><p>花金條抽取職業卡。SSR 3.1%・十連保底 SR・60 抽保底 SSR</p></div>
     <div class="mode" onclick="go('team')"><div class="ic">👥</div><b>隊伍</b><p>已收集 ${ownedCount()}/${CARD_IDS.length} 名職業，挑 3 人出戰</p></div>
     <div class="mode" onclick="go('shop')"><div class="ic">🛒</div><b>商店・裝備</b><p>買裝備、強化到 +10（可能失敗！），還能買遠征物資帶上路</p></div>
     <div class="mode" onclick="go('run')"><div class="ic">🪜</div><b>逃殺遠征</b><p>文字冒險主線 ${ABYSS} 章＋無盡深淵：選房間、搜物資、躲毒氣、結盟或背叛。目前進度：${progText()}</p></div>
@@ -1455,10 +1455,10 @@ function viewGacha(){
   <div class="panel small dim" style="margin-top:10px">🧩 5★ 後重複抽到的角色會變成碎片，到「隊伍」頁按「🧩 碎片兌換」可以指定換角色或補星。</div>
   <h3>機率</h3>
   <div class="panel small">
-    <span class="rSSR">SSR 3%</span>（${gachaPool("SSR").map(i=>CARDS[i].name).join("、")}）<br>
+    <span class="rSSR">SSR 3.1%</span>（${gachaPool("SSR").map(i=>CARDS[i].name).join("、")}）<br>
     <span class="rSR">SR 15%</span>（${gachaPool("SR").map(i=>CARDS[i].name).join("、")}）<br>
-    <span class="rR">R 62%</span>（其他 ${gachaPool("R").length} 名）<br>
-    <span class="rN">N 20%</span>（${JUNK_IDS.map(i=>JUNK[i].name).join("、")}；白卡可遣散換 🪙${JUNK_PRICE}，或 ${JUNK_COST} 張合成 1 名 R；不能組隊、升星）<br>
+    <span class="rR">R 30%</span>（其他 ${gachaPool("R").length} 名）<br>
+    <span class="rN">N 51.9%</span>（${JUNK_IDS.map(i=>JUNK[i].name).join("、")}；白卡可遣散換 🪙${JUNK_PRICE}，或 ${JUNK_COST} 張合成 1 名 R；不能組隊、升星）<br>
     <span class="dim">重複抽到不會自動升星，會記成「重複卡」，到角色頁手動升星（每星全能力+10%，3星起防禦+1）；已經5星再抽到，每張退還🪙5。</span>
   </div>
   <h3>賺金條</h3>
@@ -1499,8 +1499,8 @@ function rollRarity(){
   SAVE.pity++;
   if(SAVE.pity>=60){SAVE.pity=0;return "SSR";}
   const x=rnd();
-  if(x<.03){SAVE.pity=0;return "SSR";}
-  return x<.18?"SR":x<.80?"R":"N"; // SSR 3%／SR 15%／R 62%／N 20%
+  if(x<.031){SAVE.pity=0;return "SSR";}
+  return x<.181?"SR":x<.481?"R":"N"; // SSR 3.1%／SR 15%／R 30%／N 51.9%
 }
 function grantJunk(id){SAVE.junk[id]=(SAVE.junk[id]||0)+1;return {id,junk:true};}
 function grant(id){
@@ -1606,7 +1606,7 @@ function junkPanel(){
     <button class="mini gold" onclick="synthJunk(true)" ${junkCount()>=JUNK_COST?"":"disabled"}>⚡ 全部合成（${Math.floor(junkCount()/JUNK_COST)} 次）</button>
     <button class="mini" onclick="sellJunk()">💰 一鍵遣散全部（🪙${junkCount()*JUNK_PRICE}）</button></div>
     <div class="small dim" style="margin:4px 0 8px">白卡可以遣散（每張 🪙${JUNK_PRICE}），或任意 ${JUNK_COST} 張（可混搭）合成 1 名隨機 R 角色；不能組隊、升星或熔煉。</div>
-    <div class="row">${JUNK_IDS.filter(k=>SAVE.junk[k]).map(k=>`<div class="ccard N" style="min-width:90px;cursor:default"><div class="av">${avatar(k)}</div><div class="nm">${JUNK[k].name}</div>
+    <div class="cardgrid">${JUNK_IDS.filter(k=>SAVE.junk[k]).map(k=>`<div class="ccard N" style="cursor:default"><div class="av">${avatar(k)}</div><div class="nm">${JUNK[k].name}</div>
       <div class="small">×${SAVE.junk[k]}</div><button class="mini" onclick="sellJunk('${k}')">遣散 🪙${SAVE.junk[k]*JUNK_PRICE}</button></div>`).join("")}</div></div>`;
 }
 // 合成：任意 5 張白卡（可混搭）換 1 名隨機 R 角色（每名機率相同）；材料優先用張數多的

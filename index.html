@@ -1245,15 +1245,15 @@ function doImport(){
     SAVE=migrate(s);SAVE.run=null;RUN=null;save();closeModal();toast("匯入成功！");go("home");
   }catch(e){toast("代碼格式不對，請確認有完整複製");}
 }
-function save(){
+function save(keepTime){
   if(STALE)return;
   SAVE.appv=APP_V;
   if(SAVE_READY&&!checkIntegrity())return;
   if(SAVE_READY)checkAch();
   if(SAVE_READY&&fiveOk(SAVE.prog)&&!SAVE.fiveSeen){SAVE.fiveSeen=1;glog("👥FIVE","解鎖 5 人出戰");setTimeout(()=>toast("🎉 出戰人數解鎖！現在最多可以 5 人出戰"),0);}
-  SAVE.updatedAt=Date.now();
+  if(!keepTime||!SAVE.updatedAt)SAVE.updatedAt=Date.now(); // 開機那次不更新時間，否則舊存檔會被當成「比雲端新」而蓋掉雲端
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(packSave(SAVE)));}catch(e){}
-  if(SAVE_READY)scheduleUpload();
+  if(SAVE_READY&&!keepTime)scheduleUpload();
 }
 let SAVE_READY=false;
 let SAVE=loadSave();
@@ -4737,6 +4737,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-10-27",t:["修正雲端存檔：開啟遊戲時不再把存檔時間更新成「現在」，避免舊裝置上的舊存檔被當成比較新，開機自動同步時蓋掉雲端的新進度"]},
   {d:"2026-10-26",t:["更新說明底下新增「Q&A 問答」分頁，整理常見問題；更新說明與 Q&A 頁面改播輕鬆的中世紀風配樂","雙人對決移到「競技場」底下，競技場頁面上方可以切換","遠征新增「一鍵補血」：從隊伍最前面開始補滿，先用藥片再用酒","背包裡相同的道具合併顯示（例如 🚀火箭筒×2）","檔案室新增「分析」：列出所有角色的初始素質，可點表頭排序","新增「更新說明」，放在導覽列最右邊，並補上 10-22 起的歷史更新"]},
   {d:"2026-10-25",t:["每日登入獎勵調整為原來的 5 倍","魔王討伐頁面也會播放魔王戰配樂","修正手機抽卡結果看不到的問題（改用直接換面，不再用 3D 翻牌）",
     "肥宅物語的魔王血量改為只乘章節強度（和第 15 章同級），額外倍率只加在攻擊與防禦；小弟比照",
@@ -5902,7 +5903,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkUpdat
 // 開機時檢查存檔：簽章不符或數值異常就清空；之後每 5 秒檢查一次記憶體裡的數值
 const BOOT_BAD=STALE?"":TAMPER||validSave(SAVE);
 if(BOOT_BAD){try{backupSave(JSON.parse(localStorage.getItem(SAVE_KEY)),BOOT_BAD);}catch(e){}SAVE=newSave();RUN=null;}
-SAVE_READY=true;save();
+SAVE_READY=true;save(!BOOT_BAD);
 if(STALE)setTimeout(staleNotice,0);
 if(BOOT_BAD)setTimeout(()=>tamperNotice(BOOT_BAD),0);
 setInterval(checkIntegrity,5000);

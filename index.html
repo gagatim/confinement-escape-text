@@ -3977,6 +3977,7 @@ function openAccount(){
     <p class="small dim">${SYNC_MSG||"尚未同步"}</p>
     <div class="opts"><button class="pri" onclick="uploadSave(true)">☁ 立即上傳存檔</button>
       <button onclick="pullCloud(true)">⬇ 從雲端下載存檔</button>
+      <button onclick="openCloudHistory()">🕘 雲端歷史存檔</button>
       <button onclick="openChangePw()">🔑 修改密碼</button>
       <button onclick="doLogout()">登出</button></div>
     <div class="row" style="margin-top:10px"><button onclick="closeModal()">關閉</button></div>`);
@@ -4043,13 +4044,13 @@ async function pullCloud(ask){
     if(!bad&&isNewerSave(s)){toast("雲端存檔來自較新的版本，請先重新整理頁面更新遊戲");glog("❌CLOUD","雲端存檔版本較新");return;}
     if(bad||!s||s.v!==1){toast("雲端存檔異常，沒有載入");glog("❌CLOUD","雲端存檔簽章不符");return;}
     const why=validSave(migrate(s));if(why){toast("雲端存檔數值異常（"+why+"），沒有載入");glog("❌CLOUD",why);return;}
-    CLOUD_PENDING=s;
+    CLOUD_PENDING=s;CLOUD_PLAY=typeof s.playSec==="number"?s.playSec:null;
     const ct=s.updatedAt||0,lt=SAVE.updatedAt||0;
     if(ct===lt){SYNC_MSG="已同步";if(ask){closeModal();toast("登入成功，存檔已是最新");}return;}
     if(!ask){if(RUN&&RUN.active||CUR_B)return;ct>lt?useCloud():uploadSave();return;}
     openModal(`<h3>☁ 選擇要用哪一份存檔</h3>
-      <div class="sk"><b>☁ 雲端存檔</b>${ct>lt?' <span style="color:var(--green)">（比較新）</span>':""}<br>${saveSummary(s)}</div>
-      <div class="sk"><b>📱 這台裝置的存檔</b>${lt>ct?' <span style="color:var(--green)">（比較新）</span>':""}<br>${saveSummary(SAVE)}</div>
+      <div class="sk"><b>☁ 雲端存檔</b>${ct>lt?' <span style="color:var(--green)">（比較新）</span>':""}${isShorter(s.playSec,SAVE.playSec)?' <span style="color:var(--red)">⚠ 遊戲時間比較短</span>':""}<br>${saveSummary(s)}</div>
+      <div class="sk"><b>📱 這台裝置的存檔</b>${lt>ct?' <span style="color:var(--green)">（比較新）</span>':""}${isShorter(SAVE.playSec,s.playSec)?' <span style="color:var(--red)">⚠ 遊戲時間比較短</span>':""}<br>${saveSummary(SAVE)}</div>
       <p class="small dim">選了之後，另一份會被覆蓋。</p>
       <div class="opts"><button class="pri" onclick="useCloud()">☁ 使用雲端存檔</button><button onclick="closeModal();uploadSave(true)">📱 使用這台裝置的存檔（上傳覆蓋雲端）</button></div>`);
   }catch(e){glog("❌CLOUD",e&&e.code||e);toast(authErr(e));}
@@ -4063,11 +4064,70 @@ function useCloud(){
   SYNC_MSG="已載入雲端存檔 "+new Date().toLocaleTimeString();closeModal();render();toast("已載入雲端存檔");glog("☁CLOUD","載入雲端存檔");
 }
 function scheduleUpload(){if(!ACCT)return;clearTimeout(SYNC_T);SYNC_T=setTimeout(()=>uploadSave(),3000);}
-async function uploadSave(manual){
-  if(!ACCT||STALE)return;
+/* ----- 雲端歷史存檔：覆蓋雲端前，把舊的雲端存檔另存一份在 users/{uid}/history，最多留 5 份、至少間隔 30 分鐘 ----- */
+const HIST_MAX=5,HIST_GAP=30*60*1000;
+let HIST_AT=0; // 這次開遊戲有沒有檢查過歷史存檔（0＝還沒）
+async function cloudHistory(){
+  const db=await fbDb(),base=db.ref("users/"+ACCT.uid);
+  const force=HIST_AT<0,cur=await base.child("save").get();
+  if(!cur.exists()){HIST_AT=Date.now();CLOUD_PLAY=null;return;}
+  CLOUD_PLAY=playOf(cur.val());
+  const hs=await base.child("history").get(),h=hs.exists()?hs.val():{},ks=Object.keys(h).sort();
+  if(force||!ks.length||Date.now()-h[ks[ks.length-1]].t>HIST_GAP){
+    const t=Date.now();await base.child("history/"+t).set({t,pack:cur.val()});ks.push(String(t));
+    for(const k of ks.slice(0,Math.max(0,ks.length-HIST_MAX)))await base.child("history/"+k).remove();
+  }
+  HIST_AT=Date.now();
+}
+async function openCloudHistory(){
+  toast("讀取中……");
   try{
+    const snap=await (await fbDb()).ref("users/"+ACCT.uid+"/history").get();
+    const h=snap.exists()?snap.val():{},ks=Object.keys(h).sort().reverse();
+    CLOUD_HIST=h;
+    openModal(`<h3>🕘 雲端歷史存檔</h3><p class="dim small">每次開遊戲、或超過 30 分鐘後第一次上傳前，會把當時雲端的舊存檔留一份，最多 ${HIST_MAX} 份。還原會覆蓋目前這台裝置和雲端的存檔，而且會重新做一次數值檢查。</p>
+      ${ks.length?ks.map(k=>`<div class="sk"><b>${new Date(h[k].t).toLocaleString()}</b>・遊戲時間 <b style="color:var(--gold)">${playTxt(playOf(h[k].pack))}</b>${isShorter(playOf(h[k].pack),SAVE.playSec)?' <span style="color:var(--red)">⚠ 比目前短</span>':""}<br>${bkSummary(h[k].pack)}
+        <div class="row" style="margin-top:6px"><button class="mini pri" onclick="restoreCloudHist('${k}')">還原這份</button></div></div>`).join(""):'<p class="dim">雲端還沒有歷史存檔。</p>'}
+      <div class="row"><button onclick="openAccount()">返回</button></div>`);
+  }catch(e){toast(authErr(e));}
+}
+let CLOUD_HIST={};
+function restoreCloudHist(k,ok){
+  const e=CLOUD_HIST[k];if(!e)return;
+  const hp=playOf(e.pack);
+  if(!ok&&isShorter(hp,SAVE.playSec))return openModal(`<h3 style="color:var(--red)">⚠ 這份存檔的遊戲時間比較短</h3>
+    <div class="sk">要還原的歷史存檔：遊戲時間 <b style="color:var(--red)">${playTxt(hp)}</b></div>
+    <div class="sk">目前這台裝置的存檔：遊戲時間 <b>${playTxt(SAVE.playSec)}</b></div>
+    <p class="small">還原後，目前這台和雲端的存檔都會被換成這份比較短的，確定嗎？</p>
+    <div class="opts"><button onclick="openCloudHistory()">取消</button><button class="gold" onclick="restoreCloudHist('${k}',true)">仍然還原</button></div>`);
+  HIST_AT=-1;const old=SAVE;restorePack(e.pack);if(SAVE!==old)FORCE_UP=true; // HIST_AT=-1：還原後上傳前，先把現在的雲端存檔也留一份；FORCE_UP：這是玩家自己選的，不擋
+}
+let FORCE_UP=false;
+/* ----- 防止用遊戲時間比較短的存檔覆蓋雲端：CLOUD_PLAY＝已知的雲端遊戲秒數（null＝不知道／舊存檔沒記錄） ----- */
+const SHORT_TOL=60; // 秒；短超過這個數字才算「比較短」
+let CLOUD_PLAY=null,SHORT_WARNED=false;
+const playOf=pack=>{try{const {s}=unpackSave(pack);return s&&typeof s.playSec==="number"?s.playSec:null;}catch(e){return null;}};
+const playTxt=sec=>typeof sec==="number"?fmtPlay(sec):"未記錄";
+const isShorter=(a,b)=>typeof b==="number"&&(typeof a==="number"?a:0)<b-SHORT_TOL; // a 比 b 短很多
+function warnShort(cp){
+  if(SHORT_WARNED)return;SHORT_WARNED=true;SYNC_MSG="⚠ 已暫停上傳：這台裝置的存檔遊戲時間比雲端短";
+  openModal(`<h3 style="color:var(--red)">⚠ 小心：會覆蓋掉遊戲時間比較長的雲端存檔</h3>
+    <div class="sk"><b>☁ 雲端存檔</b>：遊戲時間 <b>${playTxt(cp)}</b></div>
+    <div class="sk"><b>📱 這台裝置的存檔</b>：遊戲時間 <b style="color:var(--red)">${playTxt(SAVE.playSec)}</b></div>
+    <p class="small">這台的存檔玩得比雲端少，很可能是舊的存檔。為了安全，<b>已先暫停自動上傳</b>。覆蓋後，雲端那份只會留在「🕘 雲端歷史存檔」裡。</p>
+    <div class="opts"><button class="pri" onclick="SHORT_WARNED=false;pullCloud(true)">☁ 看看雲端存檔，選要用哪一份</button>
+      <button onclick="SHORT_WARNED=false;HIST_AT=-1;closeModal();uploadSave(true,true)">仍然用這台的存檔覆蓋雲端</button>
+      <button onclick="closeModal()">先不上傳</button></div>`);
+}
+async function uploadSave(manual,force){
+  if(!ACCT||STALE)return;
+  if(FORCE_UP){force=true;FORCE_UP=false;}
+  try{
+    if(HIST_AT<=0){try{await cloudHistory();}catch(e){glog("❌CLOUD","歷史存檔失敗 "+(e&&e.code||e));}}
+    if(!force&&isShorter(SAVE.playSec,CLOUD_PLAY)){glog("⚠CLOUD","擋下上傳：本機遊戲時間 "+playTxt(SAVE.playSec)+" < 雲端 "+playTxt(CLOUD_PLAY));warnShort(CLOUD_PLAY);return;}
     if(PENDING_CLOUD_BK){const b=PENDING_CLOUD_BK;PENDING_CLOUD_BK=null;await cloudBackup(b.pack,b.why);} // 清空後第一次上傳前，先把清空前的存檔備份到雲端
     await (await fbDb()).ref("users/"+ACCT.uid).update({name:ACCT.name,save:packSave(SAVE),t:Date.now()}); // update 才不會洗掉 backup
+    CLOUD_PLAY=typeof SAVE.playSec==="number"?SAVE.playSec:null;SHORT_WARNED=false;
     SYNC_MSG="已同步 "+new Date().toLocaleTimeString();if(manual){toast("☁ 存檔已上傳");closeModal();}}
   catch(e){SYNC_MSG="上傳失敗："+authErr(e);glog("❌CLOUD",e&&e.code||e);if(manual)toast(authErr(e));}
 }
@@ -4737,7 +4797,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
-  {d:"2026-10-27",t:["修正雲端存檔：開啟遊戲時不再把存檔時間更新成「現在」，避免舊裝置上的舊存檔被當成比較新，開機自動同步時蓋掉雲端的新進度"]},
+  {d:"2026-10-27",t:["雲端存檔改成保留多份：覆蓋雲端前會把舊的雲端存檔留一份（最多 5 份、至少間隔 30 分鐘），在「帳號」裡的「🕘 雲端歷史存檔」可以還原，每份都會標示遊戲時間","上傳存檔前會比較遊戲時間：如果這台裝置的存檔比雲端短（可能是舊存檔），會先暫停上傳並跳出警告，由你決定要不要覆蓋；還原遊戲時間較短的歷史存檔也會先警告","修正雲端存檔：開啟遊戲時不再把存檔時間更新成「現在」，避免舊裝置上的舊存檔被當成比較新，開機自動同步時蓋掉雲端的新進度"]},
   {d:"2026-10-26",t:["更新說明底下新增「Q&A 問答」分頁，整理常見問題；更新說明與 Q&A 頁面改播輕鬆的中世紀風配樂","雙人對決移到「競技場」底下，競技場頁面上方可以切換","遠征新增「一鍵補血」：從隊伍最前面開始補滿，先用藥片再用酒","背包裡相同的道具合併顯示（例如 🚀火箭筒×2）","檔案室新增「分析」：列出所有角色的初始素質，可點表頭排序","新增「更新說明」，放在導覽列最右邊，並補上 10-22 起的歷史更新"]},
   {d:"2026-10-25",t:["每日登入獎勵調整為原來的 5 倍","魔王討伐頁面也會播放魔王戰配樂","修正手機抽卡結果看不到的問題（改用直接換面，不再用 3D 翻牌）",
     "肥宅物語的魔王血量改為只乘章節強度（和第 15 章同級），額外倍率只加在攻擊與防禦；小弟比照",

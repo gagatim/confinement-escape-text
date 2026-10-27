@@ -1854,10 +1854,11 @@ function sellHtml(id){
     ${why?`<div class="dim small">${why}</div>`:`<div class="row" style="margin-top:6px">
       ${o.dup?`<button class="mini" onclick="sellDup('${id}')">遣散 1 張重複卡（🪙+${p}${SHARD_SELL[CARDS[id].r]?` 🧩+${SHARD_SELL[CARDS[id].r]}`:""}）</button>`:""}
       ${o.stars>1?`<button class="mini" onclick="sellCard('${id}',1)">降 1 星（🪙+${p}${SHARD_SELL[CARDS[id].r]?` 🧩+${SHARD_SELL[CARDS[id].r]}`:""}）</button>`:""}
-      <button class="mini" onclick="confirmSell('${id}')">全部遣散（🪙+${p*cardWorth(id)}${SHARD_SELL[CARDS[id].r]?` 🧩+${SHARD_SELL[CARDS[id].r]*cardWorth(id)}`:""}）</button></div>`}</div>`;
+      ${trained(id)?`<span class="small dim">已練過，不能整張遣散</span>`:`<button class="mini" onclick="confirmSell('${id}')">全部遣散（🪙+${p*cardWorth(id)}${SHARD_SELL[CARDS[id].r]?` 🧩+${SHARD_SELL[CARDS[id].r]*cardWorth(id)}`:""}）</button>`}</div>`}</div>`;
 }
 function sellCard(id,n){
   const o=SAVE.owned[id];if(!o||sellBlock(id))return;
+  if(trained(id)&&n>=o.stars)return; // 練過的角色不能整張遣散（降星還是可以）
   // 降星不會降到 0；全部遣散時連突破一起算錢
   if(n>=o.stars)n=cardWorth(id);
   const g=SELL_PRICE[CARDS[id].r]*n;
@@ -1872,13 +1873,14 @@ function confirmSell(id){
   openModal(`<h3>遣散 ${CARDS[id].name}？</h3><p class="dim">這張卡（${brOf(id)?`突破${brOf(id)} `:""}${o.stars}★）會從收藏中移除，換得 🪙${g}${SHARD_SELL[CARDS[id].r]?` 和 🧩${SHARD_NAME[CARDS[id].r]} ×${SHARD_SELL[CARDS[id].r]*cardWorth(id)}`:""}。之後抽到會從 1★ 重新開始。</p>
     <div class="row"><button class="pri" onclick="sellCard('${id}',99)">遣散</button><button onclick="showCard('${id}')">取消</button></div>`);
 }
-// 一鍵：把不在隊伍裡的 R 卡全部遣散（保留至少 3 名角色）
+function trained(id){const o=SAVE.owned[id];return !!o&&(o.stars>1||lvOf(id)>1||!!o.dup||!!brOf(id));} // 練過的角色（升過星／升過等／有重複卡／突破）：一鍵操作一律跳過
+// 一鍵：把不在隊伍裡、沒練過（1★、Lv.1、無重複卡、未突破）的 R 卡遣散（保留至少 3 名角色）
 function sellAllR(go){
-  const ids=Object.keys(SAVE.owned).filter(id=>CARDS[id].r==="R"&&!sellBlock(id)&&!brOf(id));
+  const ids=Object.keys(SAVE.owned).filter(id=>CARDS[id].r==="R"&&!sellBlock(id)&&!brOf(id)&&!trained(id));
   const keep=Math.max(0,3-(Object.keys(SAVE.owned).length-ids.length)),list=ids.slice(keep);
   const g=list.reduce((a,id)=>a+SELL_PRICE.R*(SAVE.owned[id].stars+(SAVE.owned[id].dup||0)),0);
   if(!list.length){toast("沒有可以遣散的 R 卡");return;}
-  if(!go)return openModal(`<h3>一鍵遣散 R 卡？</h3><p class="dim">會遣散 ${list.length} 張不在隊伍中的 R 卡：${list.map(id=>CARDS[id].name).join("、")}。共換得 🪙${g}。</p>
+  if(!go)return openModal(`<h3>一鍵遣散 R 卡？</h3><p class="dim">會遣散 ${list.length} 張不在隊伍中、沒升過星也沒升過等的 R 卡：${list.map(id=>CARDS[id].name).join("、")}。共換得 🪙${g}。</p>
     <div class="row"><button class="pri" onclick="sellAllR(true)">遣散</button><button onclick="closeModal()">取消</button></div>`);
   list.forEach(id=>delete SAVE.owned[id]);SAVE.gold+=g;save();closeModal();toast(`遣散 ${list.length} 張，🪙+${g}`);render();
 }
@@ -1891,7 +1893,7 @@ function synBlock(id){
   if(id==="fatty")return "不提供合成";
   if(SAVE.team.includes(id))return "隊伍中";
   if(SAVE.run&&SAVE.run.party.some(m=>!m.ally&&m.id===id))return "遠征中";
-  if(brOf(id))return "已突破";
+  if(trained(id))return "已練過";
   return "";
 }
 function synTotal(){return Object.values(SYN.pick).reduce((a,b)=>a+b,0);}
@@ -1945,7 +1947,7 @@ function synthCore(pk,tier){
   const id=fresh.length&&rnd()<.6?pick(fresh):pick(pool);
   return {id,gr:grant(id)};
 }
-// 一鍵合成：自動挑材料、能合幾次就合幾次。優先用等級低、星數少的角色；隊伍中、遠征中、已突破的不會被用到
+// 一鍵合成：自動挑材料、能合幾次就合幾次。優先用等級低、星數少的角色；隊伍中、遠征中、練過的（升過星／升過等／有重複卡／突破）不會被用到
 function synthPlan(t){
   if(t==="N"){ // 白卡：每次取 5 張，優先用張數多的種類
     const left={};JUNK_IDS.forEach(k=>left[k]=SAVE.junk[k]||0);const plan=[];
@@ -1959,7 +1961,7 @@ function synthPlan(t){
   }
   const left={};let total=Object.keys(SAVE.owned).length;
   Object.keys(SAVE.owned).forEach(id=>left[id]=SAVE.owned[id].stars);
-  const elig=Object.keys(SAVE.owned).filter(id=>CARDS[id].r===t&&!synBlock(id))
+  const elig=Object.keys(SAVE.owned).filter(id=>CARDS[id].r===t&&!synBlock(id)&&!trained(id))
     .sort((a,b)=>lvOf(a)-lvOf(b)||SAVE.owned[a].stars-SAVE.owned[b].stars||a.localeCompare(b));
   const plan=[];
   for(;;){
@@ -2007,9 +2009,10 @@ const SMELT_HELP=`<div class="sk small"><b>📖 熔煉說明</b><ul style="paddi
   <li>新角色的 <b>等級（Lv）、星數、突破</b> 都取兩名材料中 <b>較低</b> 的那個。</li>
   <li>熔出已擁有的角色時，原本那張卡的等級／星數／突破，各項保留較高的那邊。</li>
   <li>放進去的兩名角色會 <b>整張消失</b>（包含所有星數），身上的裝備自動卸下回到倉庫。</li>
-  <li>隊伍中、遠征中的角色不能熔煉；熔煉後至少要保留 3 名角色。</li></ul></div>`;
+  <li>隊伍中、遠征中、練過的（升過星、升過等級、有重複卡、突破）角色不能熔煉；熔煉後至少要保留 3 名角色。</li></ul></div>`;
 function smeltBlock(id){
   if(storyOn(id))return "劇情角色";
+  if(trained(id))return "已練過";
   if(SAVE.team.includes(id))return "隊伍中";
   if(SAVE.run&&SAVE.run.party.some(m=>!m.ally&&m.id===id))return "遠征中";
   return "";
@@ -4797,6 +4800,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-10-27",t:["「一鍵遣散 R 卡」不再遣散練過的 R 卡：升過星、升過等級、有重複卡或突破過的都會保留，只遣散 1★ Lv.1 的；「一鍵合成」也一樣，練過的角色不會被當材料","練過的角色（升過星、升過等級、有重複卡或突破過）不能整張遣散、合成或熔煉掉，不會消失；降星與遣散重複卡仍可以"]},
   {d:"2026-10-27",t:["雲端存檔改成保留多份：覆蓋雲端前會把舊的雲端存檔留一份（最多 5 份、至少間隔 30 分鐘），在「帳號」裡的「🕘 雲端歷史存檔」可以還原，每份都會標示遊戲時間","上傳存檔前會比較遊戲時間：如果這台裝置的存檔比雲端短（可能是舊存檔），會先暫停上傳並跳出警告，由你決定要不要覆蓋；還原遊戲時間較短的歷史存檔也會先警告","修正雲端存檔：開啟遊戲時不再把存檔時間更新成「現在」，避免舊裝置上的舊存檔被當成比較新，開機自動同步時蓋掉雲端的新進度"]},
   {d:"2026-10-26",t:["更新說明底下新增「Q&A 問答」分頁，整理常見問題；更新說明與 Q&A 頁面改播輕鬆的中世紀風配樂","雙人對決移到「競技場」底下，競技場頁面上方可以切換","遠征新增「一鍵補血」：從隊伍最前面開始補滿，先用藥片再用酒","背包裡相同的道具合併顯示（例如 🚀火箭筒×2）","檔案室新增「分析」：列出所有角色的初始素質，可點表頭排序","新增「更新說明」，放在導覽列最右邊，並補上 10-22 起的歷史更新"]},
   {d:"2026-10-25",t:["每日登入獎勵調整為原來的 5 倍","魔王討伐頁面也會播放魔王戰配樂","修正手機抽卡結果看不到的問題（改用直接換面，不再用 3D 翻牌）",

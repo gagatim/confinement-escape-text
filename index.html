@@ -358,7 +358,29 @@ footer.credit a{color:var(--gold)}
 .bigicon.fx-EX{filter:drop-shadow(0 0 18px rgba(94,240,255,1));animation:floaty 2s ease-in-out infinite}
 /* 魔王卡 */
 .bosscard:not(.lockc){animation:glowPink 3s ease-in-out infinite}
+.av,.uav{position:relative}
+/* 造型特效（純外觀）：畫在頭像框內側，不會蓋掉突破光框 */
+.skfx{position:absolute;inset:0;pointer-events:none;z-index:2;border-radius:inherit;overflow:hidden}
+.sk-halo{box-shadow:inset 0 0 0 3px #f5c451,inset 0 0 14px 2px rgba(245,196,81,.8);animation:skHalo 2s ease-in-out infinite}
+.sk-halo::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 35%,rgba(255,244,190,.55) 50%,transparent 65%);background-size:250% 100%;animation:skSweep 2.6s ease-in-out infinite}
+@keyframes skHalo{50%{box-shadow:inset 0 0 0 3px #fff3b0,inset 0 0 22px 4px rgba(245,196,81,.95)}}
+@keyframes skSweep{0%{background-position:150% 0}100%{background-position:-50% 0}}
+.sk-sakura{box-shadow:inset 0 0 0 2px #ffb7d0,inset 0 0 16px 2px rgba(255,150,190,.7);animation:skBlush 2.4s ease-in-out infinite}
+@keyframes skBlush{50%{box-shadow:inset 0 0 0 2px #ffd3e2,inset 0 0 24px 4px rgba(255,150,190,.95)}}
+.sk-sakura b{position:absolute;top:-12%;width:8%;height:11%;background:#ffb7d0;border-radius:80% 0 80% 0;opacity:0;animation:skFall 3.6s linear infinite}
+.sk-sakura b:nth-child(1){left:8%;--dx:150%;animation-delay:0s}
+.sk-sakura b:nth-child(2){left:24%;--dx:-150%;animation-delay:.6s;animation-duration:4.2s}
+.sk-sakura b:nth-child(3){left:40%;--dx:200%;animation-delay:1.2s}
+.sk-sakura b:nth-child(4){left:56%;--dx:-200%;animation-delay:1.8s;animation-duration:4.2s}
+.sk-sakura b:nth-child(5){left:72%;--dx:150%;animation-delay:2.4s}
+.sk-sakura b:nth-child(6){left:88%;--dx:-150%;animation-delay:3s;animation-duration:4.2s}
+@keyframes skFall{0%{transform:translate(0,0) rotate(0);opacity:0}10%{opacity:.95}100%{transform:translate(var(--dx),1000%) rotate(360deg);opacity:0}}
+.noskfx .sk-halo,.noskfx .sk-halo::after,.noskfx .sk-sakura,.noskfx .sk-sakura b{animation:none!important}
+.noskfx .sk-sakura b{display:none}
+.skrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.skrow button.on{outline:2px solid var(--gold)}
 @media (prefers-reduced-motion:reduce){
+  .sk-halo,.sk-halo::after,.sk-sakura,.sk-sakura b{animation:none!important}
   #view.bshake{animation:none!important}
   .brk3 .av,.av.brk3,.brk3 .uav,.brk4 .av,.av.brk4,.brk4 .uav,.brk4 .av::after,.av.brk4::after,.brk4 .uav::after{animation:none!important}
   .ccard,.ccard::before,.stars.max,.av.fx-SSR,.pull .f,.pull .f::after,.gcard,.gcard::before,.gcard .gi,.gcard .lv,.gslot,.bigicon,.bosscard{animation:none!important}
@@ -1023,8 +1045,59 @@ function avatar(id,p2){
   if(d.img) return `<img class="avimg" src="images/bosses/${id}_${p2?2:1}.webp" alt="" draggable="false">`;
   if(d.pic) return `<img class="avimg" src="images/monsters/${id}.webp" alt="" draggable="false" onerror="this.outerHTML='<span class=emo>${d.emoji}</span>'">`;
   if(d.emoji) return `<span class="emo">${d.emoji}</span>`;
-  return `<img class="avimg" src="images/avatars/${id}.webp" alt="" draggable="false" onerror="this.outerHTML='<span class=emo>${d.name.charAt(0)}</span>'">`;
+  return `<img class="avimg" src="images/avatars/${id}.webp" alt="" draggable="false" onerror="this.outerHTML='<span class=emo>${d.name.charAt(0)}</span>'">`+skinFx(id);
 }
+/* ---- 造型（純外觀，不加任何數值）：試用造型限時開放，到期自動回收 ----
+   回收有兩道：①領取時記下到期時間，過了就收；②活動從 SKIN_PROMOS 拿掉（版本更新）後，存檔裡該活動的造型也一起收。
+   時間以「看過的最晚時間」為準（SAVE.skin.seen），把裝置時間往回調也不會延長試用。 */
+const SKINS={halo:{name:"金色光輪",icon:"🌟",desc:"金色光環＋光芒掃過頭像"},sakura:{name:"櫻花特效",icon:"🌸",desc:"粉色微光＋花瓣飄落"}};
+const SKIN_PROMOS=[{id:"trial1",name:"造型試穿活動",skins:["halo","sakura"],days:3,until:"2026-11-12"}];
+const SKIN_DAY=864e5;
+function skinNow(){const t=Date.now();if(typeof SAVE!=="undefined"&&SAVE&&SAVE.skin){if(t>(SAVE.skin.seen||0))SAVE.skin.seen=t;return SAVE.skin.seen;}return t;}
+function skinOf(id){const k=typeof SAVE!=="undefined"&&SAVE&&SAVE.skin&&SAVE.skin.worn[id];return k&&SAVE.skin.own[k]&&SKINS[k]?k:"";}
+function skinFx(id){const k=CARDS[id]?skinOf(id):"";return k?`<i class="skfx sk-${k}">${k==="sakura"?"<b></b>".repeat(6):""}</i>`:"";}
+// 回收到期或活動已移除的造型，穿著中的換回預設；回傳被回收的造型名稱
+function skinSweep(){
+  if(SAVE&&!SAVE.skin)SAVE.skin={own:{},worn:{},claimed:{},seen:0}; // 從較新版本存檔載入時可能沒有這個欄位
+  const K=SAVE&&SAVE.skin;if(!K)return [];
+  const now=skinNow(),gone=[];
+  Object.keys(K.own).forEach(k=>{const e=K.own[k];
+    if(!SKINS[k]||!SKIN_PROMOS.some(p=>p.id===e.src)||now>=e.until){delete K.own[k];if(SKINS[k])gone.push(SKINS[k].name);}});
+  Object.keys(K.worn).forEach(c=>{if(!K.own[K.worn[c]])delete K.worn[c];});
+  return gone;
+}
+function skinPromoOpen(){return SKIN_PROMOS.find(p=>!SAVE.skin.claimed[p.id]&&skinNow()<=new Date(p.until+"T23:59:59").getTime());}
+function claimSkins(pid){
+  const p=SKIN_PROMOS.find(x=>x.id===pid);if(!p||SAVE.skin.claimed[pid]||skinPromoOpen()!==p)return;
+  const now=skinNow();
+  p.skins.forEach(k=>{SAVE.skin.own[k]={until:now+p.days*SKIN_DAY,src:p.id};});
+  SAVE.skin.claimed[pid]=1;save();SFX.ssr();toast(`已領取 ${p.days} 天試用：${p.skins.map(k=>SKINS[k].name).join("、")}`);render();
+}
+function wearSkin(cid,k){
+  if(!SAVE.owned[cid])return;
+  if(k&&!SAVE.skin.own[k])return;
+  if(k)SAVE.skin.worn[cid]=k;else delete SAVE.skin.worn[cid];
+  save();SFX.click();render();showCard(cid);
+}
+function skinLeft(){const es=Object.values(SAVE.skin.own);if(!es.length)return "";const r=Math.min(...es.map(e=>e.until))-skinNow();
+  return r<=0?"即將到期":`${Math.floor(r/SKIN_DAY)} 天 ${Math.floor(r%SKIN_DAY/36e5)} 小時`;}
+function skinPanel(){
+  const p=skinPromoOpen(),own=Object.keys(SAVE.skin.own);
+  if(p)return `<div class="panel" style="text-align:center"><b>🎁 ${p.name}</b><br><span class="dim small">免費領取 ${p.skins.map(k=>SKINS[k].icon+SKINS[k].name).join("、")}，試用 ${p.days} 天，到期自動回收。純外觀，不影響能力。</span><div class="row" style="justify-content:center;margin-top:6px"><button class="pri" onclick="claimSkins('${p.id}')">領取試用</button></div></div>`;
+  if(own.length)return `<div class="panel small" style="text-align:center">🎨 試用造型剩餘 <b>${skinLeft()}</b>，到角色頁就能替角色換造型。</div>`;
+  return "";
+}
+function skinHtml(id){
+  const own=Object.keys(SAVE.skin.own);if(!own.length)return "";
+  const w=skinOf(id);
+  return `<div class="sk small"><b>🎨 造型（試用，剩 ${skinLeft()}）</b><div class="skrow">
+    <button class="mini ${w?"":"on"}" onclick="wearSkin('${id}','')">預設</button>
+    ${own.map(k=>`<button class="mini ${w===k?"on":""}" onclick="wearSkin('${id}','${k}')">${SKINS[k].icon}${SKINS[k].name}</button>`).join("")}
+    <button class="mini" style="margin-left:auto" onclick="toggleSkFx('${id}')">${document.body.classList.contains("noskfx")?"開啟":"關閉"}特效動畫</button></div>
+    <div class="dim small" style="margin-top:4px">純外觀，不影響能力。每名角色可以各自選不同的造型；到期後自動換回預設。</div></div>`;
+}
+function toggleSkFx(cid){const on=document.body.classList.toggle("noskfx");try{localStorage.setItem("jbts_noskfx",on?"1":"");}catch(e){}SFX.click();showCard(cid);}
+try{if(localStorage.getItem("jbts_noskfx"))document.body.classList.add("noskfx");}catch(e){}
 const brTier=br=>br>=10?"brk4":br>=7?"brk3":br>=4?"brk2":br>=1?"brk1":"";
 function starStr(n,br=0){return (br?`<b class="brk">突破${br}</b> `:"")+"★".repeat(n)+"<span style='opacity:.25'>"+"★".repeat(5-n)+"</span>";}
 // 星級：每多1星全能力+10%，3星起防禦+1。突破後保留之前的能力，每次突破 +1.5%，
@@ -1184,6 +1257,7 @@ function exportBackup(i){
 function checkIntegrity(){if(!SAVE||STALE)return true;const why=validSave(SAVE);if(why){wipeTampered(why);return false;}return true;}
 // 舊存檔補欄位：已逃出過禁閉室就算通關第1章
 function migrate(s){
+  if(!s.skin)s.skin={own:{},worn:{},claimed:{},seen:0}; // 造型（試用）：own 擁有、worn 各角色穿著、claimed 已領過的活動
   if(!s.junk)s.junk={}; // N 白卡數量 {代號:張數}
   if(s.prog&&s.prog.fatty==null)s.prog.fatty=0; // 《肥宅物語》進度（0～5）
   if(s.fattyCopies==null)s.fattyCopies=s.owned&&s.owned.fatty?s.owned.fatty.stars:0; // 抽到的 SR 肥宅張數（舊存檔用現有星數估）
@@ -1380,6 +1454,7 @@ function renderHeader(){
 let BATTLE_HOME="arena";
 // 畫面出錯時不要整個卡死：記錄錯誤，顯示自救按鈕
 function render(){
+  try{const g=skinSweep();if(g.length){save();toast(`試用造型「${g.join("、")}」已到期，已換回預設外觀`);}}catch(e){}
   try{renderInner();}
   catch(e){
     glog("❌RENDER",`畫面=${VIEW}：${e&&e.stack||e}`);
@@ -1475,6 +1550,7 @@ function viewHome(){
     <span class="dim">招募囚犯、組成三人小隊，從 B7 一路殺上停機坪。路上遇到的人——可以結盟，也可以先下手為強。</span></p>
   </div>
   ${loginPanel()}
+  ${skinPanel()}
   ${(h=>`<div class="nexthint"><span>👉 ${h[0]}</span><button class="pri mini" style="margin-left:auto" onclick="go('${h[1]}')">${h[2]}</button></div>`)(nextHint())}
   <div class="modes">
     <div class="mode" onclick="go('gacha')"><div class="ic">🎴</div><b>招募所</b><p>花金條抽取職業卡。SSR 3.1%・十連保底 SR・60 抽保底 SSR</p></div>
@@ -1772,6 +1848,7 @@ function showCard(id){
     ${setHtml(id)}${e.crit||e.steal||e.dodge||e.dr?`<div class="gfx">裝備特效：${statStr({crit:e.crit,steal:e.steal,dodge:e.dodge,dr:e.dr})}</div>`:""}`:""}
     </div></div>
     ${skillHtml(c)}
+    ${o?skinHtml(id):""}
     ${c.evolveFrom?`<div class="sk small"><b>🆙 進化角色</b><br>《肥宅物語》通關後由 SR 肥宅進化，或用 10 張 SR 肥宅兌換取得，不進招募池。<b>無法合成、熔煉、遣散</b>，不能當「轉換」的來源（可以當轉換的目標）。</div>`:""}
     ${id==="fatty"?`<div class="sk small"><b>🔁 SSR 肥宅</b><br>抽到 SR 肥宅 ${fattyCopies()}／${FATTY_EXCHANGE} 張，${fattyExchangeOpen()?`滿 ${FATTY_EXCHANGE} 張可以換 1 張 SSR 肥宅。`:`🔒 通關肥宅物語第 5 章後，滿 ${FATTY_EXCHANGE} 張可以換 1 張 SSR 肥宅。`}SR 肥宅不提供合成。<div class="row" style="margin-top:6px"><button class="mini ${fattyCanExchange()?"pri":""}" onclick="closeModal();confirmFattyExchange()" ${fattyCanExchange()?"":"disabled"}>${fattyExchangeOpen()?"🔁 兌換 SSR 肥宅":"🔒 兌換（尚未開放）"}</button></div></div>`:""}
     ${id==="fatty"&&o&&(SAVE.prog.fatty||0)>=5&&!SAVE.owned.fatty2?`<div class="sk small"><b>🆙 可以進化！</b><br>《肥宅物語》已通關，這位肥宅可以進化成 SSR。<div class="row" style="margin-top:6px"><button class="pri" onclick="closeModal();confirmEvolve()">🆙 進化成 SSR</button></div></div>`:""}
@@ -4803,7 +4880,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
-  {d:"2026-10-29",t:["統一全部角色、怪物與魔王的技能說明寫法（對1名敵人／對全體敵人各造成X倍攻擊傷害、恢復、持續回合等用語一致），並移除與介面重複的「冷卻N回合」","修正技能說明：暗影突襲與長跑補註「無視防禦、固定傷害的攻擊閃不掉」，暗影突襲改為無視「防禦架勢」、幸運兒吉星高照寫清楚是1倍傷害必定暴擊、橡膠人隔空取物改成雙方攻擊增減、拾荒者補上垃圾堆補給+2","合成時重複卡也算材料：每名角色的份數＝星數＋重複卡張數（例如 1★ 加 2 張重複卡算 3 份），先扣重複卡再扣星數，不會再把重複卡自動換成金幣；手動合成與一鍵合成都適用","放寬「練過」的判定：改成 3★ 以上、Lv.50 以上或突破過才算，有重複卡、2★ 以下、Lv.50 以下的角色可以被一鍵合成與一鍵遣散；Q&A、新手教學與提示同步更新","一鍵合成材料不足時，提示改成「不夠 6 張」，並說明隊伍中、遠征中、練過的角色不算"]},
+  {d:"2026-10-29",t:["新增造型試穿：主頁可免費領取「金色光輪」「櫻花特效」試用 3 天，到角色頁替每名角色各自選擇要穿的造型；純外觀，不影響能力，到期或活動結束後自動回收，可在角色頁關閉特效動畫","統一全部角色、怪物與魔王的技能說明寫法（對1名敵人／對全體敵人各造成X倍攻擊傷害、恢復、持續回合等用語一致），並移除與介面重複的「冷卻N回合」","修正技能說明：暗影突襲與長跑補註「無視防禦、固定傷害的攻擊閃不掉」，暗影突襲改為無視「防禦架勢」、幸運兒吉星高照寫清楚是1倍傷害必定暴擊、橡膠人隔空取物改成雙方攻擊增減、拾荒者補上垃圾堆補給+2","合成時重複卡也算材料：每名角色的份數＝星數＋重複卡張數（例如 1★ 加 2 張重複卡算 3 份），先扣重複卡再扣星數，不會再把重複卡自動換成金幣；手動合成與一鍵合成都適用","放寬「練過」的判定：改成 3★ 以上、Lv.50 以上或突破過才算，有重複卡、2★ 以下、Lv.50 以下的角色可以被一鍵合成與一鍵遣散；Q&A、新手教學與提示同步更新","一鍵合成材料不足時，提示改成「不夠 6 張」，並說明隊伍中、遠征中、練過的角色不算"]},
   {d:"2026-10-27",t:["Q&A 新增「手機玩到一半，想換電腦繼續玩怎麼辦？」，說明用 👤 帳號雲端存檔換裝置接關的步驟與注意事項","「一鍵遣散 R 卡」不再遣散練過的 R 卡：升過星、升過等級、有重複卡或突破過的都會保留，只遣散 1★ Lv.1 的；「一鍵合成」也一樣，練過的角色不會被當材料","練過的角色（升過星、升過等級、有重複卡或突破過）不能整張遣散、合成或熔煉掉，不會消失；降星與遣散重複卡仍可以；Q&A 與新手教學也補上說明"]},
   {d:"2026-10-27",t:["雲端存檔改成保留多份：覆蓋雲端前會把舊的雲端存檔留一份（最多 5 份、至少間隔 30 分鐘），在「帳號」裡的「🕘 雲端歷史存檔」可以還原，每份都會標示遊戲時間","上傳存檔前會比較遊戲時間：如果這台裝置的存檔比雲端短（可能是舊存檔），會先暫停上傳並跳出警告，由你決定要不要覆蓋；還原遊戲時間較短的歷史存檔也會先警告","修正雲端存檔：開啟遊戲時不再把存檔時間更新成「現在」，避免舊裝置上的舊存檔被當成比較新，開機自動同步時蓋掉雲端的新進度"]},
   {d:"2026-10-26",t:["更新說明底下新增「Q&A 問答」分頁，整理常見問題；更新說明與 Q&A 頁面改播輕鬆的中世紀風配樂","雙人對決移到「競技場」底下，競技場頁面上方可以切換","遠征新增「一鍵補血」：從隊伍最前面開始補滿，先用藥片再用酒","背包裡相同的道具合併顯示（例如 🚀火箭筒×2）","檔案室新增「分析」：列出所有角色的初始素質，可點表頭排序","新增「更新說明」，放在導覽列最右邊，並補上 10-22 起的歷史更新"]},
@@ -4841,6 +4918,7 @@ const QA=[
   ["SR、SSR 升級比較快嗎？","不會。升星加成、等級加成、升級所需經驗都不分稀有度，差別只在初始素質與技能。"],
   ["等級與經驗怎麼算？","戰鬥勝利後，參戰角色獲得經驗。每級全能力 +2%；Lv.50 之後經驗需求 ×5、每級只 +0.8%，上限 Lv.100。遠征中已經倒下的角色只拿一半經驗，遠征中升級的能力要下次出戰才生效。"],
   ["每日登入獎勵怎麼領？","7 天一輪，連續登入才會往下一天，斷掉就從第 1 天重來。每天在主頁領一次。"],
+  ["造型是什麼？怎麼拿？會到期嗎？","造型是純外觀的頭像特效（例如金色光輪、櫻花特效），不影響任何能力。目前活動期間可以在主頁免費領取試用造型，試用 3 天，到期（或活動結束後更新版本）會自動回收，穿著中的角色換回預設外觀。領取後到角色頁選擇要穿哪一款，每名角色可以各自選不同的造型；覺得畫面卡頓可以關閉特效動畫。"],
   ["什麼是「練過」的角色？為什麼不能遣散、合成或熔煉？","星數 3★ 以上、等級 Lv.50 以上或突破過的角色，就算「練過」（有重複卡不算）。為了避免誤刪，練過的角色不會被「一鍵遣散」「一鍵合成」動到，也不能整張遣散、拿去合成或熔煉；降星和遣散重複卡仍然可以。合成時，沒練過的角色每張重複卡也算 1 份材料（1★ 加 2 張重複卡＝3 份），先扣重複卡再扣星數。2★ 以下、Lv.50 以下、沒突破過的角色才會被一鍵遣散與一鍵合成。"],
   ["手機玩到一半，想換電腦（或換裝置）繼續玩怎麼辦？","存檔不會自動跟著走，要先登入同一個帳號：①在原本的裝置點主頁右上角 👤，註冊帳號（3～16 個英文、數字或底線，密碼至少 6 個字），登入後存檔會自動上傳雲端，離開前也可以按「☁ 立即上傳存檔」；②到新裝置開同一個遊戲網址，點 👤 登入同一組帳號，選「☁ 使用雲端存檔」就能接著玩。沒登入的話，存檔只在那台裝置的瀏覽器裡，新裝置會是全新進度。不想註冊也可以用主頁的「📤 匯出存檔」「📥 匯入存檔」手動搬一次。注意：帳號沒綁信箱，忘記密碼找不回來；進行中的遠征不會帶過去，請先打完或退出；兩邊存檔不同時會讓你選用哪份，標示「遊戲時間比較短」的是舊存檔，別選錯覆蓋；雲端另外保留最多 5 份歷史存檔，選錯還能還原。"],
   ["N 白卡有什麼用？","只能遣散換金條；5 張（可以混搭）可以合成 1 名隨機 R 角色。"],

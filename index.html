@@ -4487,7 +4487,7 @@ const ABYSS=15;
 // 深淵的特殊房間（不放傳送、基因庫這類依賴固定樓層的事件）
 const ABYSS_ROOMS={ration:"配給站",pharmacy:"藥房",armory:"武器庫",blackmarket:"黑市",casino:"賭場",surgery:"手術室",cryo:"冷凍艙",
   lotto:"樂透房",control:"控制室",respec:"操作室",water:"水塔",chapel:"禮拜堂",laser:"激光室",vault:"金庫",warehouse:"大倉庫",
-  granary:"糧倉",prisoncell:"牢房",wine:"酒窖",scrap:"回收廠"};
+  granary:"糧倉",prisoncell:"牢房",wine:"酒窖",scrap:"回收廠",forge:"重鑄爐"};
 // 平衡：主線全破約需 40 次遠征（機器人模擬）。金條收入刻意壓低，抽卡要省著用
 const FIRST_CLEAR=[40,50,60,70,80,90,100,120,150,200,250,300,350,400,450];
 const CH_POW=[1,1.3,1.5,1.6,1.65,1.45,1.8,1.6,1.95,2.0,2.45,1.75,1.85,1.95,2.05]; // 第6、8章魔王會復活，倍數稍低以免變成高牆；第9、10章刻意偏難
@@ -4971,6 +4971,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-10-30",t:["無盡深淵新增特殊房間「🔥 重鑄爐」：丟 2 件道具重鑄成 1 件隨機新道具，每間最多重鑄 2 次；D20 起火箭筒、霰彈槍更容易出現"]},
   {d:"2026-10-30",t:["「💧 水塔」改成全員恢復 10% 最大生命（原本是固定 3 點），補給 +2 不變；主線章節與無盡深淵的水塔都一樣"]},
   {d:"2026-10-30",t:["無盡深淵新增特殊房間「♻️ 回收廠」：可以拆 3 件道具（防毒面具、繩索不拆），讓一名隊員本次遠征攻擊或防禦 +1，每間限用一次；約 35% 機率有「回收者」看守，可以選擇迎戰或直接離開"]},
   {d:"2026-10-30",t:["新增「合作討伐」（測試階段）：到「網路對戰」建立合作房間，兩個帳號各帶 4 名角色一起打「偽永夜帝王」（調暗的永夜帝王，目前素質與永夜帝王相同，帶 4 隻偽夜行者）；同一角色只能一人帶，先按準備的先用；目前打贏不會掉落裝備，每人獲得 🪙500 金幣，每天最多領 15 次（以這台裝置的日期計算）"]},
@@ -5099,7 +5100,7 @@ function progText(){const c=SAVE.prog.cleared;return c>=ABYSS?"全破":`第 ${c+
 const EV_ICON={rival:"👤",shade:"👻",loot:"📦",empty:"🕸️",gasleak:"☣️",stash:"💰",
   wine:"🍷",ration:"🥫",junk:"🗑️",granary:"🌾",warehouse:"🏭",teleport:"🌀",lotto:"🎰",pharmacy:"💊",respec:"🧬",surgery:"🏥",
   canteen:"🍽️",vault:"🏦",control:"🖥️",recycle:"♻️",armory:"🔫",water:"💧",laser:"🔴",gene:"🧪",helipad:"🚁",morgue:"⚰️",
-  cryo:"🧊",prisoncell:"🔒",blackmarket:"🕶️",casino:"🃏",chapel:"🕯️",abyssboss:"💀",ashen:"🔥",qing:"📖",qing2:"📖",whisper:"👥",seat37:"🪑",fsnack:"🍜",scrap:"♻️"};
+  cryo:"🧊",prisoncell:"🔒",blackmarket:"🕶️",casino:"🃏",chapel:"🕯️",abyssboss:"💀",ashen:"🔥",qing:"📖",qing2:"📖",whisper:"👥",seat37:"🪑",fsnack:"🍜",scrap:"♻️",forge:"🔥"};
 const SHOP={pill:4,adrenaline:5,wine:3,rope:6,gasmask:5,knife:5,pistol:8,shotgun:12,rocket:9};
 const EV_HINT={rival:"有人的氣息",shade:"陰冷的低語",loot:"散落的物資",empty:"空蕩蕩",gasleak:"管線嘶嘶作響",stash:"金屬反光"};
 const ITEMS={
@@ -5332,6 +5333,23 @@ function runEvent(ch,pre){
         {label:"⚔️ 迎戰回收者",cls:"pri",act:()=>runBattle(ch,g,null,"鐵爪從廢鐵堆裡伸了出來！",()=>scrapUI(["回收者倒下了，壓縮機的電源重新亮起。"]))},...cont()]);
     }
     return scrapUI([]);}
+  case "forge":{ // 深淵專用：丟 2 件道具重鑄成 1 件隨機新道具，每間最多 2 次；D20 起火箭筒、霰彈槍更容易出現
+    let uses=0;
+    const forgeUI=(first,pre)=>{
+      const left=RUN.items.slice();if(first)left.splice(left.indexOf(first),1);
+      const intro=["一座還燒著的熔爐，旁邊堆著碎掉的零件。爐口寫著：「兩件舊的，換一件新的。」"];
+      if(uses>=2)return S("🔥 重鑄爐",pre.concat(["爐火熄了。"]),cont());
+      if(left.length<(first?1:2))return S("🔥 重鑄爐",pre.concat(intro,["你們身上的道具不夠重鑄（要 2 件）。"]),cont());
+      const cnt={};left.forEach(i=>cnt[i]=(cnt[i]||0)+1);
+      const btns=Object.keys(cnt).map(id=>({label:`${ITEMS[id].icon}${ITEMS[id].name}${cnt[id]>1?` ×${cnt[id]}`:""}`,act(){
+        if(!first)return forgeUI(id,[]);
+        RUN.items.splice(RUN.items.indexOf(first),1);RUN.items.splice(RUN.items.indexOf(id),1);uses++;
+        const got=gainItem(pick(LOOT_TABLE.concat(fi>=20?["rocket","shotgun"]:[])));SFX.click();
+        forgeUI(null,[`${ITEMS[first].icon}${ITEMS[first].name} 和 ${ITEMS[id].icon}${ITEMS[id].name} 被丟進爐裡，火光一閃——爐口吐出了 ${got}。`]);}}));
+      return S("🔥 重鑄爐",pre.concat(intro,[first?`已選 ${ITEMS[first].icon}${ITEMS[first].name}，再選第二件要丟進去的道具。`:`選擇要丟進爐裡的道具（已重鑄 ${uses}／2 次）。`]),
+        [...btns,...(first?[{label:"← 重選",act:()=>forgeUI(null,[])}]:[]),...cont()]);
+    };
+    return forgeUI(null,[]);}
   case "wine":{gainItem("wine");gainItem("wine");return S("🍷 酒窖",["一排排落滿灰塵的酒桶。你們拎走了兩瓶還沒壞的 🍷酒。"],cont([restOpt(ch)]));}
   case "ration":{RUN.food+=2;return S("🥫 配給站",["自動販賣機吐出兩包配給。<b>補給+2</b>。"],cont([searchOpt(ch,"🔨 敲打販賣機",l=>{if(rnd()<.5){RUN.food++;l.push("咚！又掉出一包。補給+1。");}else l.push("機器發出刺耳的警報……什麼也沒掉出來。");})]));}
   case "granary":{RUN.food+=3;return S("🌾 糧倉",["麻袋堆到天花板。你們塞滿了背包。<b>補給+3</b>。"],cont([restOpt(ch)]));}

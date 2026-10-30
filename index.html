@@ -4487,7 +4487,7 @@ const ABYSS=15;
 // 深淵的特殊房間（不放傳送、基因庫這類依賴固定樓層的事件）
 const ABYSS_ROOMS={ration:"配給站",pharmacy:"藥房",armory:"武器庫",blackmarket:"黑市",casino:"賭場",surgery:"手術室",cryo:"冷凍艙",
   lotto:"樂透房",control:"控制室",respec:"操作室",water:"水塔",chapel:"禮拜堂",laser:"激光室",vault:"金庫",warehouse:"大倉庫",
-  granary:"糧倉",prisoncell:"牢房",wine:"酒窖"};
+  granary:"糧倉",prisoncell:"牢房",wine:"酒窖",scrap:"回收廠"};
 // 平衡：主線全破約需 40 次遠征（機器人模擬）。金條收入刻意壓低，抽卡要省著用
 const FIRST_CLEAR=[40,50,60,70,80,90,100,120,150,200,250,300,350,400,450];
 const CH_POW=[1,1.3,1.5,1.6,1.65,1.45,1.8,1.6,1.95,2.0,2.45,1.75,1.85,1.95,2.05]; // 第6、8章魔王會復活，倍數稍低以免變成高牆；第9、10章刻意偏難
@@ -4971,6 +4971,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-10-30",t:["無盡深淵新增特殊房間「♻️ 回收廠」：可以拆 3 件道具（防毒面具、繩索不拆），讓一名隊員本次遠征攻擊或防禦 +1，每間限用一次；約 35% 機率有「回收者」看守，可以選擇迎戰或直接離開"]},
   {d:"2026-10-30",t:["新增「合作討伐」（測試階段）：到「網路對戰」建立合作房間，兩個帳號各帶 4 名角色一起打「偽永夜帝王」（調暗的永夜帝王，目前素質與永夜帝王相同，帶 4 隻偽夜行者）；同一角色只能一人帶，先按準備的先用；目前打贏不會掉落裝備，每人獲得 🪙500 金幣，每天最多領 15 次（以這台裝置的日期計算）"]},
   {d:"2026-10-30",t:["裝備欄的排序新增「品質%」：依每件裝備的品質浮動百分比排序（同種裝備數值強弱一目了然），裝備卡片上也直接顯示品質%；品質範圍與詞條數值表可在「📖 裝備圖鑑」查看"]},
   {d:"2026-10-30",t:["角色頁新增「🔄 重置養成」：可以把練過的角色等級重置回 Lv.1、突破歸零（不退還經驗與突破石，星數不變，要降星請用「降 1 星」），重置並降到 2★ 以下後就能拿去合成；隊伍中、遠征中、劇情角色不能重置"]},
@@ -5097,7 +5098,7 @@ function progText(){const c=SAVE.prog.cleared;return c>=ABYSS?"全破":`第 ${c+
 const EV_ICON={rival:"👤",shade:"👻",loot:"📦",empty:"🕸️",gasleak:"☣️",stash:"💰",
   wine:"🍷",ration:"🥫",junk:"🗑️",granary:"🌾",warehouse:"🏭",teleport:"🌀",lotto:"🎰",pharmacy:"💊",respec:"🧬",surgery:"🏥",
   canteen:"🍽️",vault:"🏦",control:"🖥️",recycle:"♻️",armory:"🔫",water:"💧",laser:"🔴",gene:"🧪",helipad:"🚁",morgue:"⚰️",
-  cryo:"🧊",prisoncell:"🔒",blackmarket:"🕶️",casino:"🃏",chapel:"🕯️",abyssboss:"💀",ashen:"🔥",qing:"📖",qing2:"📖",whisper:"👥",seat37:"🪑",fsnack:"🍜"};
+  cryo:"🧊",prisoncell:"🔒",blackmarket:"🕶️",casino:"🃏",chapel:"🕯️",abyssboss:"💀",ashen:"🔥",qing:"📖",qing2:"📖",whisper:"👥",seat37:"🪑",fsnack:"🍜",scrap:"♻️"};
 const SHOP={pill:4,adrenaline:5,wine:3,rope:6,gasmask:5,knife:5,pistol:8,shotgun:12,rocket:9};
 const EV_HINT={rival:"有人的氣息",shade:"陰冷的低語",loot:"散落的物資",empty:"空蕩蕩",gasleak:"管線嘶嘶作響",stash:"金屬反光"};
 const ITEMS={
@@ -5313,6 +5314,23 @@ function runEvent(ch,pre){
   // 第2章以後重用同一套事件，標題換成這間房間自己的名字
   const S=(title,lines,opts)=>{if(RUN.ch&&ch.name&&EV_ICON[ev])title=`${EV_ICON[ev]} ${ch.name}`;setScene(where,title,L.concat(lines),opts);render();};
   switch(ev){
+  case "scrap":{ // 深淵專用：拆 3 件道具當零件，裝給一名隊員（攻擊或防禦 +1，每間限一次）；35% 有回收者看守，可以選擇迎戰或離開
+    const scrapUI=pre=>{
+      const junk=RUN.items.filter(i=>i!=="rope"&&i!=="gasmask"),intro=["廢鐵堆成小山，一台壓縮機還在嗡嗡運轉。牆上寫著：「拆得越碎，越有用。」"];
+      if(junk.length<3)return S("♻️ 回收廠",pre.concat(intro,["你們身上的道具不夠拆（要 3 件，防毒面具與繩索不拆）。"]),cont());
+      const take=junk.slice(0,3),names=take.map(i=>ITEMS[i].icon+ITEMS[i].name).join("、");
+      const use=(m,k,txt)=>({label:`🔩 拆 ${names} → ${m.name} ${txt}+1`,act(){
+        take.forEach(i=>RUN.items.splice(RUN.items.indexOf(i),1));m.bonus[k]+=1;SFX.click();
+        setScene(where,"♻️ 拆解完成",[`零件被塞進 ${m.name} 的裝備裡。${txt}+1（本次遠征）。`],cont());render();}});
+      return S("♻️ 回收廠",pre.concat(intro,["這裡能把 3 件道具拆成零件，裝在一個人身上（只能拆一次）。"]),
+        [...aliveMembers().filter(m=>!m.ally).flatMap(m=>[use(m,"atk","攻擊"),use(m,"def","防禦")]),...cont()]);
+    };
+    if(rnd()<.35){
+      const g=[{id:"reclaimer",stars:1,scale:1+fi*.04,name:"回收廠看守・回收者"}];
+      return S("♻️ 回收廠",["廢鐵堆後面站起一個鐵灰色的身影。「不合格的物品，需要回收。」","回收者擋在壓縮機前，想用這台機器，就得先打倒它。"],[
+        {label:"⚔️ 迎戰回收者",cls:"pri",act:()=>runBattle(ch,g,null,"鐵爪從廢鐵堆裡伸了出來！",()=>scrapUI(["回收者倒下了，壓縮機的電源重新亮起。"]))},...cont()]);
+    }
+    return scrapUI([]);}
   case "wine":{gainItem("wine");gainItem("wine");return S("🍷 酒窖",["一排排落滿灰塵的酒桶。你們拎走了兩瓶還沒壞的 🍷酒。"],cont([restOpt(ch)]));}
   case "ration":{RUN.food+=2;return S("🥫 配給站",["自動販賣機吐出兩包配給。<b>補給+2</b>。"],cont([searchOpt(ch,"🔨 敲打販賣機",l=>{if(rnd()<.5){RUN.food++;l.push("咚！又掉出一包。補給+1。");}else l.push("機器發出刺耳的警報……什麼也沒掉出來。");})]));}
   case "granary":{RUN.food+=3;return S("🌾 糧倉",["麻袋堆到天花板。你們塞滿了背包。<b>補給+3</b>。"],cont([restOpt(ch)]));}

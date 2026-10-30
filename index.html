@@ -4971,6 +4971,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-10-30",t:["「💧 水塔」改成全員恢復 10% 最大生命（原本是固定 3 點），補給 +2 不變；主線章節與無盡深淵的水塔都一樣"]},
   {d:"2026-10-30",t:["無盡深淵新增特殊房間「♻️ 回收廠」：可以拆 3 件道具（防毒面具、繩索不拆），讓一名隊員本次遠征攻擊或防禦 +1，每間限用一次；約 35% 機率有「回收者」看守，可以選擇迎戰或直接離開"]},
   {d:"2026-10-30",t:["新增「合作討伐」（測試階段）：到「網路對戰」建立合作房間，兩個帳號各帶 4 名角色一起打「偽永夜帝王」（調暗的永夜帝王，目前素質與永夜帝王相同，帶 4 隻偽夜行者）；同一角色只能一人帶，先按準備的先用；目前打贏不會掉落裝備，每人獲得 🪙500 金幣，每天最多領 15 次（以這台裝置的日期計算）"]},
   {d:"2026-10-30",t:["裝備欄的排序新增「品質%」：依每件裝備的品質浮動百分比排序（同種裝備數值強弱一目了然），裝備卡片上也直接顯示品質%；品質範圍與詞條數值表可在「📖 裝備圖鑑」查看"]},
@@ -5334,7 +5335,7 @@ function runEvent(ch,pre){
   case "wine":{gainItem("wine");gainItem("wine");return S("🍷 酒窖",["一排排落滿灰塵的酒桶。你們拎走了兩瓶還沒壞的 🍷酒。"],cont([restOpt(ch)]));}
   case "ration":{RUN.food+=2;return S("🥫 配給站",["自動販賣機吐出兩包配給。<b>補給+2</b>。"],cont([searchOpt(ch,"🔨 敲打販賣機",l=>{if(rnd()<.5){RUN.food++;l.push("咚！又掉出一包。補給+1。");}else l.push("機器發出刺耳的警報……什麼也沒掉出來。");})]));}
   case "granary":{RUN.food+=3;return S("🌾 糧倉",["麻袋堆到天花板。你們塞滿了背包。<b>補給+3</b>。"],cont([restOpt(ch)]));}
-  case "water":{RUN.food+=2;aliveMembers().forEach(m=>m.hp=Math.min(m.maxHp,m.hp+3));return S("💧 水塔",["清涼的水從破裂的管線湧出。全員恢復3生命，<b>補給+2</b>。"],cont([restOpt(ch)]));}
+  case "water":{RUN.food+=2;aliveMembers().forEach(m=>m.hp=Math.min(m.maxHp,m.hp+Math.ceil(m.maxHp*.1)));return S("💧 水塔",["清涼的水從破裂的管線湧出。全員恢復10%生命，<b>補給+2</b>。"],cont([restOpt(ch)]));}
   case "pharmacy":{gainItem("pill");gainItem("adrenaline");return S("💊 藥房",["藥櫃被翻得亂七八糟，但還剩下 💊藥片 和 💉腎上腺素。"],cont([searchOpt(ch,"🔍 再翻翻藥櫃",l=>l.push(rnd()<.6?"在櫃子底下摸到 "+gainItem("pill")+"。":"只剩空藥瓶。"))]));}
   case "junk":{
     const r=rnd();

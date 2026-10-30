@@ -2824,7 +2824,7 @@ function mkUnit(o){
   const d=DEF(o.id),s=cardStats(o.id,o.stars||1,o.scale||1,o.br||0);
   const u={uid:++UID,id:o.id,name:o.name||d.name,side:o.side,stars:o.stars||1,
     maxHp:o.maxHp||s.maxHp,atk:s.atk+(o.atk||0),def:s.def+(o.def||0),spd:s.spd+(o.spd||0),
-    cd:0,buffs:[],st:{},perm:{},flags:{},alive:true,ally:!!o.ally,ref:o.ref||null,gx:o.gx||{},br:o.br||0};
+    cd:0,buffs:[],st:{},perm:{},flags:{},alive:true,ally:!!o.ally,ref:o.ref||null,gx:o.gx||{},br:o.br||0,pl:o.pl||""};
   const mul=o.mult||1;
   if(mul!==1){u.maxHp=Math.round(u.maxHp*mul);u.atk=Math.round(u.atk*mul);u.def=Math.round(u.def*mul);u.spd=Math.round(u.spd*mul);}
   // 章節強度：越後面的主線章節，敵人生命、攻擊、防禦越高（速度不變）
@@ -2881,7 +2881,7 @@ function revive(B,u,pct){u.alive=true;u.hp=Math.max(1,Math.ceil(u.maxHp*pct));u.
 function leechK(t){const d=DEF(t.id);return 1-((d&&d.leechRed)||0);}
 const SPLASH_IDS=["reclaimer","editor","nameless"];
 // 支線魔王「激動模式」：這幾位魔王面對 5 人以上的隊伍時啟動（開戰時判斷）：單體攻擊擴散 20%、技能與普通攻擊傷害 +10%
-const FRENZY_IDS=["doomhunter","voidlord","fatejudge","reaper","abyssking","nightemperor","overlord","endwalker"];
+const FRENZY_IDS=["doomhunter","voidlord","fatejudge","reaper","abyssking","nightemperor","overlord","endwalker","fakenight"];
 function fattyExp(B,t){ // 肥宅（SSR）被動「LEVEL UP」：被打得越多，本場防禦越高（上限 +25）
   const n=t.flags.fhit=(t.flags.fhit||0)+1,cur=t.perm.def||0;
   const add=2+(n%5===0?2:0),nv=Math.min(25,cur+add);
@@ -3056,7 +3056,7 @@ function aiChoose(B,u){
 function startBattle(cfg){
   const B={title:cfg.title,units:[],log:[],round:0,ctrl:cfg.ctrl||{A:"human",B:"ai"},items:cfg.items||null,
     wall:{},flags:{},auto:false,fast:false,wait:null,done:false,over:null,cfg,labels:cfg.labels||{A:"我方",B:"敵方"},
-    online:cfg.online||null,rseq:0,mySide:"A"};
+    online:cfg.online||null,rseq:0,mySide:"A",coop:!!cfg.coop};
   B.units=cfg.A.map(o=>mkUnit({...o,side:"A"})).concat(cfg.B.map(o=>mkUnit({...o,side:"B"})));
   B.units.forEach(u=>{if(FRENZY_IDS.includes(u.id)&&B.units.filter(x=>x.side!==u.side).length>=5){u.flags.frenzy=1;blog(B,`🔥 ${nm(u)} 面對五人的隊伍，進入了激動模式！`,"bad");}});
   CUR_B=B;BATTLE_HOME=cfg.home||"arena";VIEW="battle";
@@ -3144,7 +3144,7 @@ async function takeTurn(B,u){
     if(checkEnd(B))return;
   }
   for(let n=0;n<2;n++){
-    const ctl=B.ctrl[u.side],human=ctl==="human"&&!u.ally&&!B.auto;
+    const ctl=B.coop&&u.side==="A"&&u.pl==="B"?"remote":B.ctrl[u.side],human=ctl==="human"&&!u.ally&&!B.auto;
     const act=human?await waitHuman(B,u):ctl==="remote"?await waitRemote(B,u):aiChoose(B,u);
     if(!act)return;
     doAction(B,u,act);
@@ -3231,7 +3231,7 @@ function unitCard(B,u){
   return `<div class="ucard s${u.side} ${CARDS[u.id]?"q-"+CARDS[u.id].r:""} ${d.boss2?"bossu":""} ${u.flags&&u.flags.p2?"p2":""} ${u.flags&&u.flags.frenzy?"frenzy":""} ${u.br?brTier(u.br):""} ${u.alive?"":"dead"} ${B.active===u&&!B.over?"active":""} ${tg?"targetable":""}" id="u${u.uid}" onclick="onUnitClick(${u.uid})" title="${d.skill.name}：${d.skill.desc}\n${d.passive.name}：${d.passive.desc}">
     <div class="uav">${avatar(u.id,u.flags&&u.flags.p2)}</div>
     ${u.cd>0&&u.alive?`<div class="cdbadge">✦${u.cd}</div>`:""}
-    <div class="uname">${cl?`<span title="${cl.name}：${cl.desc}">${cl.icon}</span>`:""}${u.ally?"🤝":""}${u.name}${u.br?`<span class="brkname">突破${u.br}</span>`:""}</div>
+    <div class="uname">${cl?`<span title="${cl.name}：${cl.desc}">${cl.icon}</span>`:""}${u.ally?"🤝":""}${B.coop&&u.pl?`<span class="tag" style="margin-right:3px">${u.pl===(B.guest?"B":"A")?"我":"隊友"}</span>`:""}${u.name}${u.br?`<span class="brkname">突破${u.br}</span>`:""}</div>
     <div class="hpbar ${pct>50?"hi":""}"><i style="width:${pct}%"></i><span>${Math.max(0,u.hp)}/${u.maxHp}</span></div>
     <div class="ustat">⚔${stat(u,"atk")} 🛡${stat(u,"def")} 💨${stat(u,"spd")}</div>
     <div class="ust">${st.join(" ")}</div></div>`;
@@ -3516,20 +3516,23 @@ function netFail(e){console.error(e);toast("連線失敗："+(e&&e.message||e));
 async function hostRoom(mode){
   if(NET)return;
   if(mode==="own"&&!SAVE.team.length){toast("先到「隊伍」編好至少 1 名角色");return;}
+  if(mode==="coop"&&!Object.keys(SAVE.owned).length){toast("還沒有角色");return;}
+  const md=mode==="own"||mode==="coop"?mode:"std";
   NET={status:"connecting"};render();
   try{
     const db=await fbDb();let code=null,ref=null;
     for(let i=0;i<5&&!code;i++){
       const c=genCode(),r=db.ref("rooms/"+c);
-      const tx=await r.transaction(cur=>cur?undefined:{t:Date.now(),m:mode==="own"?"own":"std"});
+      const tx=await r.transaction(cur=>cur?undefined:{t:Date.now(),m:md});
       if(tx.committed){code=c;ref=r;}
     }
     if(!code)throw new Error("無法建立房間");
     ref.onDisconnect().remove();
-    NET={ref,code,side:"A",status:"room",gone:false,mode:mode==="own"?"own":"std"};
+    NET={ref,code,side:"A",status:"room",gone:false,mode:md};
     DUEL={phase:"lobby",step:0,picks:{A:[],B:[]},online:true,own:{}};
-    ref.child("guest").on("value",s=>{if(s.val()&&DUEL&&DUEL.phase==="lobby"){DUEL.phase=NET.mode==="own"?"own":"draft";SFX.sr();toast("對手加入了！");render();}});
-    if(NET.mode==="own")ref.child("own").on("value",onOwn);
+    if(md==="coop")coopInit();
+    ref.child("guest").on("value",s=>{if(s.val()&&DUEL&&DUEL.phase==="lobby"){DUEL.phase=isOwnMode(NET.mode)?"own":"draft";SFX.sr();toast(NET.mode==="coop"?"隊友加入了！":"對手加入了！");render();}});
+    if(isOwnMode(NET.mode))ref.child("own").on("value",onOwn);
     ref.child("gl").on("value",s=>{if(s.val())opponentLeft();});
     ref.child("draft").on("value",onDraft);
     ref.child("act").on("value",s=>{const v=s.val();if(v&&CUR_B&&CUR_B.remoteResolve)CUR_B.remoteResolve(v);});
@@ -3546,12 +3549,14 @@ async function joinRoom(code){
     if(!(await ref.child("t").once("value")).exists())throw new Error("找不到房間 "+code);
     const tx=await ref.child("guest").transaction(cur=>cur?undefined:Date.now());
     if(!tx.committed)throw new Error("房間已經有人了");
-    const mode=(await ref.child("m").once("value")).val()==="own"?"own":"std";
+    const mv=(await ref.child("m").once("value")).val(),mode=mv==="own"||mv==="coop"?mv:"std";
     if(mode==="own"&&!SAVE.team.length){ref.child("guest").remove();throw new Error("這是養成賽，請先到「隊伍」編好角色");}
+    if(mode==="coop"&&!Object.keys(SAVE.owned).length){ref.child("guest").remove();throw new Error("還沒有角色");}
     ref.child("gl").onDisconnect().set(true);
     NET={ref,code,side:"B",status:"room",gone:false,mode};
-    DUEL={phase:mode==="own"?"own":"draft",step:0,picks:{A:[],B:[]},online:true,own:{}};
-    if(mode==="own")ref.child("own").on("value",onOwn);
+    DUEL={phase:isOwnMode(mode)?"own":"draft",step:0,picks:{A:[],B:[]},online:true,own:{}};
+    if(mode==="coop")coopInit();
+    if(isOwnMode(mode))ref.child("own").on("value",onOwn);
     ref.child("t").on("value",s=>{if(!s.exists())hostLeft();});
     ref.child("draft").on("value",onDraft);
     ref.child("snap").on("value",s=>applySnap(s.val()));
@@ -3559,11 +3564,12 @@ async function joinRoom(code){
   }catch(e){NET=null;netFail(e);}
 }
 // ---- 養成賽：雙方帶自己的隊伍（等級、星數、突破、裝備都算進去），不給任何獎勵 ----
-function myOwnSpec(){return SAVE.team.slice(0,3).map(id=>{const u=teamUnit(id);u.gx=u.gx||{};return u;});}
+const isOwnMode=m=>m==="own"||m==="coop";
+function myOwnSpec(){return (NET&&NET.mode==="coop"?DUEL.coopPick:SAVE.team.slice(0,3)).map(id=>{const u=teamUnit(id);u.gx=u.gx||{};return u;});}
 // 房主不信任挑戰者送來的數字：只收合理範圍內的值
-function sanOwn(arr){
+function sanOwn(arr,max=3){
   const cl=(v,a,b)=>Math.min(b,Math.max(a,Number.isFinite(+v)?+v:a)),seen=new Set(),out=[];
-  Object.values(arr||{}).slice(0,3).forEach(x=>{
+  Object.values(arr||{}).slice(0,max).forEach(x=>{
     if(!x||!CARDS[x.id]||seen.has(x.id))return;seen.add(x.id);
     const stars=Math.round(cl(x.stars,1,5)),br=Math.round(cl(x.br,0,BR_MAX)),scale=cl(x.scale,1,lvMul(LV_MAX)),g=x.gx||{};
     const base=cardStats(x.id,stars,scale,br);
@@ -3576,13 +3582,47 @@ function sanOwn(arr){
 function onOwn(s){
   if(!DUEL||!DUEL.online||!NET)return;
   const v=s.val()||{};DUEL.own={A:v.A?Object.values(v.A):null,B:v.B?Object.values(v.B):null};
+  DUEL.ownOrder=DUEL.ownOrder||[];["A","B"].forEach(k=>{if(DUEL.own[k]&&!DUEL.ownOrder.includes(k))DUEL.ownOrder.push(k);}); // 誰先按準備，同一角色就算誰的
   if(VIEW==="duel")render();
-  if(NET.side==="A"&&DUEL.own.A&&DUEL.own.B&&!DUEL.started)setTimeout(startOwnBattle,900);
+  if(NET.side==="A"&&DUEL.own.A&&DUEL.own.B&&!DUEL.started)setTimeout(NET.mode==="coop"?startCoopBattle:startOwnBattle,900);
 }
 function readyOwn(){
   if(!NET||!NET.ref||DUEL.ownReady)return;
-  if(!SAVE.team.length){toast("先到「隊伍」編好角色");return;}
+  if(NET.mode==="coop"){
+    const mate=DUEL.own&&DUEL.own[NET.side==="A"?"B":"A"],taken=mate?mate.map(x=>x.id):[];
+    DUEL.coopPick=DUEL.coopPick.filter(id=>!taken.includes(id));
+    if(!DUEL.coopPick.length){toast("至少要選 1 名角色");return;}
+  }else if(!SAVE.team.length){toast("先到「隊伍」編好角色");return;}
   DUEL.ownReady=true;NET.ref.child("own/"+NET.side).set(myOwnSpec()).catch(netFail);SFX.click();render();
+}
+// ---- 合作討伐：兩個帳號各帶 4 名角色，一起打偽永夜帝王；同一角色先按準備的人先用，目前不掉落裝備 ----
+const COOP_N=4;
+function coopInit(){
+  const ids=Object.keys(SAVE.owned).sort((a,b)=>R_ORDER[CARDS[a].r]-R_ORDER[CARDS[b].r]||lvOf(b)-lvOf(a));
+  DUEL.coopPick=SAVE.team.filter(id=>SAVE.owned[id]).slice(0,COOP_N);
+  ids.forEach(id=>{if(DUEL.coopPick.length<COOP_N&&!DUEL.coopPick.includes(id))DUEL.coopPick.push(id);});
+}
+function coopToggle(id){
+  if(DUEL.ownReady)return;
+  const p=DUEL.coopPick,i=p.indexOf(id);
+  if(i>=0)p.splice(i,1);else if(p.length<COOP_N)p.push(id);else{toast(`最多帶 ${COOP_N} 名`);return;}
+  SFX.click();render();
+}
+function startCoopBattle(){
+  if(!NET||!DUEL||DUEL.started)return;
+  const order=DUEL.ownOrder&&DUEL.ownOrder.length===2?DUEL.ownOrder:["A","B"],seen=new Set(),dup=[],units=[];
+  order.forEach(side=>sanOwn(DUEL.own[side],COOP_N).forEach(u=>{
+    if(seen.has(u.id)){dup.push(CARDS[u.id].name);return;}
+    seen.add(u.id);units.push({...u,pl:side});
+  }));
+  if(!units.some(u=>u.pl==="A")||!units.some(u=>u.pl==="B")){toast("隊友的隊伍資料異常");leaveOnline();return;}
+  DUEL.started=true;DUEL.phase="battle";
+  const M=MONSTERS.fakenight;
+  startBattle({title:"合作討伐・偽永夜帝王 · 房間 "+NET.code,home:"duel",maxRound:200,coop:true,ctrl:{A:"human",B:"ai"},labels:{A:"我方",B:"偽王"},online:NET,
+    A:units,B:[{id:"fakenight",stars:1,gx:M.gx}].concat([0,1,2,3].map(()=>({id:"fakenight_m",stars:1,gx:BOSS_MINION.fakenight.gx||{}}))),
+    intro:`「${M.quote}」（偽夜行者 ×4 站到了他的身後）${dup.length?`（${dup.join("、")} 已被先準備的玩家帶上場，後面的玩家不能重複上場）`:""}　⚠ 目前是測試階段，打贏也不會掉落裝備。`,
+    resultNote:B=>B.over==="A"?"偽永夜帝王倒下了。（測試階段：沒有掉落裝備）":"偽王太強了……",
+    onEnd(){leaveOnline();}});
 }
 function startOwnBattle(){
   if(!NET||!DUEL||DUEL.started)return;
@@ -3645,10 +3685,10 @@ function pushSnap(B){
   if(SNAP_T||!NET||!NET.ref)return;
   SNAP_T=setTimeout(()=>{
     SNAP_T=null;if(!NET||!NET.ref)return;
-    NET.ref.child("snap").set({title:B.title,round:B.round,over:B.over||"",active:B.active?B.active.uid:0,wall:B.wall,
+    NET.ref.child("snap").set({title:B.title,coop:B.coop?1:0,round:B.round,over:B.over||"",active:B.active?B.active.uid:0,wall:B.wall,
       waitUid:B.rwait?B.rwait.uid:0,waitSeq:B.rwait?B.rwait.seq:0,log:B.log.slice(-40),
       units:B.units.map(u=>({uid:u.uid,id:u.id,name:u.name,side:u.side,stars:u.stars,maxHp:u.maxHp,hp:u.hp,atk:u.atk,def:u.def,spd:u.spd,
-        cd:u.cd,buffs:u.buffs,st:u.st,perm:u.perm,alive:u.alive,ally:u.ally}))
+        cd:u.cd,buffs:u.buffs,st:u.st,perm:u.perm,alive:u.alive,ally:u.ally,pl:u.pl||"",p2:u.flags.p2?1:0,fr:u.flags.frenzy?1:0}))
     }).catch(()=>{});
   },80);
 }
@@ -3664,9 +3704,10 @@ function applySnap(s){
   if(!s||!NET||NET.side!=="B")return;
   const prev=CUR_B&&CUR_B.guest?CUR_B:null;
   // Firebase 不存空陣列／空物件，要補回預設值
-  const units=(s.units||[]).map(u=>Object.assign(u,{buffs:u.buffs||[],st:u.st||{},perm:u.perm||{},flags:{}}));
-  const B=prev||{guest:true,ctrl:{A:"remote",B:"human"},labels:{A:"對手",B:"你"},mySide:"B",items:null,flags:{},done:false,online:NET,
-    cfg:{onEnd:()=>leaveOnline()}};
+  const units=(s.units||[]).map(u=>Object.assign(u,{buffs:u.buffs||[],st:u.st||{},perm:u.perm||{},flags:{p2:u.p2||0,frenzy:u.fr||0}}));
+  const B=prev||(s.coop?{guest:true,coop:true,ctrl:{A:"remote",B:"ai"},labels:{A:"我方",B:"偽王"},mySide:"A",items:null,flags:{},done:false,online:NET,
+    cfg:{onEnd:()=>leaveOnline()}}:{guest:true,ctrl:{A:"remote",B:"human"},labels:{A:"對手",B:"你"},mySide:"B",items:null,flags:{},done:false,online:NET,
+    cfg:{onEnd:()=>leaveOnline()}});
   const diffs=[];
   if(prev)units.forEach(u=>{const o=prev.units.find(x=>x.uid===u.uid);if(o&&o.hp!==u.hp)diffs.push([u,u.hp-o.hp]);});
   Object.assign(B,{title:s.title,round:s.round,units,log:s.log||[],wall:s.wall||{},over:s.over||null});
@@ -3681,7 +3722,7 @@ function applySnap(s){
   if(B.done)return;
   VIEW="battle";render();
   diffs.forEach(([u,d])=>{fx(B,u,(d>0?"+":"")+d,d>0?"heal":"dmg");d>0?SFX.heal():SFX.hit();});
-  if(B.over&&!B.overSfx){B.overSfx=1;B.over==="B"?SFX.win():SFX.lose();}
+  if(B.over&&!B.overSfx){B.overSfx=1;B.over===B.mySide?SFX.win():SFX.lose();}
 }
 function sendAct(B,seq,a){
   B.sentSeq=seq;
@@ -3710,12 +3751,13 @@ function copyLink(l){
 function viewOnline(){
   if(!NET)return `<div class="panel"><p style="margin-top:0">和朋友在不同裝置上連線對打：一人建立房間，把房號或邀請連結傳給對方。</p>
     <div class="row"><button class="pri" onclick="hostRoom()">🏠 建立房間（標準・3★ 選角）</button>
-      <button class="gold" onclick="hostRoom('own')">🏠 建立房間（養成賽・帶自己的隊伍）</button></div>
+      <button class="gold" onclick="hostRoom('own')">🏠 建立房間（養成賽・帶自己的隊伍）</button>
+      <button class="gold" onclick="hostRoom('coop')">🏠 建立房間（合作討伐・偽永夜帝王）</button></div>
     <h3>加入房間</h3>
     <div class="row"><input id="joinCode" maxlength="5" placeholder="5碼房號" value="${JOIN_CODE}" autocomplete="off"
       style="font:inherit;font-size:18px;letter-spacing:4px;text-transform:uppercase;width:150px;padding:6px 10px;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px">
     <button class="gold" onclick="joinRoom($('#joinCode').value)">加入</button></div>
-    <p class="dim small">標準：雙方都以 3★ 參戰，蛇形選角。養成賽：雙方帶自己的隊伍（等級、星數、突破、裝備都算），沒有公平限制，也沒有獎勵；加入房間時會自動判斷是哪種。房主的裝置負責計算戰鬥：房主關掉網頁，對戰就結束；挑戰者斷線或 60 秒沒動作，改由 AI 代打。</p></div>`;
+    <p class="dim small">標準：雙方都以 3★ 參戰，蛇形選角。養成賽：雙方帶自己的隊伍（等級、星數、突破、裝備都算），沒有公平限制，也沒有獎勵；加入房間時會自動判斷是哪種。合作討伐：兩人各帶 4 名角色，一起打偽永夜帝王（測試階段，不掉落裝備）。房主的裝置負責計算戰鬥：房主關掉網頁，對戰就結束；挑戰者斷線或 60 秒沒動作，改由 AI 代打。</p></div>`;
   if(NET.status==="connecting")return `<div class="panel">🌐 連線中……</div>`;
   const leave=`<button onclick="leaveOnline()">離開房間</button>`;
   if(DUEL.phase==="lobby"){
@@ -3724,7 +3766,19 @@ function viewOnline(){
       <div style="font-size:44px;font-weight:900;letter-spacing:10px;color:var(--gold)">${NET.code}</div>
       <div class="small dim" style="word-break:break-all">${link}</div>
       <div class="row" style="justify-content:center;margin-top:10px"><button class="gold" onclick="copyLink('${link}')">📋 複製邀請連結</button>${leave}</div>
-      <p class="dim">等待對手加入……</p></div>`;
+      <p class="dim">${NET.mode==="coop"?"等待隊友加入……":"等待對手加入……"}</p></div>`;
+  }
+  if(NET.mode==="coop"){
+    const op=NET.side==="A"?"B":"A",mate=DUEL.own&&DUEL.own[op],taken=mate?mate.map(x=>x.id):[],pick=DUEL.coopPick||[];
+    const ids=Object.keys(SAVE.owned).sort((a,b)=>R_ORDER[CARDS[a].r]-R_ORDER[CARDS[b].r]||lvOf(b)-lvOf(a));
+    return `<div class="row"><span class="dim">房間 ${NET.code}・合作討伐：偽永夜帝王</span><span style="margin-left:auto">${leave}</span></div>
+      <div class="panel" style="border-color:var(--gold)">⚠ <b>目前是測試階段，打贏偽永夜帝王不會掉落裝備。</b></div>
+      <h3>你要帶的角色（${pick.length}／${COOP_N}）</h3>
+      <div class="cardgrid">${ids.map(id=>{const c=CARDS[id],on=pick.includes(id),tk=taken.includes(id);
+        return `<div class="ccard ${c.r} ${tk?"locked":""}" style="${on?"outline:3px solid var(--gold)":tk||DUEL.ownReady?"opacity:.5":""}" onclick="${tk?"":`coopToggle('${id}')`}"><div class="av">${avatar(id)}</div><div class="nm">${c.name}</div><div class="small">Lv.${lvOf(id)}${tk?"・隊友已選":""}</div></div>`;}).join("")}</div>
+      <h3>隊友</h3>${mate?`<p class="dim">隊友已準備（${mate.length} 名）。</p>`:`<p class="dim">隊友還在準備……</p>`}
+      <div class="row" style="margin-top:12px">${DUEL.ownReady?`<span class="dim">已準備，等隊友……</span>`:`<button class="pri" onclick="readyOwn()">✅ 準備好了</button>`}</div>
+      <p class="dim small">各帶最多 ${COOP_N} 名（等級、星數、突破、裝備都算）。同一角色只能一人帶，先按準備的先用。你只操作自己的角色，隊友操作他的；準備後就不能換人。房主關掉網頁，戰鬥就結束；隊友斷線或 60 秒沒動作，改由 AI 代打。</p>`;
   }
   if(DUEL.phase==="own"||(NET.mode==="own"&&DUEL.phase==="battle")){
     const me=NET.side,op=me==="A"?"B":"A",mine=myOwnSpec(),theirs=DUEL.own&&DUEL.own[op];
@@ -3799,6 +3853,10 @@ Object.assign(MONSTERS,{
       use(B,u){blog(B,"⛓ 「遊戲結束。」","bad");foes(B,u).forEach(t=>{hit(B,u,t,u.flags.p2?1.6:1.2,{noSpread:true});if(u.flags.p2&&t.alive&&rnd()<.3)stun(B,t,1);});}},
     passive:{name:"最後的勝者",desc:"受到的傷害降低25%；暴擊率+15%、吸血15%。｜吸血減免：玩家對自己造成傷害時，吸血效果減少 70%。｜激動模式（面對 5 人以上的隊伍時啟動）：單體攻擊擴散 20%，技能傷害 +10%，普通攻擊 +10%。"}}
 });
+// 偽永夜帝王：雙帳號合作討伐專用（不在 BOSS_LIST 裡，只能從「網路對戰」開合作房間打）。素質比真王高，圖片是永夜帝王調暗的版本（images/bosses/fakenight_1／2.webp）
+MONSTERS.fakenight={...MONSTERS.nightemperor,name:"偽永夜帝王", // 目前素質與永夜帝王相同（生命、攻擊、防禦、速度都沿用）
+  quote:"你以為我是影子？是你們，一直活在我的影子裡。",
+  skill:{...MONSTERS.nightemperor.skill,name:"偽．永夜降臨"}};
 // 支線魔王的小弟：命運裁決者、死神代行者、深淵君王、永夜帝王、天命霸主、終焉行者各帶兩名；生命、攻擊、防禦、速度都是魔王的 1/3
 const BOSS_MINION={
   fatejudge:{name:"命運書記",emoji:"📜",drp:.1,
@@ -3820,6 +3878,7 @@ const BOSS_MINION={
     skill:{name:"終焉低語",cd:3,t:"none",kind:"dmg",desc:"對全體敵人各造成0.6倍攻擊傷害，每人20%機率暈眩1回合。",use(B,u){blog(B,"🕯️ 信徒們低聲吟誦：「終焉將至。」","bad");foes(B,u).forEach(t=>{hit(B,u,t,.6);if(t.alive&&rnd()<.2)stun(B,t,1);});}},
     passive:{name:"殉道者",desc:"每回合開始恢復3%最大生命。"}}
 };
+BOSS_MINION.fakenight={...BOSS_MINION.nightemperor,name:"偽夜行者"}; // 偽永夜帝王帶 4 隻（見 startCoopBattle），素質同樣是偽王的 1/3
 Object.keys(BOSS_MINION).forEach(k=>{const M=MONSTERS[k];
   MONSTERS[k+"_m"]={...BOSS_MINION[k],r:"R",pic:true, // 圖放在 images/monsters/{魔王代號}_m.webp，沒有圖會自動退回表情符號
     hp:Math.max(1,Math.round(M.hp/3)),atk:Math.max(1,Math.round(M.atk/3)),def:Math.round(M.def/3),spd:Math.max(1,Math.round(M.spd/3)),minionOf:k};});
@@ -4901,6 +4960,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-10-30",t:["新增「合作討伐」（測試階段）：到「網路對戰」建立合作房間，兩個帳號各帶 4 名角色一起打「偽永夜帝王」（調暗的永夜帝王，目前素質與永夜帝王相同，帶 4 隻偽夜行者）；同一角色只能一人帶，先按準備的先用；目前打贏不會掉落裝備"]},
   {d:"2026-10-30",t:["裝備欄的排序新增「品質%」：依每件裝備的品質浮動百分比排序（同種裝備數值強弱一目了然），裝備卡片上也直接顯示品質%；品質範圍與詞條數值表可在「📖 裝備圖鑑」查看"]},
   {d:"2026-10-30",t:["角色頁新增「🔄 重置養成」：可以把練過的角色等級重置回 Lv.1、突破歸零（不退還經驗與突破石，星數不變，要降星請用「降 1 星」），重置並降到 2★ 以下後就能拿去合成；隊伍中、遠征中、劇情角色不能重置"]},
   {d:"2026-10-29",t:["新增造型試穿：主頁可免費領取「金色光輪」「櫻花特效」試用 3 天，到角色頁替每名角色各自選擇要穿的造型；純外觀，不影響能力，到期或活動結束後自動回收，可在角色頁關閉特效動畫","統一全部角色、怪物與魔王的技能說明寫法（對1名敵人／對全體敵人各造成X倍攻擊傷害、恢復、持續回合等用語一致），並移除與介面重複的「冷卻N回合」","修正技能說明：暗影突襲與長跑補註「無視防禦、固定傷害的攻擊閃不掉」，暗影突襲改為無視「防禦架勢」、幸運兒吉星高照寫清楚是1倍傷害必定暴擊、橡膠人隔空取物改成雙方攻擊增減、拾荒者補上垃圾堆補給+2","合成時重複卡也算材料：每名角色的份數＝星數＋重複卡張數（例如 1★ 加 2 張重複卡算 3 份），先扣重複卡再扣星數，不會再把重複卡自動換成金幣；手動合成與一鍵合成都適用","放寬「練過」的判定：改成 3★ 以上、Lv.50 以上或突破過才算，有重複卡、2★ 以下、Lv.50 以下的角色可以被一鍵合成與一鍵遣散；Q&A、新手教學與提示同步更新","一鍵合成材料不足時，提示改成「不夠 6 張」，並說明隊伍中、遠征中、練過的角色不算"]},

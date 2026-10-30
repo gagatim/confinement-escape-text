@@ -1927,11 +1927,31 @@ function sellDup(id){
 }
 function sellHtml(id){
   const o=SAVE.owned[id],p=SELL_PRICE[CARDS[id].r],why=sellBlock(id);
-  return `<div class="sk"><b>💰 遣散</b> <span class="dim small">每 1 星可換 🪙${p}</span>
+  const rs=resetBlock(id);
+  return `<div class="sk"><b>🔄 重置養成</b> <span class="dim small">等級回 Lv.1、突破歸零（不退還）</span>
+    <div class="row" style="margin-top:6px">${rs?`<span class="small dim">${rs}</span>`:(lvOf(id)>1||brOf(id)?`<button class="mini" onclick="confirmReset('${id}')">重置等級／突破</button>`:`<span class="small dim">已是 Lv.1、未突破</span>`)}</div></div>
+    <div class="sk"><b>💰 遣散</b> <span class="dim small">每 1 星可換 🪙${p}</span>
     ${why?`<div class="dim small">${why}</div>`:`<div class="row" style="margin-top:6px">
       ${o.dup?`<button class="mini" onclick="sellDup('${id}')">遣散 1 張重複卡（🪙+${p}${SHARD_SELL[CARDS[id].r]?` 🧩+${SHARD_SELL[CARDS[id].r]}`:""}）</button>`:""}
       ${o.stars>1?`<button class="mini" onclick="sellCard('${id}',1)">降 1 星（🪙+${p}${SHARD_SELL[CARDS[id].r]?` 🧩+${SHARD_SELL[CARDS[id].r]}`:""}）</button>`:""}
       ${trained(id)?`<span class="small dim">已練過，不能整張遣散</span>`:`<button class="mini" onclick="confirmSell('${id}')">全部遣散（🪙+${p*cardWorth(id)}${SHARD_SELL[CARDS[id].r]?` 🧩+${SHARD_SELL[CARDS[id].r]*cardWorth(id)}`:""}）</button>`}</div>`}</div>`;
+}
+// 重置養成：等級回到 Lv.1、經驗清空、突破歸零（不退任何東西）；星數請用「降星」，這樣練過的卡就能拿去合成
+function resetBlock(id){
+  if(storyOn(id))return "劇情角色，無法重置";
+  if(SAVE.team.includes(id))return "在出戰隊伍中，先移出隊伍才能重置";
+  if(SAVE.run&&SAVE.run.party.some(m=>!m.ally&&m.id===id))return "正在遠征中，結束後才能重置";
+  return "";
+}
+function confirmReset(id){
+  const o=SAVE.owned[id];
+  openModal(`<h3>重置 ${CARDS[id].name}？</h3><p class="dim">等級 Lv.${lvOf(id)} 會回到 Lv.1、經驗清空${brOf(id)?`、突破 ${brOf(id)} 歸零`:""}。<b>不會退還任何東西</b>（經驗、突破石都不退），星數（${o.stars}★）不變；要降星請用「降 1 星」。重置後星數 2★ 以下就不算練過，可以拿去合成。裝備不受影響，但等級不夠的裝備會暫時失效。</p>
+    <div class="row"><button class="pri" onclick="resetCard('${id}')">重置</button><button onclick="showCard('${id}')">取消</button></div>`);
+}
+function resetCard(id){
+  const o=SAVE.owned[id];if(!o||resetBlock(id))return;
+  o.lv=1;o.exp=0;delete o.br;
+  save();SFX.click();toast(`${CARDS[id].name} 已重置為 Lv.1`);showCard(id);render();
 }
 function sellCard(id,n){
   const o=SAVE.owned[id];if(!o||sellBlock(id))return;
@@ -4880,6 +4900,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-10-30",t:["角色頁新增「🔄 重置養成」：可以把練過的角色等級重置回 Lv.1、突破歸零（不退還經驗與突破石，星數不變，要降星請用「降 1 星」），重置並降到 2★ 以下後就能拿去合成；隊伍中、遠征中、劇情角色不能重置"]},
   {d:"2026-10-29",t:["新增造型試穿：主頁可免費領取「金色光輪」「櫻花特效」試用 3 天，到角色頁替每名角色各自選擇要穿的造型；純外觀，不影響能力，到期或活動結束後自動回收，可在角色頁關閉特效動畫","統一全部角色、怪物與魔王的技能說明寫法（對1名敵人／對全體敵人各造成X倍攻擊傷害、恢復、持續回合等用語一致），並移除與介面重複的「冷卻N回合」","修正技能說明：暗影突襲與長跑補註「無視防禦、固定傷害的攻擊閃不掉」，暗影突襲改為無視「防禦架勢」、幸運兒吉星高照寫清楚是1倍傷害必定暴擊、橡膠人隔空取物改成雙方攻擊增減、拾荒者補上垃圾堆補給+2","合成時重複卡也算材料：每名角色的份數＝星數＋重複卡張數（例如 1★ 加 2 張重複卡算 3 份），先扣重複卡再扣星數，不會再把重複卡自動換成金幣；手動合成與一鍵合成都適用","放寬「練過」的判定：改成 3★ 以上、Lv.50 以上或突破過才算，有重複卡、2★ 以下、Lv.50 以下的角色可以被一鍵合成與一鍵遣散；Q&A、新手教學與提示同步更新","一鍵合成材料不足時，提示改成「不夠 6 張」，並說明隊伍中、遠征中、練過的角色不算"]},
   {d:"2026-10-27",t:["Q&A 新增「手機玩到一半，想換電腦繼續玩怎麼辦？」，說明用 👤 帳號雲端存檔換裝置接關的步驟與注意事項","「一鍵遣散 R 卡」不再遣散練過的 R 卡：升過星、升過等級、有重複卡或突破過的都會保留，只遣散 1★ Lv.1 的；「一鍵合成」也一樣，練過的角色不會被當材料","練過的角色（升過星、升過等級、有重複卡或突破過）不能整張遣散、合成或熔煉掉，不會消失；降星與遣散重複卡仍可以；Q&A 與新手教學也補上說明"]},
   {d:"2026-10-27",t:["雲端存檔改成保留多份：覆蓋雲端前會把舊的雲端存檔留一份（最多 5 份、至少間隔 30 分鐘），在「帳號」裡的「🕘 雲端歷史存檔」可以還原，每份都會標示遊戲時間","上傳存檔前會比較遊戲時間：如果這台裝置的存檔比雲端短（可能是舊存檔），會先暫停上傳並跳出警告，由你決定要不要覆蓋；還原遊戲時間較短的歷史存檔也會先警告","修正雲端存檔：開啟遊戲時不再把存檔時間更新成「現在」，避免舊裝置上的舊存檔被當成比較新，開機自動同步時蓋掉雲端的新進度"]},

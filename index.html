@@ -3620,10 +3620,13 @@ function startCoopBattle(){
   const M=MONSTERS.fakenight;
   startBattle({title:"合作討伐・偽永夜帝王 · 房間 "+NET.code,home:"duel",maxRound:200,coop:true,ctrl:{A:"human",B:"ai"},labels:{A:"我方",B:"偽王"},online:NET,
     A:units,B:[{id:"fakenight",stars:1,gx:M.gx}].concat([0,1,2,3].map(()=>({id:"fakenight_m",stars:1,gx:BOSS_MINION.fakenight.gx||{}}))),
-    intro:`「${M.quote}」（偽夜行者 ×4 站到了他的身後）${dup.length?`（${dup.join("、")} 已被先準備的玩家帶上場，後面的玩家不能重複上場）`:""}　⚠ 目前是測試階段，打贏也不會掉落裝備。`,
-    resultNote:B=>B.over==="A"?"偽永夜帝王倒下了。（測試階段：沒有掉落裝備）":"偽王太強了……",
-    onEnd(){leaveOnline();}});
+    intro:`「${M.quote}」（偽夜行者 ×4 站到了他的身後）${dup.length?`（${dup.join("、")} 已被先準備的玩家帶上場，後面的玩家不能重複上場）`:""}　⚠ 目前是測試階段，打贏不會掉落裝備，只有 🪙${COOP_GOLD}。`,
+    resultNote:B=>B.over==="A"?`偽永夜帝王倒下了。獲得 🪙${COOP_GOLD}（測試階段：沒有掉落裝備）`:"偽王太強了……",
+    onEnd(win){coopReward(win);leaveOnline();}});
 }
+// 合作討伐獎勵：打贏每人 🪙300，目前不掉落裝備。房主與隊友各自在自己的裝置領取（結算按鈕只會觸發一次）
+const COOP_GOLD=300;
+function coopReward(win){if(!win)return;SAVE.gold+=COOP_GOLD;save();toast(`🪙+${COOP_GOLD}（合作討伐獎勵）`);}
 function startOwnBattle(){
   if(!NET||!DUEL||DUEL.started)return;
   const a=sanOwn(DUEL.own.A),b=sanOwn(DUEL.own.B);
@@ -3706,7 +3709,7 @@ function applySnap(s){
   // Firebase 不存空陣列／空物件，要補回預設值
   const units=(s.units||[]).map(u=>Object.assign(u,{buffs:u.buffs||[],st:u.st||{},perm:u.perm||{},flags:{p2:u.p2||0,frenzy:u.fr||0}}));
   const B=prev||(s.coop?{guest:true,coop:true,ctrl:{A:"remote",B:"ai"},labels:{A:"我方",B:"偽王"},mySide:"A",items:null,flags:{},done:false,online:NET,
-    cfg:{onEnd:()=>leaveOnline()}}:{guest:true,ctrl:{A:"remote",B:"human"},labels:{A:"對手",B:"你"},mySide:"B",items:null,flags:{},done:false,online:NET,
+    cfg:{onEnd:win=>{coopReward(win);leaveOnline();}}}:{guest:true,ctrl:{A:"remote",B:"human"},labels:{A:"對手",B:"你"},mySide:"B",items:null,flags:{},done:false,online:NET,
     cfg:{onEnd:()=>leaveOnline()}});
   const diffs=[];
   if(prev)units.forEach(u=>{const o=prev.units.find(x=>x.uid===u.uid);if(o&&o.hp!==u.hp)diffs.push([u,u.hp-o.hp]);});
@@ -3772,7 +3775,7 @@ function viewOnline(){
     const op=NET.side==="A"?"B":"A",mate=DUEL.own&&DUEL.own[op],taken=mate?mate.map(x=>x.id):[],pick=DUEL.coopPick||[];
     const ids=Object.keys(SAVE.owned).sort((a,b)=>R_ORDER[CARDS[a].r]-R_ORDER[CARDS[b].r]||lvOf(b)-lvOf(a));
     return `<div class="row"><span class="dim">房間 ${NET.code}・合作討伐：偽永夜帝王</span><span style="margin-left:auto">${leave}</span></div>
-      <div class="panel" style="border-color:var(--gold)">⚠ <b>目前是測試階段，打贏偽永夜帝王不會掉落裝備。</b></div>
+      <div class="panel" style="border-color:var(--gold)">⚠ <b>目前是測試階段，打贏偽永夜帝王不會掉落裝備，只有 🪙${COOP_GOLD} 金幣。</b></div>
       <h3>你要帶的角色（${pick.length}／${COOP_N}）</h3>
       <div class="cardgrid">${ids.map(id=>{const c=CARDS[id],on=pick.includes(id),tk=taken.includes(id);
         return `<div class="ccard ${c.r} ${tk?"locked":""}" style="${on?"outline:3px solid var(--gold)":tk||DUEL.ownReady?"opacity:.5":""}" onclick="${tk?"":`coopToggle('${id}')`}"><div class="av">${avatar(id)}</div><div class="nm">${c.name}</div><div class="small">Lv.${lvOf(id)}${tk?"・隊友已選":""}</div></div>`;}).join("")}</div>
@@ -4960,7 +4963,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
-  {d:"2026-10-30",t:["新增「合作討伐」（測試階段）：到「網路對戰」建立合作房間，兩個帳號各帶 4 名角色一起打「偽永夜帝王」（調暗的永夜帝王，目前素質與永夜帝王相同，帶 4 隻偽夜行者）；同一角色只能一人帶，先按準備的先用；目前打贏不會掉落裝備"]},
+  {d:"2026-10-30",t:["新增「合作討伐」（測試階段）：到「網路對戰」建立合作房間，兩個帳號各帶 4 名角色一起打「偽永夜帝王」（調暗的永夜帝王，目前素質與永夜帝王相同，帶 4 隻偽夜行者）；同一角色只能一人帶，先按準備的先用；目前打贏不會掉落裝備，每人獲得 🪙300 金幣"]},
   {d:"2026-10-30",t:["裝備欄的排序新增「品質%」：依每件裝備的品質浮動百分比排序（同種裝備數值強弱一目了然），裝備卡片上也直接顯示品質%；品質範圍與詞條數值表可在「📖 裝備圖鑑」查看"]},
   {d:"2026-10-30",t:["角色頁新增「🔄 重置養成」：可以把練過的角色等級重置回 Lv.1、突破歸零（不退還經驗與突破石，星數不變，要降星請用「降 1 星」），重置並降到 2★ 以下後就能拿去合成；隊伍中、遠征中、劇情角色不能重置"]},
   {d:"2026-10-29",t:["新增造型試穿：主頁可免費領取「金色光輪」「櫻花特效」試用 3 天，到角色頁替每名角色各自選擇要穿的造型；純外觀，不影響能力，到期或活動結束後自動回收，可在角色頁關閉特效動畫","統一全部角色、怪物與魔王的技能說明寫法（對1名敵人／對全體敵人各造成X倍攻擊傷害、恢復、持續回合等用語一致），並移除與介面重複的「冷卻N回合」","修正技能說明：暗影突襲與長跑補註「無視防禦、固定傷害的攻擊閃不掉」，暗影突襲改為無視「防禦架勢」、幸運兒吉星高照寫清楚是1倍傷害必定暴擊、橡膠人隔空取物改成雙方攻擊增減、拾荒者補上垃圾堆補給+2","合成時重複卡也算材料：每名角色的份數＝星數＋重複卡張數（例如 1★ 加 2 張重複卡算 3 份），先扣重複卡再扣星數，不會再把重複卡自動換成金幣；手動合成與一鍵合成都適用","放寬「練過」的判定：改成 3★ 以上、Lv.50 以上或突破過才算，有重複卡、2★ 以下、Lv.50 以下的角色可以被一鍵合成與一鍵遣散；Q&A、新手教學與提示同步更新","一鍵合成材料不足時，提示改成「不夠 6 張」，並說明隊伍中、遠征中、練過的角色不算"]},

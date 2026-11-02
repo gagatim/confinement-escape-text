@@ -4117,7 +4117,7 @@ const FK={slots:{},tried:false};
 const fkEsc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 async function fkLoad(){
   try{const s=await (await fbDb()).ref("firstKill/"+FK_BOSS).get();FK.slots=s.val()||{};}catch(e){glog("❌FK","讀取首殺榜失敗 "+(e&&e.code||e&&e.message||e));}
-  if(VIEW==="boss")render();
+  if(VIEW==="boss"||VIEW==="ach")render();
 }
 function fkRank(){
   if(ACCT)for(let n=1;n<=FK_SLOTS;n++){const s=FK.slots[n];if(s&&s.uid===ACCT.uid)return n;}
@@ -4149,7 +4149,7 @@ function fkBoardHtml(){
   const medal=["🥇","🥈","🥉"],me=fkRank();
   const rows=[1,2,3].map(n=>{const s=FK.slots[n];
     return `<div class="small" style="margin:3px 0">${medal[n-1]} 第 ${n} 名・${s?`<b>${fkEsc(s.name)}</b> <span class="dim">${new Date(s.t).toLocaleDateString()}</span>`:`<span class="dim">虛位以待</span>`}　<span class="dim">🌟金色攻擊果實 ×${FK_REWARD[n]}</span></div>`;}).join("");
-  return `<div class="panel" style="margin-top:12px"><b>🏅 ${MONSTERS[FK_BOSS].name}首殺榜</b>
+  return `<div class="panel" style="margin-top:12px"><b>🏅 全服首殺榜・${MONSTERS[FK_BOSS].name}</b>
     <p class="dim small" style="margin:4px 0">全服前 3 位擊敗${MONSTERS[FK_BOSS].name}的玩家，可以得到稱號「${FK_TITLE}」、成就和金色攻擊果實。要<b>登入帳號</b>才能搶名額，以名額被搶走的先後排名。</p>
     ${rows}${me?`<div class="small" style="color:var(--green);margin-top:4px">✓ 你是第 ${me} 名</div>`:!ACCT?`<div class="small" style="color:var(--gold);margin-top:4px">登入帳號後打贏才能搶名額</div>`:""}</div>`;
 }
@@ -4159,10 +4159,16 @@ function viewAch(){
   const done=ACH.filter(a=>SAVE.ach&&SAVE.ach[a.id]).length,groups=[...new Set(ACH.map(a=>a.g))];
   SAVE.ach=SAVE.ach||{};
   const list=ACH.filter(a=>!ACH_TAB||a.g===ACH_TAB).sort((a,b)=>(SAVE.ach[a.id]?1:0)-(SAVE.ach[b.id]?1:0)); // 未達成的排前面
+  const tabs=`<div class="filters"><button class="${ACH_TAB?"":"on"}" onclick="ACH_TAB='';render()">全部</button>${groups.map(g=>`<button class="${ACH_TAB===g?"on":""}" onclick="ACH_TAB='${g}';render()">${g}</button>`).join("")}<button class="${ACH_TAB==="global"?"on":""}" onclick="ACH_TAB='global';render()">🌐 全服成就</button></div>`;
+  if(ACH_TAB==="global"){
+    if(!FK.tried){FK.tried=true;fkLoad();}
+    return `<h2>🏆 成就</h2>${tabs}<h3>🌐 全服成就</h3>${fkBoardHtml()}
+      <div class="row" style="margin-top:8px"><button class="mini" onclick="fkLoad()">🔄 重新整理榜單</button></div>`;
+  }
   return `<h2>🏆 成就</h2>
   <div class="panel"><b>已達成 ${done}／${ACH.length}</b><div class="ratebar"><i style="width:${done/ACH.length*100}%"></i></div>
     <span class="dim small">達成時自動發獎勵（金條或突破石）。</span></div>
-  <div class="filters"><button class="${ACH_TAB?"":"on"}" onclick="ACH_TAB='';render()">全部</button>${groups.map(g=>`<button class="${ACH_TAB===g?"on":""}" onclick="ACH_TAB='${g}';render()">${g}</button>`).join("")}</div>
+  ${tabs}
   <div class="achgrid">${list.map(a=>{const ok=SAVE.ach[a.id];let v=0;try{v=a.v(SAVE);}catch(e){}
     return `<div class="achcard ${ok?"done":""}"><div class="ai">${ok?"🏆":"🔒"}</div><div style="flex:1;min-width:0">
       <b>${a.n}</b> <span class="small dim">${a.g}</span><div class="small">${a.d}</div>
@@ -5024,7 +5030,8 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
-  {d:"2026-11-02",t:["新增「深淵君王首殺榜」：全服前 3 位擊敗第 5 位魔王「深淵君王」的玩家（需登入帳號，以搶到名額的先後排名），可得稱號「深淵君王首殺者」、成就，以及 🌟金色攻擊果實（第 1 名 ×2、第 2、3 名各 ×1）；榜單顯示在魔王討伐頁，果實到角色卡使用"]},
+  {d:"2026-11-02",t:["成就頁新增「🌐 全服成就」分頁，顯示「全服首殺榜・深淵君王」前 3 名的玩家帳號（可按「重新整理榜單」更新）"]},
+  {d:"2026-11-02",t:["新增「深淵君王首殺榜」：全服前 3 位擊敗第 5 位魔王「深淵君王」的玩家（需登入帳號，以搶到名額的先後排名），可得稱號「深淵君王首殺者」、成就，以及 🌟金色攻擊果實（第 1 名 ×2、第 2、3 名各 ×1）；榜單顯示在魔王討伐頁，果實到角色卡使用。注意：<b>要先註冊並登入帳號</b>，打贏後遊戲會自動連線上傳紀錄、領取名額；名次以「成功登記名額」的先後為準，所以兩人打贏時間很接近時，網路較慢的人可能被搶先，請在網路穩定時挑戰"]},
   {d:"2026-11-02",t:["裝備新增「頭盔」「戒指」「鞋子」三個部位，目前尚未開放（角色卡與試穿畫面顯示為鎖住的欄位，還沒有對應裝備）"]},
   {d:"2026-11-02",t:["魔王出手時的一般命中螢幕震動幅度調小約一半（暴擊／重擊維持原本的震動）"]},
   {d:"2026-10-30",t:["無盡深淵新增特殊房間「🔥 重鑄爐」：丟 2 件道具重鑄成 1 件隨機新道具，每間最多重鑄 2 次；D20 起火箭筒、霰彈槍更容易出現"]},

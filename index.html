@@ -2836,7 +2836,7 @@ function startTrain(){
 // 遠征頁的獨立專區：連續 10 關，每關 5 顆恐龍蛋；打完一關立刻接下一關（同一場戰鬥，血量不回復）。
 // 獎勵：10 關全過才有 🪙DINO_GOLD，沒有其他掉落物；每人每天最多領 DINO_DAILY 次（用這台裝置的日期計算，跟合作討伐一樣）。
 // 強度：血厚、傷害低。要調整就改下面幾個數字（hp／atk 是第 1 關的基礎值，每關再乘 dinoScale）
-const DINO_WAVES=10,DINO_EGGS=5,DINO_MAXROUND=1000,DINO_PICS=40,DINO_GOLD=200,DINO_DAILY=50;
+const DINO_WAVES=10,DINO_EGGS=5,DINO_MAXROUND=1000,DINO_PICS=40,DINO_GOLD=400,DINO_DAILY=30;
 function dinoLeft(){const c=SAVE.dino;return c&&c.d===coopToday()?Math.max(0,DINO_DAILY-c.n):DINO_DAILY;}
 MONSTERS.dinoegg={name:"恐龍蛋",emoji:"🥚",r:"R",hp:800,atk:3,def:5,spd:3, // 生命 800（原本 80 的 10 倍）；防禦 5（每點讓每次受到的傷害少 0.7，防禦不隨關卡增加）
   skill:{name:"孵化震動",cd:3,t:"enemy",kind:"dmg",desc:"造成1.2倍攻擊傷害。",use(B,u,t){hit(B,u,t,1.2);}},
@@ -5238,6 +5238,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-02",t:["恐龍蛋專區的通關獎勵調整：10 關全部通過可得 🪙400（原本 200），每天最多領 30 次（原本 50 次）"]},
   {d:"2026-11-02",t:["團隊賽 2v2 新增獎勵：你的隊伍獲勝，且戰鬥超過 10 回合，每位獲勝者可得 🪙666，每人每天最多領 10 次（以這台裝置的日期計算）；輸了、平手或 10 回合內就結束都沒有獎勵。獎勵在結算畫面按「繼續」時入帳"]},
   {d:"2026-11-02",t:["恐龍蛋專區的戰鬥新增專屬配樂：JungleXcessive（Tozan，OpenGameArt，CC0），頁尾已補上出處與授權"]},
   {d:"2026-11-02",t:["團隊賽 2v2 修正：①4 人準備好後的等待時間內如果有人離開，不會少一個人硬開打，會等人補上；②出戰角色全部被同隊隊友先帶走的玩家，現在會收到提示、不能按準備（以前會變成旁觀者）"]},

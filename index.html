@@ -234,6 +234,7 @@ b.sA{color:var(--sideA)} b.sB{color:var(--sideB)}
 .gslots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
 .gslot{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:8px;text-align:center;cursor:pointer;font-size:12px;min-height:74px}
 .gslot.has{border-style:solid}
+.gslot.locked{opacity:.45;cursor:not-allowed}
 .gslot .gi{font-size:24px;line-height:1.2}
 .ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .gcard{background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:10px;cursor:pointer;transition:.15s;position:relative}
@@ -995,6 +996,9 @@ const SETS={
 };
 const setKeyOf=base=>GEAR[base].set||GEAR[base].q;
 const SLOTS={weapon:"武器",armor:"防具",acc:"飾品"};
+// 尚未開放的部位：只顯示鎖住的欄位，沒有對應裝備、也不能點；開放時搬進 SLOTS 即可
+const LOCKED_SLOTS={helmet:"頭盔",ring:"戒指",boots:"鞋子"};
+const lockedSlotsHtml=()=>Object.keys(LOCKED_SLOTS).map(sl=>`<div class="gslot locked"><div class="small dim">${LOCKED_SLOTS[sl]}</div><div class="gi">🔒</div><span class="dim small">尚未開放</span></div>`).join("");
 // 有插圖的裝備（images/equipment/{代號}.webp，256×256 透明底）。沒有插圖的（目前只有狗牌）、或圖片載入失敗時，退回用表情符號
 // 裝備箱插圖（images/boxes/{箱子代號}.webp），載入失敗時退回表情符號
 function boxImg(k,cls=""){
@@ -1845,7 +1849,7 @@ function showCard(id){
     <div>${clsTag(id)} <span class="dim small">${CLASSES[c.cls].desc}</span></div>${o?lvBar(id):""}
     <div class="small">❤ ${sv("hp",s.maxHp)}　⚔ ${sv("atk",s.atk)}　🛡 ${sv("def",s.def)}　💨 ${sv("spd",s.spd)}</div>
     ${o?`<div class="gslots">${Object.keys(SLOTS).map(sl=>{const g=gearById(o.eq&&o.eq[sl]);
-      return `<div class="gslot ${g?"has "+GEAR[g.base].q:""}" onclick="openSlot('${id}','${sl}')"><div class="gi">${g?gearImg(g.base):"＋"}</div>${g?`<b class="r${GEAR[g.base].q}">${qTag(GEAR[g.base].q)}${GEAR[g.base].name}${g.lv?" +"+g.lv:""}</b>${lvOk(id,g.base)?"":`<div class="req bad">⚠ 需 Lv.${GEAR_REQ[GEAR[g.base].q]}，未生效</div>`}`:`<span class="dim">${SLOTS[sl]}</span>`}</div>`;}).join("")}</div>
+      return `<div class="gslot ${g?"has "+GEAR[g.base].q:""}" onclick="openSlot('${id}','${sl}')"><div class="gi">${g?gearImg(g.base):"＋"}</div>${g?`<b class="r${GEAR[g.base].q}">${qTag(GEAR[g.base].q)}${GEAR[g.base].name}${g.lv?" +"+g.lv:""}</b>${lvOk(id,g.base)?"":`<div class="req bad">⚠ 需 Lv.${GEAR_REQ[GEAR[g.base].q]}，未生效</div>`}`:`<span class="dim">${SLOTS[sl]}</span>`}</div>`;}).join("")}${lockedSlotsHtml()}</div>
     ${setHtml(id)}${e.crit||e.steal||e.dodge||e.dr?`<div class="gfx">裝備特效：${statStr({crit:e.crit,steal:e.steal,dodge:e.dodge,dr:e.dr})}</div>`:""}`:""}
     </div></div>
     ${skillHtml(c)}
@@ -2482,7 +2486,7 @@ function viewFit(){
   </div>
   <div class="gslots" style="margin-top:10px">${Object.keys(SLOTS).map(sl=>{const g=gearById(eq[sl]);
     return `<div class="gslot ${g?"has "+GEAR[g.base].q:""} ${FIT_SLOT===sl?"fitsel":""}" onclick="fitSlot('${sl}')"><div class="small dim">${SLOTS[sl]}</div>
-      <div class="gi">${g?gearImg(g.base):"＋"}</div>${g?`<b class="r${GEAR[g.base].q}">${qTag(GEAR[g.base].q)}${GEAR[g.base].name}${g.lv?" +"+g.lv:""}</b>${lvOk(id,g.base)?"":`<div class="req bad">需 Lv.${GEAR_REQ[GEAR[g.base].q]}</div>`}`:`<span class="dim small">空</span>`}</div>`;}).join("")}</div>
+      <div class="gi">${g?gearImg(g.base):"＋"}</div>${g?`<b class="r${GEAR[g.base].q}">${qTag(GEAR[g.base].q)}${GEAR[g.base].name}${g.lv?" +"+g.lv:""}</b>${lvOk(id,g.base)?"":`<div class="req bad">需 Lv.${GEAR_REQ[GEAR[g.base].q]}</div>`}`:`<span class="dim small">空</span>`}</div>`;}).join("")}${lockedSlotsHtml()}</div>
   ${setHtml(id)}
   ${eq[FIT_SLOT]?`<div class="row" style="margin-top:6px"><button class="mini" onclick="fitTakeOff('${FIT_SLOT}')">卸下目前的${SLOTS[FIT_SLOT]}</button></div>`:""}
   <h3 style="margin-top:14px">📦 倉庫・${SLOTS[FIT_SLOT]}（${list.length} 件）</h3>${sortBar()}
@@ -4971,6 +4975,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-02",t:["裝備新增「頭盔」「戒指」「鞋子」三個部位，目前尚未開放（角色卡與試穿畫面顯示為鎖住的欄位，還沒有對應裝備）"]},
   {d:"2026-11-02",t:["魔王出手時的一般命中螢幕震動幅度調小約一半（暴擊／重擊維持原本的震動）"]},
   {d:"2026-10-30",t:["無盡深淵新增特殊房間「🔥 重鑄爐」：丟 2 件道具重鑄成 1 件隨機新道具，每間最多重鑄 2 次；D20 起火箭筒、霰彈槍更容易出現"]},
   {d:"2026-10-30",t:["「💧 水塔」改成全員恢復 10% 最大生命（原本是固定 3 點），補給 +2 不變；主線章節與無盡深淵的水塔都一樣"]},

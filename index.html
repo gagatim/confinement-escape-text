@@ -4113,10 +4113,10 @@ function checkAch(){
    名額放在 Firebase 的 firstKill/abyssking/{1,2,3}，用 transaction 搶，每格只能寫一次（規則見 database.rules.json）。
    果實發進存檔（SAVE.gfruits）；稱號以資料庫的名單為準，連不上時才看存檔裡的 SAVE.fk。 */
 const FK_BOSS="abyssking",FK_SLOTS=3,FK_REWARD={1:2,2:1,3:1},FK_TITLE="深淵君王首殺者";
-const FK={slots:{},tried:false};
+const FK={slots:{},tried:false,ok:false,err:false}; // ok：榜單讀到過；err：最近一次讀取失敗（沒網路、測試版等），這時不能顯示成「虛位以待」
 const fkEsc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 async function fkLoad(){
-  try{const s=await (await fbDb()).ref("firstKill/"+FK_BOSS).get();FK.slots=s.val()||{};}catch(e){glog("❌FK","讀取首殺榜失敗 "+(e&&e.code||e&&e.message||e));}
+  try{const s=await (await fbDb()).ref("firstKill/"+FK_BOSS).get();FK.slots=s.val()||{};FK.ok=true;FK.err=false;}catch(e){FK.err=true;glog("❌FK","讀取首殺榜失敗 "+(e&&e.code||e&&e.message||e));}
   if(VIEW==="boss"||VIEW==="ach")render();
 }
 function fkRank(){
@@ -4137,7 +4137,7 @@ async function fkClaim(){
       const r=await ref.child(n).transaction(v=>v===null?{uid:ACCT.uid,name:ACCT.name,t:firebase.database.ServerValue.TIMESTAMP}:undefined);
       if(r.committed){rank=n;fresh=true;}
     }
-    FK.slots=(await ref.get()).val()||{};
+    FK.slots=(await ref.get()).val()||{};FK.ok=true;FK.err=false;
     if(!rank)return "🏅 深淵君王首殺榜的 3 個名額已經被搶走了。";
     SAVE.fk={rank,at:Date.now()};
     if(fresh)SAVE.gfruits.atk+=FK_REWARD[rank];
@@ -4147,7 +4147,8 @@ async function fkClaim(){
 }
 function fkBoardHtml(){
   const medal=["🥇","🥈","🥉"],me=fkRank();
-  const rows=[1,2,3].map(n=>{const s=FK.slots[n];
+  const rows=!FK.ok?`<div class="small dim" style="margin:6px 0">${FK.err?"⚠ 榜單讀取失敗（可能沒有網路，或是測試版不開放），請稍後按「重新整理榜單」再試。":"榜單載入中……"}</div>`
+  :[1,2,3].map(n=>{const s=FK.slots[n];
     return `<div class="small" style="margin:3px 0">${medal[n-1]} 第 ${n} 名・${s?`<b>${fkEsc(s.name)}</b> <span class="dim">${new Date(s.t).toLocaleDateString()}</span>`:`<span class="dim">虛位以待</span>`}　<span class="dim">🌟金色攻擊果實 ×${FK_REWARD[n]}</span></div>`;}).join("");
   return `<div class="panel" style="margin-top:12px"><b>🏅 全服首殺榜・${MONSTERS[FK_BOSS].name}</b>
     <p class="dim small" style="margin:4px 0">全服前 3 位擊敗${MONSTERS[FK_BOSS].name}的玩家，可以得到稱號「${FK_TITLE}」、成就和金色攻擊果實。要<b>登入帳號</b>才能搶名額，以名額被搶走的先後排名。</p>
@@ -5030,6 +5031,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-02",t:["修正首殺榜在沒網路或讀取失敗時，會誤顯示成「虛位以待」的問題（現在會顯示讀取失敗或載入中）"]},
   {d:"2026-11-02",t:["成就頁新增「🌐 全服成就」分頁，顯示「全服首殺榜・深淵君王」前 3 名的玩家帳號（可按「重新整理榜單」更新）"]},
   {d:"2026-11-02",t:["新增「深淵君王首殺榜」：全服前 3 位擊敗第 5 位魔王「深淵君王」的玩家（需登入帳號，以搶到名額的先後排名），可得稱號「深淵君王首殺者」、成就，以及 🌟金色攻擊果實（第 1 名 ×2、第 2、3 名各 ×1）；榜單顯示在魔王討伐頁，果實到角色卡使用。注意：<b>要先註冊並登入帳號</b>，打贏後遊戲會自動連線上傳紀錄、領取名額；名次以「成功登記名額」的先後為準，所以兩人打贏時間很接近時，網路較慢的人可能被搶先，請在網路穩定時挑戰"]},
   {d:"2026-11-02",t:["裝備新增「頭盔」「戒指」「鞋子」三個部位，目前尚未開放（角色卡與試穿畫面顯示為鎖住的欄位，還沒有對應裝備）"]},

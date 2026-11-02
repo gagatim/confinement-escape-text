@@ -3285,7 +3285,7 @@ function unitCard(B,u){
   const d=DEF(u.id),cl=CARDS[u.id]?CLASSES[CARDS[u.id].cls]:null;
   return `<div class="ucard s${u.side} ${CARDS[u.id]?"q-"+CARDS[u.id].r:""} ${d.boss2?"bossu":""} ${u.flags&&u.flags.p2?"p2":""} ${u.flags&&u.flags.frenzy?"frenzy":""} ${u.br?brTier(u.br):""} ${u.alive?"":"dead"} ${B.active===u&&!B.over?"active":""} ${tg?"targetable":""}" id="u${u.uid}" onclick="onUnitClick(${u.uid})" title="${d.skill.name}：${d.skill.desc}\n${d.passive.name}：${d.passive.desc}">
     <div class="uav">${avatar(u.id,u.flags&&u.flags.p2)}</div>
-    ${u.cd>0&&u.alive?`<div class="cdbadge">✦${u.cd}</div>`:""}
+    ${u.cd>0&&u.alive&&SAVE.showCd!==false?`<div class="cdbadge">✦${u.cd}</div>`:""}
     <div class="uname">${cl?`<span title="${cl.name}：${cl.desc}">${cl.icon}</span>`:""}${u.ally?"🤝":""}${B.coop&&u.pl?`<span class="tag" style="margin-right:3px">${u.pl===(B.guest?"B":"A")?"我":"隊友"}</span>`:""}${u.name}${u.br?`<span class="brkname">突破${u.br}</span>`:""}</div>
     <div class="hpbar ${pct>50?"hi":""}"><i style="width:${pct}%"></i><span>${Math.max(0,u.hp)}/${u.maxHp}</span></div>
     <div class="ustat">⚔${stat(u,"atk")} 🛡${stat(u,"def")} 💨${stat(u,"spd")}</div>
@@ -3457,6 +3457,7 @@ function viewBattle(){
   const ctl=B.over?"":`<div class="bctl">
     ${B.ctrl.A==="human"&&B.ctrl.B!=="human"?`<button data-kb="auto" onclick="act('auto')" class="${B.auto?"ok":""}">${B.auto?"自動中":"自動"}</button>`:""}
     ${B.guest?"":`<button data-kb="fast" onclick="CUR_B.fast=!CUR_B.fast;render()" class="${B.fast?"ok":""}">${B.fast?"⏩ 快速":"▶ 正常"}</button>`}
+    <button class="mini ${SAVE.showCd!==false?"ok":""}" data-kb="cd" onclick="SAVE.showCd=SAVE.showCd===false;save();render()" title="顯示或隱藏角色左上角的技能冷卻回合數">✦ 冷卻 ${SAVE.showCd!==false?"開":"關"}</button>
     <button class="mini" data-kb="stuck" onclick="openStuck()" title="畫面卡住時用">🐞 卡住了</button></div>`;
   return `<div class="btop"><div class="ttl">${B.title}　<span class="dim small">第 ${B.round} 回合</span></div></div>
     <div class="side B ${B.units.filter(u=>u.side===op).length>3?"big":""}">${B.units.filter(u=>u.side===op).map(u=>unitCard(B,u)).join("")}</div>
@@ -5081,6 +5082,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-02",t:["戰鬥畫面新增「✦ 冷卻 開／關」按鈕，可以顯示或隱藏角色左上角的技能冷卻回合數（預設開啟，設定會記住）"]},
   {d:"2026-11-02",t:["恐龍蛋的被動「厚實蛋殼」改為防禦 +15（連同基礎防禦 5，共 20）"]},
   {d:"2026-11-02",t:["恐龍蛋專區換上 40 款不同的恐龍蛋插圖（每顆隨機）；恐龍蛋生命提高為原本的 10 倍、防禦提高到 5，戰鬥回合上限放寬到 1000 回合（只有恐龍蛋專區）"]},
   {d:"2026-11-02",t:["說明頁的配樂標示補上「戰鬥／破關」曲目的作者全名（Alexey Kasyanchuk / DEgITx）、作者連結與 CC BY 4.0 授權連結"]},

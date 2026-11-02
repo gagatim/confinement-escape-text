@@ -17,8 +17,24 @@
     "firstKill": {
       "abyssking": {
         ".read": true,
-        "$n": {
-          ".write": "auth != null && !data.exists() && newData.exists() && ($n === '1' || ($n === '2' && root.child('firstKill/abyssking/1').exists() && root.child('firstKill/abyssking/1/uid').val() !== auth.uid) || ($n === '3' && root.child('firstKill/abyssking/2').exists() && root.child('firstKill/abyssking/1/uid').val() !== auth.uid && root.child('firstKill/abyssking/2/uid').val() !== auth.uid))",
+        "1": {
+          ".write": "auth != null && !data.exists() && newData.exists()",
+          ".validate": "newData.hasChildren(['uid', 'name', 't']) && newData.child('uid').val() === auth.uid && newData.child('name').isString() && newData.child('name').val().length <= 16 && newData.child('t').val() === now",
+          "uid": { ".validate": true },
+          "name": { ".validate": true },
+          "t": { ".validate": true },
+          "$other": { ".validate": false }
+        },
+        "2": {
+          ".write": "auth != null && !data.exists() && newData.exists() && root.child('firstKill/abyssking/1').exists() && root.child('firstKill/abyssking/1/uid').val() !== auth.uid",
+          ".validate": "newData.hasChildren(['uid', 'name', 't']) && newData.child('uid').val() === auth.uid && newData.child('name').isString() && newData.child('name').val().length <= 16 && newData.child('t').val() === now",
+          "uid": { ".validate": true },
+          "name": { ".validate": true },
+          "t": { ".validate": true },
+          "$other": { ".validate": false }
+        },
+        "3": {
+          ".write": "auth != null && !data.exists() && newData.exists() && root.child('firstKill/abyssking/2').exists() && root.child('firstKill/abyssking/1/uid').val() !== auth.uid && root.child('firstKill/abyssking/2/uid').val() !== auth.uid",
           ".validate": "newData.hasChildren(['uid', 'name', 't']) && newData.child('uid').val() === auth.uid && newData.child('name').isString() && newData.child('name').val().length <= 16 && newData.child('t').val() === now",
           "uid": { ".validate": true },
           "name": { ".validate": true },

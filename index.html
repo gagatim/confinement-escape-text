@@ -535,8 +535,8 @@ footer.credit a{color:var(--gold)}
       出處 <a href="https://opengameart.org/content/jrpg-epic-rock-battle-theme-1" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・無盡深淵：<b>Dark Cavern Ambient</b> — by Paul Wortmann・
       出處 <a href="https://opengameart.org/content/dark-cavern-ambient" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
-      ・戰鬥／破關：<b>DEgITx - Machine Paradigm</b>・出處 <a href="https://www.youtube.com/watch?v=2uGf8-vfFLI" target="_blank" rel="noopener">YouTube</a>
-      （作者頻道 <a href="https://www.youtube.com/@DEgITx" target="_blank" rel="noopener">@DEgITx</a>），版權屬於原作者，透過 YouTube 嵌入播放器播放。<br>
+      ・戰鬥／破關：<b>Machine Paradigm</b> — Music: Alexey Kasyanchuk (DEgITx)・出處 <a href="https://www.youtube.com/watch?v=2uGf8-vfFLI" target="_blank" rel="noopener">YouTube</a>
+      （<a href="https://degitx.com/links" target="_blank" rel="noopener">作者連結</a>・<a href="https://www.youtube.com/@DEgITx" target="_blank" rel="noopener">@DEgITx</a>）・授權 <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>，透過 YouTube 嵌入播放器播放。<br>
       右上角 🎵 可以開關背景音樂。<br>
       <button class="mini" style="margin-top:6px" onclick="openStuck()">🐞 遊戲卡住了／回報問題</button></div>
     <audio id="bgm_main" src="music/ambient_horror_track01.ogg" loop preload="auto"></audio>
@@ -5078,6 +5078,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-02",t:["說明頁的配樂標示補上「戰鬥／破關」曲目的作者全名（Alexey Kasyanchuk / DEgITx）、作者連結與 CC BY 4.0 授權連結"]},
   {d:"2026-11-02",t:["遠征新增「🥚 恐龍蛋專區」：連續 10 關，每關 5 顆恐龍蛋（血厚、傷害低），打完一關馬上接下一關，中間不回血；目前沒有任何掉落物"]},
   {d:"2026-11-02",t:["修正首殺榜在沒網路或讀取失敗時，會誤顯示成「虛位以待」的問題（現在會顯示讀取失敗或載入中）"]},
   {d:"2026-11-02",t:["成就頁新增「🌐 全服成就」分頁，顯示「全服首殺榜・深淵君王」前 3 名的玩家帳號（可按「重新整理榜單」更新）"]},

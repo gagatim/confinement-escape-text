@@ -1285,6 +1285,7 @@ function migrate(s){
   if(!s.train)s.train={best:0};
   if(!s.bosses)s.bosses={};
   if(!s.coop)s.coop={d:"",n:0};
+  if(!s.dino)s.dino={d:"",n:0};
   if(!s.ach)s.ach={};
   if(!s.lore)s.lore={};
   s.team=(s.team||[]).filter(id=>s.owned[id]);
@@ -2828,9 +2829,11 @@ function startTrain(){
 }
 
 /* ===================== 恐龍蛋專區 ===================== */
-// 遠征頁的獨立專區：連續 10 關，每關 5 顆恐龍蛋；打完一關立刻接下一關（同一場戰鬥，血量不回復）。目前沒有任何掉落物，也不記進度。
+// 遠征頁的獨立專區：連續 10 關，每關 5 顆恐龍蛋；打完一關立刻接下一關（同一場戰鬥，血量不回復）。
+// 獎勵：10 關全過才有 🪙DINO_GOLD，沒有其他掉落物；每人每天最多領 DINO_DAILY 次（用這台裝置的日期計算，跟合作討伐一樣）。
 // 強度：血厚、傷害低。要調整就改下面幾個數字（hp／atk 是第 1 關的基礎值，每關再乘 dinoScale）
-const DINO_WAVES=10,DINO_EGGS=5,DINO_MAXROUND=1000,DINO_PICS=40;
+const DINO_WAVES=10,DINO_EGGS=5,DINO_MAXROUND=1000,DINO_PICS=40,DINO_GOLD=200,DINO_DAILY=50;
+function dinoLeft(){const c=SAVE.dino;return c&&c.d===coopToday()?Math.max(0,DINO_DAILY-c.n):DINO_DAILY;}
 MONSTERS.dinoegg={name:"恐龍蛋",emoji:"🥚",r:"R",hp:800,atk:3,def:5,spd:3, // 生命 800（原本 80 的 10 倍）；防禦 5（每點讓每次受到的傷害少 0.7，防禦不隨關卡增加）
   skill:{name:"孵化震動",cd:3,t:"enemy",kind:"dmg",desc:"造成1.2倍攻擊傷害。",use(B,u,t){hit(B,u,t,1.2);}},
   passive:{name:"厚實蛋殼",desc:"防禦+15。"}};
@@ -2846,8 +2849,8 @@ function viewDino(){
     <ul class="dim small" style="padding-left:18px;margin:0">
       <li>恐龍蛋血很厚、傷害很低，考驗隊伍的持久力。</li>
       <li>每顆約 ❤${s.maxHp} ⚔${s.atk} 🛡${s.def+15}（第 1 關）→ ❤${e.maxHp} ⚔${e.atk} 🛡${e.def+15}（第 ${DINO_WAVES} 關）。防禦含被動「厚實蛋殼」+15。</li>
-      <li>全隊倒下就結束；戰敗沒有懲罰。</li>
-      <li>目前沒有任何掉落物。</li>
+      <li>全隊倒下就結束；戰敗沒有懲罰，也沒有獎勵。</li>
+      <li>獎勵：<b>${DINO_WAVES} 關全部通過</b>可得 🪙${DINO_GOLD}，沒有其他掉落物。每天最多領 ${DINO_DAILY} 次（今天還剩 <b>${dinoLeft()}</b> 次，用這台裝置的日期計算）。</li>
     </ul></div>
   <h3>出戰隊伍</h3><div class="cardgrid">${SAVE.team.map(id=>cardTile(id,`showCard('${id}')`)).join("")||"<span class='dim'>尚未編隊</span>"}</div>
   <div class="row" style="margin-top:14px"><button class="pri" onclick="startDino()" ${SAVE.team.length?"":"disabled"}>⚔ 開始挑戰</button></div>`;
@@ -2861,8 +2864,16 @@ function startDino(){
     resultNote:B=>B.over==="A"?`${DINO_WAVES} 關全部通過！`:`撐到第 ${B.wave} 關倒下了。`,
     onEnd(win,B){
       const n=win?DINO_WAVES:B.wave-1;
+      let note="";
+      if(win){
+        if(dinoLeft()>0){
+          const t=coopToday(),c=SAVE.dino;
+          SAVE.dino={d:t,n:(c&&c.d===t?c.n:0)+1};SAVE.gold+=DINO_GOLD;save();
+          note=`<br>🪙+${DINO_GOLD}（今天還可以領 ${dinoLeft()} 次）`;
+        }else note=`<br><span class="dim">今天的獎勵已經領滿 ${DINO_DAILY} 次了，明天再來。</span>`;
+      }
       CUR_B=null;RUN_TAB="dino";VIEW="run";render();
-      openModal(`<h3>🥚 恐龍蛋專區${win?"・全數通過":""}</h3><p>${win?`${DINO_WAVES} 關全部打完了！`:`通過了 ${n}／${DINO_WAVES} 關，第 ${B.wave} 關倒下了。`}</p>
+      openModal(`<h3>🥚 恐龍蛋專區${win?"・全數通過":""}</h3><p>${win?`${DINO_WAVES} 關全部打完了！${note}`:`通過了 ${n}／${DINO_WAVES} 關，第 ${B.wave} 關倒下了。`}</p>
         <div class="row"><button class="pri" onclick="closeModal();startDino()">再挑戰一次</button><button onclick="closeModal()">關閉</button></div>`);
     }});
 }
@@ -5085,6 +5096,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-02",t:["恐龍蛋專區新增獎勵：10 關全部通過可得 🪙200，每天最多領 50 次（以這台裝置的日期計算）；沒有通關或領滿次數不給獎勵，仍然沒有其他掉落物"]},
   {d:"2026-11-02",t:["移除戰鬥畫面按鈕列裡的「🐞 卡住了」，戰鬥中請用右上角的「🐞」（效果相同）"]},
   {d:"2026-11-02",t:["右上角的 ❓、✦、🎵、🔊 合併成一顆「⚙ 設定」，點開可以切換背景音樂、音效、技能冷卻數字，也能開啟玩法導引；右上角另外新增「🐞」按鈕，隨時可以開啟「卡住了／回報問題」視窗"]},
   {d:"2026-11-02",t:["技能冷卻數字的開關改放在右上角的小圖示「✦」（點一下切換，關閉時顯示「✦✕」），戰鬥畫面裡的「✦ 冷卻」按鈕移除"]},

@@ -150,7 +150,7 @@ button,.door,.ccard,.ucard,.gcard,.chap,.bosscard,.item,.pull{touch-action:manip
 .shake{animation:shake .35s}
 #view.bshake{animation:bshake .4s}
 #view.bshake.big{animation:bshakeBig .6s}
-@keyframes bshake{10%{transform:translate(-5px,3px)}30%{transform:translate(5px,-3px)}50%{transform:translate(-4px,2px)}70%{transform:translate(3px,-2px)}90%{transform:translate(-1px,1px)}}
+@keyframes bshake{10%{transform:translate(-2px,1px)}30%{transform:translate(2px,-1px)}50%{transform:translate(-2px,1px)}70%{transform:translate(1px,-1px)}90%{transform:translate(-1px,0)}}
 @keyframes bshakeBig{8%{transform:translate(-11px,6px) rotate(-.4deg)}22%{transform:translate(10px,-7px) rotate(.4deg)}38%{transform:translate(-9px,5px)}54%{transform:translate(7px,-4px)}70%{transform:translate(-4px,3px)}86%{transform:translate(2px,-1px)}}
 @keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
 .apanel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;margin:10px 0;min-height:60px}
@@ -4971,6 +4971,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-02",t:["魔王出手時的一般命中螢幕震動幅度調小約一半（暴擊／重擊維持原本的震動）"]},
   {d:"2026-10-30",t:["無盡深淵新增特殊房間「🔥 重鑄爐」：丟 2 件道具重鑄成 1 件隨機新道具，每間最多重鑄 2 次；D20 起火箭筒、霰彈槍更容易出現"]},
   {d:"2026-10-30",t:["「💧 水塔」改成全員恢復 10% 最大生命（原本是固定 3 點），補給 +2 不變；主線章節與無盡深淵的水塔都一樣"]},
   {d:"2026-10-30",t:["無盡深淵新增特殊房間「♻️ 回收廠」：可以拆 3 件道具（防毒面具、繩索不拆），讓一名隊員本次遠征攻擊或防禦 +1，每間限用一次；約 35% 機率有「回收者」看守，可以選擇迎戰或直接離開"]},

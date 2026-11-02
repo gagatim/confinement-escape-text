@@ -2841,10 +2841,16 @@ MONSTERS.dinoegg={name:"恐龍蛋",emoji:"🥚",r:"R",hp:800,atk:3,def:5,spd:3, 
 for(let i=1;i<=DINO_PICS;i++)MONSTERS["dinoegg"+i]={...MONSTERS.dinoegg,pic:true};
 const dinoScale=w=>1+(w-1)*.35;
 const dinoWave=w=>Array.from({length:DINO_EGGS},()=>({id:"dinoegg"+ri(1,DINO_PICS),stars:1,scale:dinoScale(w)}));
+// 區域：第一區就是目前的設定（10 關、每關 5 顆恐龍蛋）；第二到第五區先佔位，還沒有怪物，之後要開放就把 open 改成 true 並補上內容
+const DINO_ZONES=[{n:"第一區",open:true},{n:"第二區"},{n:"第三區"},{n:"第四區"},{n:"第五區"}];
+let DINO_ZONE=1;
 function viewDino(){
-  const s=cardStats("dinoegg",1,dinoScale(1)),e=cardStats("dinoegg",1,dinoScale(DINO_WAVES));
-  return `<h2>逃殺遠征</h2>${runTabs()}
-  <div class="panel"><h3 style="margin-top:0">🥚 恐龍蛋專區</h3>
+  const s=cardStats("dinoegg",1,dinoScale(1)),e=cardStats("dinoegg",1,dinoScale(DINO_WAVES)),z=DINO_ZONES[DINO_ZONE-1];
+  const tabs=`<div class="filters">${DINO_ZONES.map((o,i)=>`<button class="${i+1===DINO_ZONE?"on":""}" onclick="DINO_ZONE=${i+1};render()">${o.open?"":"🔒 "}${o.n}</button>`).join("")}</div>`;
+  if(!z.open)return `<h2>逃殺遠征</h2>${runTabs()}${tabs}
+  <div class="panel"><h3 style="margin-top:0">🥚 ${z.n}</h3><p class="dim">🔒 尚未開放。這一區目前還沒有怪物，敬請期待。</p></div>`;
+  return `<h2>逃殺遠征</h2>${runTabs()}${tabs}
+  <div class="panel"><h3 style="margin-top:0">🥚 ${z.n}</h3>
     <p>連續 <b>${DINO_WAVES}</b> 關，每關 <b>${DINO_EGGS}</b> 顆恐龍蛋。打完一關<b>馬上接著下一關</b>，中間不會回血，也不能換人。</p>
     <ul class="dim small" style="padding-left:18px;margin:0">
       <li>恐龍蛋血很厚、傷害很低，考驗隊伍的持久力。</li>
@@ -5096,6 +5102,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-02",t:["恐龍蛋專區分成「第一區」到「第五區」：第一區就是目前的玩法與獎勵，第二到第五區先放上鎖住的佔位頁面，目前還沒有怪物"]},
   {d:"2026-11-02",t:["恐龍蛋專區新增獎勵：10 關全部通過可得 🪙200，每天最多領 50 次（以這台裝置的日期計算）；沒有通關或領滿次數不給獎勵，仍然沒有其他掉落物"]},
   {d:"2026-11-02",t:["移除戰鬥畫面按鈕列裡的「🐞 卡住了」，戰鬥中請用右上角的「🐞」（效果相同）"]},
   {d:"2026-11-02",t:["右上角的 ❓、✦、🎵、🔊 合併成一顆「⚙ 設定」，點開可以切換背景音樂、音效、技能冷卻數字，也能開啟玩法導引；右上角另外新增「🐞」按鈕，隨時可以開啟「卡住了／回報問題」視窗"]},

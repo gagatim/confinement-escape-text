@@ -529,6 +529,8 @@ footer.credit a{color:var(--gold)}
       ・競技場：<b>Epic Boss Battle [Seamlessly Looping]</b> — by Juhani Junkala（<a href="https://opengameart.org/content/boss-battle-music" target="_blank" rel="noopener">OpenGameArt</a>，上傳者 SubspaceAudio）・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・雙人對決：<b>JRPG Epic Rock Battle Theme #1</b> — by HydroGene・
       出處 <a href="https://opengameart.org/content/jrpg-epic-rock-battle-theme-1" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
+      ・恐龍蛋專區：<b>JungleXcessive</b> — by Tozan・
+      出處 <a href="https://opengameart.org/content/junglexcessive" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・無盡深淵：<b>Dark Cavern Ambient</b> — by Paul Wortmann・
       出處 <a href="https://opengameart.org/content/dark-cavern-ambient" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・戰鬥／破關：<b>Machine Paradigm</b> — Music: Alexey Kasyanchuk (DEgITx)・出處 <a href="https://www.youtube.com/watch?v=2uGf8-vfFLI" target="_blank" rel="noopener">YouTube</a>
@@ -545,6 +547,7 @@ footer.credit a{color:var(--gold)}
     <audio id="bgm_shop" src="music/bossa_nova_shop.mp3" loop preload="none"></audio>
     <audio id="bgm_arena" src="music/arena_epic_boss_battle.ogg" loop preload="none"></audio>
     <audio id="bgm_duel" src="music/jrpg_battle_loop.mp3" loop preload="none"></audio>
+    <audio id="bgm_dino" src="music/jungle_xcessive.ogg" loop preload="none"></audio>
     <audio id="bgm_boss_hard1" src="music/boss/boss_hard_battle_3.ogg" loop preload="none"></audio>
     <audio id="bgm_boss_hard2" src="music/boss/boss_hard_battle_2.ogg" loop preload="none"></audio>
     <audio id="bgm_boss_heavy1" src="music/boss/boss_heavy_battle_1.ogg" loop preload="none"></audio>
@@ -1378,7 +1381,7 @@ function openSettings(){
 // 戰鬥中與逃出成功的畫面 battle 改播 YouTube 嵌入播放器（不下載音檔）。
 // 瀏覽器規定要使用者點過頁面才能出聲，所以第一次點擊時才開始播
 const BGM_ID="2uGf8-vfFLI";
-const BGM_KEYS=["main","town","shop","ach","train","run","abyss","story","arena","duel","boss_hard1","boss_hard2","boss_heavy1","boss_heavy2"];
+const BGM_KEYS=["main","town","shop","ach","train","run","abyss","story","arena","duel","dino","boss_hard1","boss_hard2","boss_heavy1","boss_heavy2"];
 // 支線八大魔王各自的戰鬥配樂（OpenGameArt MintoDog，CC0）；越後面的魔王越重
 const BOSS_BGM={doomhunter:"boss_hard1",voidlord:"boss_heavy2",fatejudge:"boss_hard2",reaper:"boss_heavy2",abyssking:"boss_hard1",nightemperor:"boss_heavy2",overlord:"boss_heavy1",endwalker:"boss_heavy1"};
 let BGM=null,BGM_READY=false,BGM_STARTED=false,BGM_CUR=null;
@@ -2864,7 +2867,7 @@ function viewDino(){
 function startDino(){
   if(!SAVE.team.length)return;
   const ids=SAVE.team.slice(),waveTitle=w=>`恐龍蛋專區 第 ${w}／${DINO_WAVES} 關`;
-  startBattle({title:waveTitle(1),home:"run",maxRound:DINO_MAXROUND,A:ids.map(teamUnit),B:dinoWave(1),
+  startBattle({title:waveTitle(1),home:"run",maxRound:DINO_MAXROUND,bgm:"dino",A:ids.map(teamUnit),B:dinoWave(1),
     waves:Array.from({length:DINO_WAVES-1},(_,i)=>dinoWave(i+2)),waveTitle, // 後面 9 關：前一關的蛋全倒，立刻補上下一批
     intro:"一整片恐龍蛋在地上微微晃動……",
     resultNote:B=>B.over==="A"?`${DINO_WAVES} 關全部通過！`:`撐到第 ${B.wave} 關倒下了。`,
@@ -5217,6 +5220,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-02",t:["恐龍蛋專區的戰鬥新增專屬配樂：JungleXcessive（Tozan，OpenGameArt，CC0），頁尾已補上出處與授權"]},
   {d:"2026-11-02",t:["團隊賽 2v2 修正：①4 人準備好後的等待時間內如果有人離開，不會少一個人硬開打，會等人補上；②出戰角色全部被同隊隊友先帶走的玩家，現在會收到提示、不能按準備（以前會變成旁觀者）"]},
   {d:"2026-11-02",t:["團隊賽 2v2 打滿 100 回合還沒分出勝負，改判「平手」（原本是 B 隊獲勝）"]},
   {d:"2026-11-02",t:["團隊賽 2v2 的逾時時間從 30 秒改成 60 秒：60 秒沒動作或斷線，改由 AI 代打"]},

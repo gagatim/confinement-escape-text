@@ -2829,7 +2829,7 @@ function startTrain(){
 const DINO_WAVES=10,DINO_EGGS=5,DINO_MAXROUND=1000,DINO_PICS=40;
 MONSTERS.dinoegg={name:"恐龍蛋",emoji:"🥚",r:"R",hp:800,atk:3,def:5,spd:3, // 生命 800（原本 80 的 10 倍）；防禦 5（每點讓每次受到的傷害少 0.7，防禦不隨關卡增加）
   skill:{name:"孵化震動",cd:3,t:"enemy",kind:"dmg",desc:"造成1.2倍攻擊傷害。",use(B,u,t){hit(B,u,t,1.2);}},
-  passive:{name:"厚實蛋殼",desc:"生命很高，但攻擊很低。"}};
+  passive:{name:"厚實蛋殼",desc:"防禦+15。"}};
 // 40 張不同的蛋圖（images/monsters/dinoegg1～40.webp），每顆蛋隨機挑一張；素質都和 dinoegg 一樣
 for(let i=1;i<=DINO_PICS;i++)MONSTERS["dinoegg"+i]={...MONSTERS.dinoegg,pic:true};
 const dinoScale=w=>1+(w-1)*.35;
@@ -2841,7 +2841,7 @@ function viewDino(){
     <p>連續 <b>${DINO_WAVES}</b> 關，每關 <b>${DINO_EGGS}</b> 顆恐龍蛋。打完一關<b>馬上接著下一關</b>，中間不會回血，也不能換人。</p>
     <ul class="dim small" style="padding-left:18px;margin:0">
       <li>恐龍蛋血很厚、傷害很低，考驗隊伍的持久力。</li>
-      <li>每顆約 ❤${s.maxHp} ⚔${s.atk} 🛡${s.def}（第 1 關）→ ❤${e.maxHp} ⚔${e.atk} 🛡${e.def}（第 ${DINO_WAVES} 關）。</li>
+      <li>每顆約 ❤${s.maxHp} ⚔${s.atk} 🛡${s.def+15}（第 1 關）→ ❤${e.maxHp} ⚔${e.atk} 🛡${e.def+15}（第 ${DINO_WAVES} 關）。防禦含被動「厚實蛋殼」+15。</li>
       <li>全隊倒下就結束；戰敗沒有懲罰。</li>
       <li>目前沒有任何掉落物。</li>
     </ul></div>
@@ -2893,6 +2893,7 @@ function stat(u,k){
   if(k==="atk"&&u.id==="reclaimer"&&u.hp<u.maxHp/2)v+=Math.max(2,Math.round(u.atk*.12));
   if(k==="atk"&&u.id==="ashen"&&hasBond(u,"qing"))v+=Math.max(1,Math.round(u.atk*.04)); // 羈絆「名冊合照」
   if(k==="def"&&u.id==="chief"&&u.hp<u.maxHp/2)v+=2;
+  if(k==="def"&&u.id.startsWith("dinoegg"))v+=15; // 恐龍蛋被動「厚實蛋殼」
   return Math.max(k==="atk"?1:0,v);
 }
 // 同一陣營裡有沒有另一名活著的指定角色（羈絆判定用）
@@ -5080,6 +5081,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-02",t:["恐龍蛋的被動「厚實蛋殼」改為防禦 +15（連同基礎防禦 5，共 20）"]},
   {d:"2026-11-02",t:["恐龍蛋專區換上 40 款不同的恐龍蛋插圖（每顆隨機）；恐龍蛋生命提高為原本的 10 倍、防禦提高到 5，戰鬥回合上限放寬到 1000 回合（只有恐龍蛋專區）"]},
   {d:"2026-11-02",t:["說明頁的配樂標示補上「戰鬥／破關」曲目的作者全名（Alexey Kasyanchuk / DEgITx）、作者連結與 CC BY 4.0 授權連結"]},
   {d:"2026-11-02",t:["遠征新增「🥚 恐龍蛋專區」：連續 10 關，每關 5 顆恐龍蛋（血厚、傷害低），打完一關馬上接下一關，中間不回血；目前沒有任何掉落物"]},

@@ -505,10 +505,8 @@ footer.credit a{color:var(--gold)}
     <nav id="nav"></nav>
     <div class="wallet" id="wallet"></div>
     <button class="muteBtn" id="acctBtn" onclick="openAccount()" title="帳號／雲端存檔">👤</button>
-    <button class="muteBtn" onclick="openGuide(0)" title="玩法導引">❓</button>
-    <button class="muteBtn" id="cdBtn" onclick="toggleCd()" title="戰鬥中角色左上角的技能冷卻數字（開／關）"></button>
-    <button class="muteBtn" id="bgmBtn" onclick="toggleBgm()" title="背景音樂"></button>
-    <button class="muteBtn" id="muteBtn" onclick="toggleMute()" title="音效"></button>
+    <button class="muteBtn" id="stuckBtn" onclick="openStuck()" title="遊戲卡住了／回報問題">🐞</button>
+    <button class="muteBtn" id="setBtn" onclick="openSettings()" title="設定（背景音樂、音效、技能冷卻數字、玩法導引）">⚙</button>
   </header>
   <main id="view"></main>
   <footer class="credit">
@@ -535,7 +533,7 @@ footer.credit a{color:var(--gold)}
       出處 <a href="https://opengameart.org/content/dark-cavern-ambient" target="_blank" rel="noopener">OpenGameArt</a>・授權 <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">CC0</a><br>
       ・戰鬥／破關：<b>Machine Paradigm</b> — Music: Alexey Kasyanchuk (DEgITx)・出處 <a href="https://www.youtube.com/watch?v=2uGf8-vfFLI" target="_blank" rel="noopener">YouTube</a>
       （<a href="https://degitx.com/links" target="_blank" rel="noopener">作者連結</a>・<a href="https://www.youtube.com/@DEgITx" target="_blank" rel="noopener">@DEgITx</a>）・授權 <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>，透過 YouTube 嵌入播放器播放。<br>
-      右上角 🎵 可以開關背景音樂。<br>
+      右上角 ⚙ 設定裡可以開關背景音樂。<br>
       <button class="mini" style="margin-top:6px" onclick="openStuck()">🐞 遊戲卡住了／回報問題</button></div>
     <audio id="bgm_main" src="music/ambient_horror_track01.ogg" loop preload="auto"></audio>
     <audio id="bgm_run" src="music/determined_pursuit_loop.ogg" loop preload="none"></audio>
@@ -1362,7 +1360,17 @@ const SFX={
   gas:()=>tone(80,.6,"sawtooth",.04,40)
 };
 function toggleMute(){SAVE.muted=!SAVE.muted;save();renderHeader();}
-function toggleCd(){SAVE.showCd=SAVE.showCd===false;save();render();} // 技能冷卻數字的顯示開關（預設開）；render() 會連同右上角圖示一起更新
+function toggleCd(){SAVE.showCd=SAVE.showCd===false;save();render();} // 技能冷卻數字的顯示開關（預設開）
+// 右上角 ⚙ 的設定視窗：背景音樂、音效、技能冷卻數字三個開關，加上玩法導引；切換後視窗重開，狀態馬上更新
+function openSettings(){
+  const row=(ic,name,on,fn)=>`<div class="row" style="align-items:center;margin:8px 0"><span style="flex:1">${ic} ${name}</span><button class="mini ${on?"ok":""}" style="min-width:64px" onclick="${fn};openSettings()">${on?"開":"關"}</button></div>`;
+  openModal(`<h3>⚙ 設定</h3>
+    ${row("🎵","背景音樂",SAVE.bgm!==false,"toggleBgm()")}
+    ${row("🔊","音效",!SAVE.muted,"toggleMute()")}
+    ${row("✦","技能冷卻數字（戰鬥中角色左上角）",SAVE.showCd!==false,"toggleCd()")}
+    <div class="row" style="align-items:center;margin:8px 0"><span style="flex:1">❓ 玩法導引</span><button class="mini" onclick="closeModal();openGuide(0)">開啟</button></div>
+    <div class="row" style="margin-top:12px"><button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
+}
 
 /* ===================== BGM ===================== */
 // 依場景換曲：選單 main、遠征探索 run、無盡深淵 abyss（music/ 裡的 CC0 曲子）；
@@ -1450,10 +1458,7 @@ function renderHeader(){
   const cur=NAV.find(([k])=>k===navOf());
   $("#menuBtn").textContent=(NAV_OPEN?"✕ ":"☰ ")+(cur?cur[1]:"選單");
   $("#wallet").textContent="🪙 "+SAVE.gold;
-  $("#muteBtn").textContent=SAVE.muted?"🔇":"🔊";
   $("#acctBtn").textContent=ACCT?"👤 "+ACCT.name:"👤";
-  $("#bgmBtn").textContent=SAVE.bgm===false?"🎵✕":"🎵";
-  $("#cdBtn").textContent=SAVE.showCd===false?"✦✕":"✦";
 }
 let BATTLE_HOME="arena";
 // 畫面出錯時不要整個卡死：記錄錯誤，顯示自救按鈕
@@ -1487,7 +1492,7 @@ function openModal(html){$("#mbox").innerHTML=html;$("#modal").classList.add("sh
 function closeModal(){$("#modal").classList.remove("show");}
 
 /* ===================== GUIDE ===================== */
-// 超簡單導引：第一次進來自動打開，之後按右上角 ❓ 重看
+// 超簡單導引：第一次進來自動打開，之後按右上角 ⚙ 設定裡的「玩法導引」重看
 const GUIDE=[
   {ic:"⛓",t:"這是什麼遊戲？",b:["你和同伴被關在禁閉室，要一路往上爬、搶上只有 <b>三個座位</b> 的直升機。","玩法只有三件事：<b>抽角色 → 組隊 → 出發遠征</b>。"]},
   {ic:"🎴",t:"① 抽角色",b:["到「招募」花金條抽卡。<b>第一次十連必出 SSR</b>，開局的金條剛好夠。","抽到重複的角色會記成「重複卡」，到角色頁手動升星（最多 5★），每 1 星能力 +10%。","5★ 後可以用 💎突破石「突破」（隊伍頁點角色 →「✨突破」，最多 10 次）：星星回到 1★ 再升，能力保留並再 +1.5%，突破後每升 1 星 +2.5%。","第 n 次突破要 💎×2n，成功率 30% 起每次 ×0.85（30→26→22→…→7%）。失敗突破石消失，但不會降星。","突破石來源：商店、主線魔王、深淵守門者、練功房、成就。練過的角色（3★ 以上、Lv.50 以上、突破過；有重複卡不算）不會被一鍵合成、一鍵遣散動到，也不能整張遣散、合成或熔煉掉。"]},
@@ -3456,7 +3461,7 @@ function viewBattle(){
   const ctl=B.over?"":`<div class="bctl">
     ${B.ctrl.A==="human"&&B.ctrl.B!=="human"?`<button data-kb="auto" onclick="act('auto')" class="${B.auto?"ok":""}">${B.auto?"自動中":"自動"}</button>`:""}
     ${B.guest?"":`<button data-kb="fast" onclick="CUR_B.fast=!CUR_B.fast;render()" class="${B.fast?"ok":""}">${B.fast?"⏩ 快速":"▶ 正常"}</button>`}
-    <button class="mini" data-kb="stuck" onclick="openStuck()" title="畫面卡住時用">🐞 卡住了</button></div>`;
+    </div>`;
   return `<div class="btop"><div class="ttl">${B.title}　<span class="dim small">第 ${B.round} 回合</span></div></div>
     <div class="side B ${B.units.filter(u=>u.side===op).length>3?"big":""}">${B.units.filter(u=>u.side===op).map(u=>unitCard(B,u)).join("")}</div>
     <div class="vs">— ${B.labels[op]} ／ ${B.labels[me]} —</div>
@@ -5080,6 +5085,8 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-02",t:["移除戰鬥畫面按鈕列裡的「🐞 卡住了」，戰鬥中請用右上角的「🐞」（效果相同）"]},
+  {d:"2026-11-02",t:["右上角的 ❓、✦、🎵、🔊 合併成一顆「⚙ 設定」，點開可以切換背景音樂、音效、技能冷卻數字，也能開啟玩法導引；右上角另外新增「🐞」按鈕，隨時可以開啟「卡住了／回報問題」視窗"]},
   {d:"2026-11-02",t:["技能冷卻數字的開關改放在右上角的小圖示「✦」（點一下切換，關閉時顯示「✦✕」），戰鬥畫面裡的「✦ 冷卻」按鈕移除"]},
   {d:"2026-11-02",t:["移除右下角的 🆘 圓形按鈕，相關提示文字（畫面錯誤、Q&A、戰鬥卡住提醒）一併改成指向「🐞 卡住了」（戰鬥畫面）與頁面最下方的「🐞 遊戲卡住了／回報問題」"]},
   {d:"2026-11-02",t:["戰鬥畫面新增「✦ 冷卻 開／關」按鈕，可以顯示或隱藏角色左上角的技能冷卻回合數（預設開啟，設定會記住）"]},
@@ -5146,7 +5153,7 @@ const QA=[
   ["魔王討伐一定要打嗎？","不用，是支線。8 位魔王打倒一位才會出現下一位；打倒第一條命後魔王會爆氣進入第二階段。打贏有機會掉落魔王專屬的 EX 裝備。"],
   ["畫面提示「請重新整理」是什麼意思？","遊戲更新後，舊頁面讀到新版存檔時會提示。重新整理頁面載入新版即可，存檔不會消失。"],
   ["存檔被清掉了怎麼辦？","遊戲偵測到存檔異常而清空時，會先自動備份，跳出的提示裡有「♻ 還原備份」按鈕可以還原（還原時會再檢查一次）。"],
-  ["遊戲卡住或畫面出錯怎麼辦？","戰鬥中按畫面上的「🐞 卡住了」；其他畫面把頁面捲到最下面，按「🐞 遊戲卡住了／回報問題」，複製紀錄回報；遠征卡住可以先試「重置這一層」。"]
+  ["遊戲卡住或畫面出錯怎麼辦？","按右上角的「🐞」開啟「卡住了／回報問題」視窗，複製紀錄回報；遠征卡住可以先試「重置這一層」。"]
 ];
 function viewQA(){
   return `<h2>❓ Q&amp;A</h2><p class="dim small">常見問題。點問題展開答案。</p>
@@ -6323,7 +6330,7 @@ setInterval(()=>{
   const B=CUR_B;if(!B||B.done||B.over||B.wait||B.guest||B.rwait)return;
   const sig=B.round+"|"+B.log.length;
   if(B.wd!==sig){B.wd=sig;B.wdT=Date.now();return;}
-  if(Date.now()-B.wdT>20000&&!B.wdWarned){B.wdWarned=true;glog("⏰STUCK",`戰鬥 20 秒沒有進展：${B.title} 第${B.round}回合`);toast("戰鬥好像卡住了，可以按畫面上的「🐞 卡住了」自救");}
+  if(Date.now()-B.wdT>20000&&!B.wdWarned){B.wdWarned=true;glog("⏰STUCK",`戰鬥 20 秒沒有進展：${B.title} 第${B.round}回合`);toast("戰鬥好像卡住了，可以按右上角的「🐞」自救");}
 },5000);
 render();
 bootAcct();

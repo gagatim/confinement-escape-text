@@ -1289,6 +1289,7 @@ function migrate(s){
   if(!s.bosses)s.bosses={};
   if(!s.coop)s.coop={d:"",n:0};
   if(!s.dino)s.dino={d:"",n:0};
+  if(!s.t2)s.t2={d:"",n:0};
   if(!s.ach)s.ach={};
   if(!s.lore)s.lore={};
   s.team=(s.team||[]).filter(id=>s.owned[id]);
@@ -3729,6 +3730,22 @@ function coopReward(win){
   if(SAVE.coop.n>=COOP_DAILY){toast(`今天的合作討伐獎勵已領滿（${COOP_DAILY} 次），明天再來`);return;}
   SAVE.coop.n++;SAVE.gold+=COOP_GOLD;save();toast(`🪙+${COOP_GOLD}（合作討伐獎勵，今天 ${SAVE.coop.n}／${COOP_DAILY} 次）`);
 }
+// 團隊賽獎勵：我方隊伍獲勝、戰鬥超過 T2_MIN_ROUND 回合，每人 🪙T2_GOLD；每人每天最多 T2_DAILY 次（用這台裝置的日期計算）。平手、輸、速戰速決都沒有
+const T2_GOLD=666,T2_MIN_ROUND=10,T2_DAILY=10;
+function t2Left(){const c=SAVE.t2;return c&&c.d===coopToday()?Math.max(0,T2_DAILY-c.n):T2_DAILY;}
+function t2Reward(B){
+  if(!B||B.over!==B.mySide||!(B.round>T2_MIN_ROUND))return;
+  if(!SAVE.t2||SAVE.t2.d!==coopToday())SAVE.t2={d:coopToday(),n:0};
+  if(SAVE.t2.n>=T2_DAILY){toast(`今天的團隊賽獎勵已領滿（${T2_DAILY} 次），明天再來`);return;}
+  SAVE.t2.n++;SAVE.gold+=T2_GOLD;save();toast(`🪙+${T2_GOLD}（團隊賽獎勵，今天 ${SAVE.t2.n}／${T2_DAILY} 次）`);
+}
+function t2Note(B){
+  if(B.over==="D")return "回合數用盡，雙方平手，沒有獎勵。";
+  if(B.over!==B.mySide)return "這次沒有獎勵。";
+  if(!(B.round>T2_MIN_ROUND))return `這場只打了 ${B.round} 回合，要超過 ${T2_MIN_ROUND} 回合才有獎勵。`;
+  if(t2Left()<=0)return `獲勝！但今天的團隊賽獎勵已領滿（${T2_DAILY} 次），明天再來。`;
+  return `獲勝！按「繼續」領取 🪙${T2_GOLD}（每人每天最多 ${T2_DAILY} 次，今天還剩 ${t2Left()} 次）。`;
+}
 function startOwnBattle(){
   if(!NET||!DUEL||DUEL.started)return;
   const a=sanOwn(DUEL.own.A),b=sanOwn(DUEL.own.B);
@@ -3812,7 +3829,8 @@ function startT2Battle(){
   startBattle({title:"團隊賽 2v2 · 房間 "+NET.code,home:"duel",t2:true,maxRound:100,ctrl:{A:"remote",B:"remote"},labels:{A:"A隊",B:"B隊"},online:NET,
     A:team.A,B:team.B,
     intro:`連線建立。A 隊（玩家1、玩家2）對上 B 隊（玩家3、玩家4）。${dup.length?`（${dup.join("、")} 在同隊已被先準備的玩家帶上場，後面的玩家不能重複上場）`:""}`,
-    onEnd(){leaveOnline();}});
+    resultNote:t2Note,
+    onEnd(win,B){t2Reward(B);leaveOnline();}});
 }
 function viewT2(){
   const leave=`<button onclick="leaveOnline()">離開房間</button>`,me=NET.seat,own=DUEL.own||{},seats=DUEL.seats||{};
@@ -3831,7 +3849,7 @@ function viewT2(){
     ${team("A",[0,1])}${team("B",[2,3])}
     ${own[me]?"":`<h3>你的出戰角色</h3><div class="cardgrid">${myOwnSpec().map(av).join("")}</div>`}
     <div class="row" style="margin-top:12px">${DUEL.ownReady?`<span class="dim">已準備，等其他玩家……（4 人都準備好會自動開始）</span>`:`<button class="pri" onclick="readyOwn()">✅ 準備好了</button>`}</div>
-    <p class="dim small">玩家 1、2 組成 A 隊，玩家 3、4 組成 B 隊（依加入順序）。每人帶「隊伍」頁編好的前 3 名角色（等級、星數、突破、裝備都算），沒有獎勵。同隊不能重複帶同一個角色，先按準備的先用。你只操作自己的角色；${T2_TIMEOUT/1000} 秒沒動作或斷線，改由 AI 代打。房主關掉網頁，對戰就結束。</p>`;
+    <p class="dim small">玩家 1、2 組成 A 隊，玩家 3、4 組成 B 隊（依加入順序）。每人帶「隊伍」頁編好的前 3 名角色（等級、星數、突破、裝備都算）。獲勝且戰鬥超過 ${T2_MIN_ROUND} 回合，每人可得 🪙${T2_GOLD}（每天最多 ${T2_DAILY} 次，你今天還剩 ${t2Left()} 次）。同隊不能重複帶同一個角色，先按準備的先用。你只操作自己的角色；${T2_TIMEOUT/1000} 秒沒動作或斷線，改由 AI 代打。房主關掉網頁，對戰就結束。</p>`;
 }
 function onDraft(s){
   if(!DUEL||!DUEL.online||!NET)return;
@@ -3906,7 +3924,7 @@ function applySnap(s){
   // Firebase 不存空陣列／空物件，要補回預設值
   const units=(s.units||[]).map(u=>Object.assign(u,{buffs:u.buffs||[],st:u.st||{},perm:u.perm||{},flags:{p2:u.p2||0,frenzy:u.fr||0}}));
   const B=prev||(s.t2?{guest:true,t2:true,ctrl:{A:"remote",B:"remote"},labels:{A:"A隊",B:"B隊"},mySide:NET.team,mySeat:String(NET.seat),items:null,flags:{},done:false,online:NET,
-    cfg:{onEnd:()=>leaveOnline()}}:s.coop?{guest:true,coop:true,ctrl:{A:"remote",B:"ai"},labels:{A:"我方",B:"偽王"},mySide:"A",items:null,flags:{},done:false,online:NET,
+    cfg:{resultNote:t2Note,onEnd:(win,B)=>{t2Reward(B);leaveOnline();}}}:s.coop?{guest:true,coop:true,ctrl:{A:"remote",B:"ai"},labels:{A:"我方",B:"偽王"},mySide:"A",items:null,flags:{},done:false,online:NET,
     cfg:{onEnd:win=>{coopReward(win);leaveOnline();}}}:{guest:true,ctrl:{A:"remote",B:"human"},labels:{A:"對手",B:"你"},mySide:"B",items:null,flags:{},done:false,online:NET,
     cfg:{onEnd:()=>leaveOnline()}});
   const diffs=[];
@@ -3960,7 +3978,7 @@ function viewOnline(){
     <div class="row"><input id="joinCode" maxlength="5" placeholder="5碼房號" value="${JOIN_CODE}" autocomplete="off"
       style="font:inherit;font-size:18px;letter-spacing:4px;text-transform:uppercase;width:150px;padding:6px 10px;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px">
     <button class="gold" onclick="joinRoom($('#joinCode').value)">加入</button></div>
-    <p class="dim small">標準：雙方都以 3★ 參戰，蛇形選角。養成賽：雙方帶自己的隊伍（等級、星數、突破、裝備都算），沒有公平限制，也沒有獎勵；加入房間時會自動判斷是哪種。合作討伐：兩人各帶 4 名角色，一起打偽永夜帝王（測試階段，不掉落裝備）。團隊賽 2v2：4 位玩家（2 對 2）各帶隊伍前 3 名角色，規則同養成賽，沒有獎勵。房主的裝置負責計算戰鬥：房主關掉網頁，對戰就結束；挑戰者斷線或 60 秒沒動作，改由 AI 代打。</p></div>`;
+    <p class="dim small">標準：雙方都以 3★ 參戰，蛇形選角。養成賽：雙方帶自己的隊伍（等級、星數、突破、裝備都算），沒有公平限制，也沒有獎勵；加入房間時會自動判斷是哪種。合作討伐：兩人各帶 4 名角色，一起打偽永夜帝王（測試階段，不掉落裝備）。團隊賽 2v2：4 位玩家（2 對 2）各帶隊伍前 3 名角色，規則同養成賽；獲勝且戰鬥超過 ${T2_MIN_ROUND} 回合，每人可得 🪙${T2_GOLD}（每天最多 ${T2_DAILY} 次）。房主的裝置負責計算戰鬥：房主關掉網頁，對戰就結束；挑戰者斷線或 60 秒沒動作，改由 AI 代打。</p></div>`;
   if(NET.status==="connecting")return `<div class="panel">🌐 連線中……</div>`;
   if(NET.mode==="t2")return viewT2();
   const leave=`<button onclick="leaveOnline()">離開房間</button>`;
@@ -5220,6 +5238,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-02",t:["團隊賽 2v2 新增獎勵：你的隊伍獲勝，且戰鬥超過 10 回合，每位獲勝者可得 🪙666，每人每天最多領 10 次（以這台裝置的日期計算）；輸了、平手或 10 回合內就結束都沒有獎勵。獎勵在結算畫面按「繼續」時入帳"]},
   {d:"2026-11-02",t:["恐龍蛋專區的戰鬥新增專屬配樂：JungleXcessive（Tozan，OpenGameArt，CC0），頁尾已補上出處與授權"]},
   {d:"2026-11-02",t:["團隊賽 2v2 修正：①4 人準備好後的等待時間內如果有人離開，不會少一個人硬開打，會等人補上；②出戰角色全部被同隊隊友先帶走的玩家，現在會收到提示、不能按準備（以前會變成旁觀者）"]},
   {d:"2026-11-02",t:["團隊賽 2v2 打滿 100 回合還沒分出勝負，改判「平手」（原本是 B 隊獲勝）"]},
@@ -5295,7 +5314,7 @@ const QA=[
   ["遠征中怎麼補血？","背包的藥片、酒可以一個一個選隊員使用，也可以按「一鍵補血」：從隊伍最前面開始補滿，先用藥片，藥片用完才用酒。酒的效果是隨機的，可能補 6、補 2，也可能扣 2。"],
   ["遠征中放棄會怎樣？","視同全隊覆沒，只帶回一半的金條。"],
   ["魔王討伐一定要打嗎？","不用，是支線。8 位魔王打倒一位才會出現下一位；打倒第一條命後魔王會爆氣進入第二階段。打贏有機會掉落魔王專屬的 EX 裝備。"],
-  ["團隊賽 2v2（4 人網路對戰）怎麼玩？規則與流程","<b>是什麼</b>：4 位玩家各用自己的帳號連線，分成 2 對 2 對打。屬於養成賽規則：等級、星數、突破、裝備都算進去，<b>沒有任何獎勵</b>，也不影響你的存檔。<br><br><b>事前準備</b>：每位玩家先到「整備室 → 隊伍」編好隊伍，出戰的是<b>隊伍前 3 名</b>角色。隊伍是空的不能加入。<br><br><b>流程</b><br>① 房主：「競技場 → 雙人對決 → 🌐 網路對戰」按「🏠 建立房間（團隊賽 2v2・4 人）」，會得到 5 碼房號和邀請連結。<br>② 其他 3 人：輸入房號按「加入」，或直接點邀請連結。依加入順序成為玩家 2、3、4，房間滿 4 人後就不能再加入。<br>③ 分隊：<b>玩家 1（房主）＋玩家 2 ＝ A 隊</b>，<b>玩家 3 ＋玩家 4 ＝ B 隊</b>，不能自己換。想跟朋友同隊，請約好加入順序。<br>④ 準備：每人看過自己的出戰角色後按「✅ 準備好了」，<b>4 人都準備好會自動開打</b>。按下準備後不能換人，要換請先離開房間。<br>⑤ 戰鬥：全場依速度排出行動順序，輪到你的角色時才會出現操作按鈕（攻擊、技能、防禦），其他人只看戰況。角色名稱旁的「我」是你的角色，「P1」到「P4」是其他玩家的角色。<br>⑥ 結束：一隊全員倒下，另一隊獲勝；打滿 100 回合還沒分勝負，判<b>平手</b>。結算後按「繼續」離開房間。<br><br><b>重複角色</b>：同一隊內不能重複帶同一個角色，先按準備的人先用，後面的人那一隻不會上場（戰鬥開頭會提示）。不同隊可以帶同一個角色。<br><br><b>逾時與斷線</b>：輪到你 60 秒沒操作，這一手會自動出招。有人斷線或關掉網頁，只有他的角色改由 AI 代打，其他人繼續打。開打前有人離開，座位會空出來讓別人加入。<br><br><b>注意</b>：戰鬥由房主的裝置負責計算，<b>房主關掉網頁或離線，整場就直接結束</b>，請選網路穩定的人當房主。建議 4 人都先按 Ctrl＋F5 更新到最新版再開房。"],
+  ["團隊賽 2v2（4 人網路對戰）怎麼玩？規則與流程","<b>是什麼</b>：4 位玩家各用自己的帳號連線，分成 2 對 2 對打。屬於養成賽規則：等級、星數、突破、裝備都算進去。<b>獎勵</b>：你的隊伍獲勝，且戰鬥超過 10 回合，每位獲勝者可得 🪙666，每人每天最多領 10 次（以這台裝置的日期計算）；輸了、平手、或 10 回合內就結束都沒有獎勵，也不會影響你的其他存檔內容。獎勵在結算畫面按「繼續」時入帳。<br><br><b>事前準備</b>：每位玩家先到「整備室 → 隊伍」編好隊伍，出戰的是<b>隊伍前 3 名</b>角色。隊伍是空的不能加入。<br><br><b>流程</b><br>① 房主：「競技場 → 雙人對決 → 🌐 網路對戰」按「🏠 建立房間（團隊賽 2v2・4 人）」，會得到 5 碼房號和邀請連結。<br>② 其他 3 人：輸入房號按「加入」，或直接點邀請連結。依加入順序成為玩家 2、3、4，房間滿 4 人後就不能再加入。<br>③ 分隊：<b>玩家 1（房主）＋玩家 2 ＝ A 隊</b>，<b>玩家 3 ＋玩家 4 ＝ B 隊</b>，不能自己換。想跟朋友同隊，請約好加入順序。<br>④ 準備：每人看過自己的出戰角色後按「✅ 準備好了」，<b>4 人都準備好會自動開打</b>。按下準備後不能換人，要換請先離開房間。<br>⑤ 戰鬥：全場依速度排出行動順序，輪到你的角色時才會出現操作按鈕（攻擊、技能、防禦），其他人只看戰況。角色名稱旁的「我」是你的角色，「P1」到「P4」是其他玩家的角色。<br>⑥ 結束：一隊全員倒下，另一隊獲勝；打滿 100 回合還沒分勝負，判<b>平手</b>。結算後按「繼續」離開房間。<br><br><b>重複角色</b>：同一隊內不能重複帶同一個角色，先按準備的人先用，後面的人那一隻不會上場（戰鬥開頭會提示）。不同隊可以帶同一個角色。<br><br><b>逾時與斷線</b>：輪到你 60 秒沒操作，這一手會自動出招。有人斷線或關掉網頁，只有他的角色改由 AI 代打，其他人繼續打。開打前有人離開，座位會空出來讓別人加入。<br><br><b>注意</b>：戰鬥由房主的裝置負責計算，<b>房主關掉網頁或離線，整場就直接結束</b>，請選網路穩定的人當房主。建議 4 人都先按 Ctrl＋F5 更新到最新版再開房。"],
   ["畫面提示「請重新整理」是什麼意思？","遊戲更新後，舊頁面讀到新版存檔時會提示。重新整理頁面載入新版即可，存檔不會消失。"],
   ["存檔被清掉了怎麼辦？","遊戲偵測到存檔異常而清空時，會先自動備份，跳出的提示裡有「♻ 還原備份」按鈕可以還原（還原時會再檢查一次）。"],
   ["遊戲卡住或畫面出錯怎麼辦？","按右上角的「🐞」開啟「卡住了／回報問題」視窗，複製紀錄回報；遠征卡住可以先試「重置這一層」。"]

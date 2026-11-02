@@ -3934,7 +3934,8 @@ function viewBosses(){
   if(SAVE.prog.cleared<BOSS_REQ)return `<h3>⚔ 魔王討伐（支線）</h3><div class="panel dim">逃出第 1 章「禁閉室」後開放。</div>`;
   return `<h3>⚔ 魔王討伐（支線・可以不打）</h3>
     <p class="dim small">8 位強度偏高的魔王，打倒一位才會出現下一位。打倒第一條命後魔王會<b style="color:var(--red)">爆氣</b>進入第二階段：換上氣場、回復生命、攻擊和速度上升、技能冷卻縮短。打贏有機會掉落魔王專屬的 <b class="rEX">EX 裝備</b>。</p>
-    <div class="bossgrid">${BOSS_LIST.map(bossCard).join("")}</div>`;
+    <div class="bossgrid">${BOSS_LIST.map(bossCard).join("")}</div>
+    ${(()=>{if(!FK.tried){FK.tried=true;fkLoad();}return fkBoardHtml();})()}`;
 }
 function openBoss(id){
   const i=BOSS_LIST.indexOf(id),M=MONSTERS[id],r=bossReward(i),n=SAVE.bosses[id]||0,G=GEAR[BOSS_DROP[id]];
@@ -3985,10 +3986,12 @@ function beginBoss(id){
         if(first||rnd()<.02){const g=addGear(BOSS_DROP[id]);notes.push(`🎁 <b class="rEX">魔王專屬裝備：${gearName(g)}</b>（${statStr(gearStats(g))}${g.fx.length?" "+fxStr(g):""}）`);SFX.ssr();}
         if(i+1<BOSS_LIST.length&&first)notes.push(`🔓 下一位魔王出現了：<b>${MONSTERS[BOSS_LIST[i+1]].name}</b>`);
         if(i+1===BOSS_LIST.length&&first)notes.push("🎬 <b>8 位魔王全部討伐完成！</b>");
+        if(id===FK_BOSS)notes.push('<span id="fkNote"></span>');
       }
       save();CUR_B=null;VIEW="boss";render();
       if(win)openModal(`<h3>⚔ 討伐成功：${M.name}</h3><div class="detail"><div class="av"><img src="images/bosses/${id}_2.webp" alt=""></div><div><p>${notes.join("<br>")}</p></div></div>
         <div class="row"><button class="pri" onclick="openBoss('${id}')">再挑戰一次</button><button onclick="closeModal()">關閉</button></div>`);
+      if(win&&id===FK_BOSS)fkClaim().then(m=>{const el=document.getElementById("fkNote");if(el&&m)el.innerHTML=m;else if(m)toast(m.replace(/<[^>]+>/g,""));});
     }});
 }
 
@@ -4085,12 +4088,13 @@ const ACH=[
   {g:"戰鬥",id:"train30",n:"苦練成材",d:"練功房通過第 30 關",v:s=>(s.train&&s.train.best)||0,t:30,r:{stone:5}},
   {g:"戰鬥",id:"boss1",n:"魔王討伐",d:"打倒 1 位支線魔王",v:s=>Object.keys(s.bosses||{}).length,t:1,r:{stone:5}},
   {g:"戰鬥",id:"boss3",n:"不可能的任務",d:"打倒第 3 位支線魔王「命運裁決者」",v:s=>(s.bosses||{}).fatejudge?1:0,t:1,r:{stone:30}},
+  {g:"戰鬥",id:"fk5",n:"深淵君王首殺",d:"成為前 3 名擊敗第 5 位支線魔王「深淵君王」的玩家（需登入帳號）",v:s=>(s.fk&&s.fk.rank)?1:0,t:1,r:{note:"🏅首殺稱號＋🌟金色攻擊果實"}},
   {g:"裝備",id:"gear10",n:"強化大師",d:"任一裝備強化到 +10",v:s=>maxOf((s.gear||[]).map(g=>g.lv)),t:10,r:{stone:5}},
   {g:"裝備",id:"gearUR",n:"傳說入手",d:"獲得 1 件 UR 傳說裝備",v:s=>(s.gear||[]).some(g=>GEAR[g.base].q==="UR")?1:0,t:1,r:{gold:50}},
   {g:"裝備",id:"gearEX",n:"魔王的遺物",d:"獲得 1 件 EX 魔王專屬裝備",v:s=>(s.gear||[]).some(g=>GEAR[g.base].q==="EX")?1:0,t:1,r:{stone:5}},
   {g:"裝備",id:"set3",n:"全套",d:"任一角色穿滿 3 件同稀有度裝備（套裝）",v:s=>maxOf(Object.keys(s.owned).map(id=>maxOf(Object.values(setCounts(id))))),t:3,r:{gold:40}}
 ];
-function rewardStr(r){return [r.gold?`🪙${r.gold}`:"",r.stone?`💎×${r.stone}`:""].filter(Boolean).join(" ");}
+function rewardStr(r){return [r.gold?`🪙${r.gold}`:"",r.stone?`💎×${r.stone}`:"",r.note||""].filter(Boolean).join(" ");}
 // 檢查並發獎；回傳這次新達成的成就
 function checkAch(){
   SAVE.ach=SAVE.ach||{};const got=[];
@@ -4105,6 +4109,51 @@ function checkAch(){
   }
   return got;
 }
+/* ===== 深淵君王首殺榜：前 3 名擊敗第 5 位魔王的帳號，拿稱號和金色攻擊果實 =====
+   名額放在 Firebase 的 firstKill/abyssking/{1,2,3}，用 transaction 搶，每格只能寫一次（規則見 database.rules.json）。
+   果實發進存檔（SAVE.gfruits）；稱號以資料庫的名單為準，連不上時才看存檔裡的 SAVE.fk。 */
+const FK_BOSS="abyssking",FK_SLOTS=3,FK_REWARD={1:2,2:1,3:1},FK_TITLE="深淵君王首殺者";
+const FK={slots:{},tried:false};
+const fkEsc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+async function fkLoad(){
+  try{const s=await (await fbDb()).ref("firstKill/"+FK_BOSS).get();FK.slots=s.val()||{};}catch(e){glog("❌FK","讀取首殺榜失敗 "+(e&&e.code||e&&e.message||e));}
+  if(VIEW==="boss")render();
+}
+function fkRank(){
+  if(ACCT)for(let n=1;n<=FK_SLOTS;n++){const s=FK.slots[n];if(s&&s.uid===ACCT.uid)return n;}
+  return (SAVE.fk&&SAVE.fk.rank)||0;
+}
+const fkTitle=()=>fkRank()?`🏅${FK_TITLE}`:"";
+// 打贏深淵君王後呼叫：回傳要顯示的訊息（空字串＝不用顯示）
+async function fkClaim(){
+  if(SAVE.fk&&SAVE.fk.rank)return "";
+  if(!ACCT)return "🏅 深淵君王首殺榜：登入帳號後打贏，才能搶前 3 名的名額。";
+  try{
+    const ref=(await fbDb()).ref("firstKill/"+FK_BOSS),cur=(await ref.get()).val()||{};
+    let rank=0,fresh=false;
+    for(let n=1;n<=FK_SLOTS;n++)if(cur[n]&&cur[n].uid===ACCT.uid){rank=n;break;} // 已經在榜上（例如存檔重來過）：只補稱號，不重發果實
+    for(let n=1;n<=FK_SLOTS&&!rank;n++){
+      if(cur[n])continue;
+      const r=await ref.child(n).transaction(v=>v===null?{uid:ACCT.uid,name:ACCT.name,t:firebase.database.ServerValue.TIMESTAMP}:undefined);
+      if(r.committed){rank=n;fresh=true;}
+    }
+    FK.slots=(await ref.get()).val()||{};
+    if(!rank)return "🏅 深淵君王首殺榜的 3 個名額已經被搶走了。";
+    SAVE.fk={rank,at:Date.now()};
+    if(fresh)SAVE.gfruits.atk+=FK_REWARD[rank];
+    save();checkAch();SFX.ssr();
+    return `🏅 <b class="rEX">你是第 ${rank} 位擊敗深淵君王的玩家！</b>獲得稱號「${FK_TITLE}」${fresh?`與 🌟金色攻擊果實 ×${FK_REWARD[rank]}（到角色卡使用）`:""}`;
+  }catch(e){glog("❌FK","搶首殺名額失敗 "+(e&&e.code||e&&e.message||e));return "🏅 首殺榜連線失敗，下次打贏深淵君王再試。";}
+}
+function fkBoardHtml(){
+  const medal=["🥇","🥈","🥉"],me=fkRank();
+  const rows=[1,2,3].map(n=>{const s=FK.slots[n];
+    return `<div class="small" style="margin:3px 0">${medal[n-1]} 第 ${n} 名・${s?`<b>${fkEsc(s.name)}</b> <span class="dim">${new Date(s.t).toLocaleDateString()}</span>`:`<span class="dim">虛位以待</span>`}　<span class="dim">🌟金色攻擊果實 ×${FK_REWARD[n]}</span></div>`;}).join("");
+  return `<div class="panel" style="margin-top:12px"><b>🏅 ${MONSTERS[FK_BOSS].name}首殺榜</b>
+    <p class="dim small" style="margin:4px 0">全服前 3 位擊敗${MONSTERS[FK_BOSS].name}的玩家，可以得到稱號「${FK_TITLE}」、成就和金色攻擊果實。要<b>登入帳號</b>才能搶名額，以名額被搶走的先後排名。</p>
+    ${rows}${me?`<div class="small" style="color:var(--green);margin-top:4px">✓ 你是第 ${me} 名</div>`:!ACCT?`<div class="small" style="color:var(--gold);margin-top:4px">登入帳號後打贏才能搶名額</div>`:""}</div>`;
+}
+
 let ACH_TAB="";
 function viewAch(){
   const done=ACH.filter(a=>SAVE.ach&&SAVE.ach[a.id]).length,groups=[...new Set(ACH.map(a=>a.g))];
@@ -4150,7 +4199,7 @@ function setAcct(u){ACCT={uid:u.uid,name:u.displayName||u.email.split("@")[0]};t
 function fmtPlay(sec){const m=Math.floor(sec/60);return m>=60?`${Math.floor(m/60)} 小時 ${m%60} 分`:`${m} 分鐘`;}
 function saveSummary(s){return `🪙${s.gold}・抽 ${s.pulls} 次・角色 ${Object.keys(s.owned).length} 名・${s.prog.cleared>=ABYSS?"主線全破":`主線第 ${s.prog.cleared+1} 章`}${typeof s.playSec==="number"?`・遊戲時間 ${fmtPlay(s.playSec)}`:""}${s.updatedAt?`<br><span class="dim">最後存檔 ${new Date(s.updatedAt).toLocaleString()}</span>`:""}`;}
 function openAccount(){
-  if(ACCT)return openModal(`<h3>👤 ${ACCT.name}</h3>
+  if(ACCT)return openModal(`<h3>👤 ${ACCT.name}${fkTitle()?` <span class="small rEX">${fkTitle()}</span>`:""}</h3>
     <p class="small">已登入。存檔會自動上傳雲端，換手機或電腦登入同一個帳號就能接著玩。</p>
     <p class="small dim">${SYNC_MSG||"尚未同步"}</p>
     <div class="opts"><button class="pri" onclick="uploadSave(true)">☁ 立即上傳存檔</button>
@@ -4975,6 +5024,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-02",t:["新增「深淵君王首殺榜」：全服前 3 位擊敗第 5 位魔王「深淵君王」的玩家（需登入帳號，以搶到名額的先後排名），可得稱號「深淵君王首殺者」、成就，以及 🌟金色攻擊果實（第 1 名 ×2、第 2、3 名各 ×1）；榜單顯示在魔王討伐頁，果實到角色卡使用"]},
   {d:"2026-11-02",t:["裝備新增「頭盔」「戒指」「鞋子」三個部位，目前尚未開放（角色卡與試穿畫面顯示為鎖住的欄位，還沒有對應裝備）"]},
   {d:"2026-11-02",t:["魔王出手時的一般命中螢幕震動幅度調小約一半（暴擊／重擊維持原本的震動）"]},
   {d:"2026-10-30",t:["無盡深淵新增特殊房間「🔥 重鑄爐」：丟 2 件道具重鑄成 1 件隨機新道具，每間最多重鑄 2 次；D20 起火箭筒、霰彈槍更容易出現"]},

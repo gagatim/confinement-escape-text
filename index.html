@@ -2858,8 +2858,8 @@ function viewDino(){
       <li>全隊倒下就結束；戰敗沒有懲罰，也沒有獎勵。</li>
       <li>獎勵：<b>${DINO_WAVES} 關全部通過</b>可得 🪙${DINO_GOLD}，沒有其他掉落物。每天最多領 ${DINO_DAILY} 次（今天還剩 <b>${dinoLeft()}</b> 次，用這台裝置的日期計算）。</li>
     </ul></div>
-  <h3>出戰隊伍</h3><div class="cardgrid">${SAVE.team.map(id=>cardTile(id,`showCard('${id}')`)).join("")||"<span class='dim'>尚未編隊</span>"}</div>
-  <div class="row" style="margin-top:14px"><button class="pri" onclick="startDino()" ${SAVE.team.length?"":"disabled"}>⚔ 開始挑戰</button></div>`;
+  <div class="row" style="margin-top:14px"><button class="pri" onclick="startDino()" ${SAVE.team.length?"":"disabled"}>⚔ 開始挑戰</button></div>
+  <h3>出戰隊伍</h3><div class="cardgrid">${SAVE.team.map(id=>cardTile(id,`showCard('${id}')`)).join("")||"<span class='dim'>尚未編隊</span>"}</div>`;
 }
 function startDino(){
   if(!SAVE.team.length)return;
@@ -5102,6 +5102,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-02",t:["恐龍蛋專區的「⚔ 開始挑戰」按鈕移到說明的正下方，不用再捲到出戰隊伍下面"]},
   {d:"2026-11-02",t:["恐龍蛋專區分成「第一區」到「第五區」：第一區就是目前的玩法與獎勵，第二到第五區先放上鎖住的佔位頁面，目前還沒有怪物"]},
   {d:"2026-11-02",t:["恐龍蛋專區新增獎勵：10 關全部通過可得 🪙200，每天最多領 50 次（以這台裝置的日期計算）；沒有通關或領滿次數不給獎勵，仍然沒有其他掉落物"]},
   {d:"2026-11-02",t:["移除戰鬥畫面按鈕列裡的「🐞 卡住了」，戰鬥中請用右上角的「🐞」（效果相同）"]},

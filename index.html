@@ -3681,6 +3681,10 @@ function readyOwn(){
     DUEL.coopPick=DUEL.coopPick.filter(id=>!taken.includes(id));
     if(!DUEL.coopPick.length){toast("至少要選 1 名角色");return;}
   }else if(!SAVE.team.length){toast("先到「隊伍」編好角色");return;}
+  if(NET.mode==="t2"){ // 隊友已經先帶了同樣的角色：全部重複的話沒有角色能上場，不讓準備
+    const mate=DUEL.own&&DUEL.own[NET.seat^1],taken=mate?mate.map(x=>x.id):[];
+    if(!myOwnSpec().some(u=>!taken.includes(u.id))){toast("你的出戰角色全都被隊友先帶走了，請先離開房間，到「隊伍」換掉前 3 名再加入");return;}
+  }
   DUEL.ownReady=true;NET.ref.child("own/"+(NET.mode==="t2"?NET.seat:NET.side)).set(myOwnSpec()).catch(netFail);SFX.click();render();
 }
 // ---- 合作討伐：兩個帳號各帶 4 名角色，一起打偽永夜帝王；同一角色先按準備的人先用，目前不掉落裝備 ----
@@ -3789,6 +3793,8 @@ function onGoneT2(s){
 }
 function startT2Battle(){
   if(!NET||!DUEL||DUEL.started||NET.mode!=="t2")return;
+  const seats=DUEL.seats||{};
+  if(![0,1,2,3].every(k=>DUEL.own[k]&&(k===0||seats[k])))return; // 等待的 0.9 秒內有人離開：不開打，等人補上
   const seen={A:new Set(),B:new Set()},dup=[],team={A:[],B:[]};
   (DUEL.ownOrder||[]).forEach(k=>{
     const sd=k<2?"A":"B";
@@ -5211,6 +5217,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-02",t:["團隊賽 2v2 修正：①4 人準備好後的等待時間內如果有人離開，不會少一個人硬開打，會等人補上；②出戰角色全部被同隊隊友先帶走的玩家，現在會收到提示、不能按準備（以前會變成旁觀者）"]},
   {d:"2026-11-02",t:["團隊賽 2v2 打滿 100 回合還沒分出勝負，改判「平手」（原本是 B 隊獲勝）"]},
   {d:"2026-11-02",t:["團隊賽 2v2 的逾時時間從 30 秒改成 60 秒：60 秒沒動作或斷線，改由 AI 代打"]},
   {d:"2026-11-02",t:["Q&A 新增「團隊賽 2v2（4 人網路對戰）怎麼玩？規則與流程」，詳細說明準備、分隊、戰鬥、重複角色、逾時與斷線"]},

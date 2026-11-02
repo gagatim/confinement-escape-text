@@ -3184,11 +3184,13 @@ async function battleLoopInner(B){
       if(checkEnd(B))break;
       await sleep(B.fast?120:450);
     }
-    if(B.round>(B.cfg.maxRound||60)){B.over="B";blog(B,"戰鬥拖太久，毒氣淹沒了一切……","bad");}
+    if(B.round>(B.cfg.maxRound||60)){
+      if(B.t2){B.over="D";blog(B,"戰鬥拖太久，雙方都筋疲力盡……","bad");} // 團隊賽打滿回合數判平手
+      else{B.over="B";blog(B,"戰鬥拖太久，毒氣淹沒了一切……","bad");}}
   }
   B.active=null;B.wait=null;
-  blog(B,B.over==="A"?`🏆 ${B.labels.A} 獲勝！`:`☠ ${B.labels.B} 獲勝。`,"big");
-  (B.ctrl.B==="human"||B.over==="A")?SFX.win():SFX.lose();
+  blog(B,B.over==="D"?"🤝 回合數用盡，雙方平手。":B.over==="A"?`🏆 ${B.labels.A} 獲勝！`:`☠ ${B.labels.B} 獲勝。`,"big");
+  if(B.over==="D")SFX.click();else(B.ctrl.B==="human"||B.over==="A")?SFX.win():SFX.lose();
   render();
 }
 async function takeTurn(B,u){
@@ -3315,8 +3317,8 @@ function unitCard(B,u){
 function actionPanel(B){
   if(B.over){
     const hot=B.ctrl.A==="human"&&B.ctrl.B==="human",win=B.over===B.mySide;
-    const head=hot?`${B.labels[B.over]} 勝利！`:win?"勝利":"敗北";
-    return `<div class="result ${win||hot?"win":"lose"}"><h2>${head}</h2><div class="dim">${B.cfg.resultNote?B.cfg.resultNote(B):""}</div>
+    const draw=B.over==="D",head=draw?"平手":hot?`${B.labels[B.over]} 勝利！`:win?"勝利":"敗北";
+    return `<div class="result ${win||hot||draw?"win":"lose"}"><h2>${head}</h2><div class="dim">${B.cfg.resultNote?B.cfg.resultNote(B):""}</div>
       <button class="pri" data-kb="continue" style="margin-top:8px" onclick="finishBattle()">繼續</button>${KB_HINT}</div>`;
   }
   const w=B.wait;
@@ -3572,7 +3574,7 @@ const FB_CFG={apiKey:"AIzaSyBFcsgw6urVdIyJbvH1aZLaK0MQNJ1yfSg",authDomain:"confi
   databaseURL:"https://confinement-escape-text-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId:"confinement-escape-text",appId:"1:523494416946:web:9e95a3d65ec4f17e87d22b"};
 const FB_SDK="https://www.gstatic.com/firebasejs/10.12.2/";
-const REMOTE_TIMEOUT=60000,T2_TIMEOUT=30000; // 團隊賽四個人輪流，逾時縮短為 30 秒
+const REMOTE_TIMEOUT=60000,T2_TIMEOUT=60000; // 團隊賽逾時（與一般網路對戰相同，60 秒）
 let FB_DB=null,NET=null,DUEL_MODE="local",JOIN_CODE="",SNAP_T=null;
 function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement("script");s.src=src;s.onload=res;s.onerror=()=>rej(new Error("無法載入連線元件"));document.head.appendChild(s);});}
 // SDK 只在進入網路對戰時才載入，其他模式仍可離線遊玩
@@ -3912,7 +3914,7 @@ function applySnap(s){
   if(B.done)return;
   VIEW="battle";render();
   diffs.forEach(([u,d])=>{fx(B,u,(d>0?"+":"")+d,d>0?"heal":"dmg");d>0?SFX.heal():SFX.hit();});
-  if(B.over&&!B.overSfx){B.overSfx=1;B.over===B.mySide?SFX.win():SFX.lose();}
+  if(B.over&&!B.overSfx){B.overSfx=1;B.over==="D"?SFX.click():B.over===B.mySide?SFX.win():SFX.lose();}
 }
 function sendAct(B,seq,a){
   B.sentSeq=seq;
@@ -5209,6 +5211,9 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-02",t:["團隊賽 2v2 打滿 100 回合還沒分出勝負，改判「平手」（原本是 B 隊獲勝）"]},
+  {d:"2026-11-02",t:["團隊賽 2v2 的逾時時間從 30 秒改成 60 秒：60 秒沒動作或斷線，改由 AI 代打"]},
+  {d:"2026-11-02",t:["Q&A 新增「團隊賽 2v2（4 人網路對戰）怎麼玩？規則與流程」，詳細說明準備、分隊、戰鬥、重複角色、逾時與斷線"]},
   {d:"2026-11-02",t:["雙人對決 → 網路對戰新增「團隊賽 2v2」：4 位玩家連線，玩家 1、2 一隊，玩家 3、4 一隊（依加入順序），每人帶「隊伍」頁前 3 名角色，規則同養成賽、沒有獎勵；每人只操作自己的角色，30 秒沒動作或斷線改由 AI 代打，其他人繼續打；房主關掉網頁對戰就結束"]},
   {d:"2026-11-02",t:["恐龍蛋專區的「⚔ 開始挑戰」按鈕移到說明的正下方，不用再捲到出戰隊伍下面"]},
   {d:"2026-11-02",t:["恐龍蛋專區分成「第一區」到「第五區」：第一區就是目前的玩法與獎勵，第二到第五區先放上鎖住的佔位頁面，目前還沒有怪物"]},
@@ -5279,6 +5284,7 @@ const QA=[
   ["遠征中怎麼補血？","背包的藥片、酒可以一個一個選隊員使用，也可以按「一鍵補血」：從隊伍最前面開始補滿，先用藥片，藥片用完才用酒。酒的效果是隨機的，可能補 6、補 2，也可能扣 2。"],
   ["遠征中放棄會怎樣？","視同全隊覆沒，只帶回一半的金條。"],
   ["魔王討伐一定要打嗎？","不用，是支線。8 位魔王打倒一位才會出現下一位；打倒第一條命後魔王會爆氣進入第二階段。打贏有機會掉落魔王專屬的 EX 裝備。"],
+  ["團隊賽 2v2（4 人網路對戰）怎麼玩？規則與流程","<b>是什麼</b>：4 位玩家各用自己的帳號連線，分成 2 對 2 對打。屬於養成賽規則：等級、星數、突破、裝備都算進去，<b>沒有任何獎勵</b>，也不影響你的存檔。<br><br><b>事前準備</b>：每位玩家先到「整備室 → 隊伍」編好隊伍，出戰的是<b>隊伍前 3 名</b>角色。隊伍是空的不能加入。<br><br><b>流程</b><br>① 房主：「競技場 → 雙人對決 → 🌐 網路對戰」按「🏠 建立房間（團隊賽 2v2・4 人）」，會得到 5 碼房號和邀請連結。<br>② 其他 3 人：輸入房號按「加入」，或直接點邀請連結。依加入順序成為玩家 2、3、4，房間滿 4 人後就不能再加入。<br>③ 分隊：<b>玩家 1（房主）＋玩家 2 ＝ A 隊</b>，<b>玩家 3 ＋玩家 4 ＝ B 隊</b>，不能自己換。想跟朋友同隊，請約好加入順序。<br>④ 準備：每人看過自己的出戰角色後按「✅ 準備好了」，<b>4 人都準備好會自動開打</b>。按下準備後不能換人，要換請先離開房間。<br>⑤ 戰鬥：全場依速度排出行動順序，輪到你的角色時才會出現操作按鈕（攻擊、技能、防禦），其他人只看戰況。角色名稱旁的「我」是你的角色，「P1」到「P4」是其他玩家的角色。<br>⑥ 結束：一隊全員倒下，另一隊獲勝；打滿 100 回合還沒分勝負，判<b>平手</b>。結算後按「繼續」離開房間。<br><br><b>重複角色</b>：同一隊內不能重複帶同一個角色，先按準備的人先用，後面的人那一隻不會上場（戰鬥開頭會提示）。不同隊可以帶同一個角色。<br><br><b>逾時與斷線</b>：輪到你 60 秒沒操作，這一手會自動出招。有人斷線或關掉網頁，只有他的角色改由 AI 代打，其他人繼續打。開打前有人離開，座位會空出來讓別人加入。<br><br><b>注意</b>：戰鬥由房主的裝置負責計算，<b>房主關掉網頁或離線，整場就直接結束</b>，請選網路穩定的人當房主。建議 4 人都先按 Ctrl＋F5 更新到最新版再開房。"],
   ["畫面提示「請重新整理」是什麼意思？","遊戲更新後，舊頁面讀到新版存檔時會提示。重新整理頁面載入新版即可，存檔不會消失。"],
   ["存檔被清掉了怎麼辦？","遊戲偵測到存檔異常而清空時，會先自動備份，跳出的提示裡有「♻ 還原備份」按鈕可以還原（還原時會再檢查一次）。"],
   ["遊戲卡住或畫面出錯怎麼辦？","按右上角的「🐞」開啟「卡住了／回報問題」視窗，複製紀錄回報；遠征卡住可以先試「重置這一層」。"]

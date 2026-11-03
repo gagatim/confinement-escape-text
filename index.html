@@ -1176,6 +1176,23 @@ const TEAM_BASE=3,TEAM_BIG=5,FIVE_ABYSS=150;
 const fiveOk=p=>!!p&&(p.cleared||0)>=ABYSS&&(p.fatty||0)>=5&&(p.abyssBest||0)>=FIVE_ABYSS;
 const teamMax=()=>fiveOk(SAVE.prog)?TEAM_BIG:TEAM_BASE;
 const extraFoes=()=>Math.max(0,SAVE.team.length-TEAM_BASE); // 隊伍比 3 人多幾人，敵人就跟著多幾隻
+/* ---- 存入角色系統（架構，目前尚未開放：STORE_OPEN=false）----
+   存入第 N 格的角色，會把 STORE_BONUS 裡替他設定的能力，加給「出戰第 N 位」的角色。
+   存入位數量跟出戰位一樣（3 人隊 3 格、解鎖五人隊後 5 格）。存入的角色不能同時出戰，也不能遣散、合成、熔煉。
+   團隊賽 2v2 不套用存入加成。沒設定的角色加成是 0。 */
+const STORE_OPEN=false;
+const STORE_BONUS={
+  // 角色代號:{hp:生命, atk:攻擊, def:防禦, spd:速度, crit:暴擊%, steal:吸血%, dodge:閃避%, dr:減傷%}，只填要給的項目
+  // 範例：ashen:{atk:2,hp:5},
+};
+const storeMax=()=>teamMax();
+const isStored=id=>!!SAVE.stored&&SAVE.stored.includes(id);
+// 出戰角色（依它在隊伍的位置）從對應存入格拿到的加成
+function storeBonusOf(id){
+  if(!STORE_OPEN)return {};
+  const i=SAVE.team.indexOf(id);if(i<0||i>=storeMax())return {};
+  const sid=SAVE.stored[i];return (sid&&STORE_BONUS[sid])||{};
+}
 // 檢查存檔裡有沒有遊戲規則不可能出現的數值，有的話回傳原因
 function validSave(s){
   if(!isInt(s.gold,0,5000000))return "金條數量異常";
@@ -1191,6 +1208,12 @@ function validSave(s){
     if(o.exp!=null&&!isInt(o.exp,0,lvNeed(o.lv||1)))return `${CARDS[id].name} 經驗值異常`;
   }
   if(!Array.isArray(s.team)||s.team.length>(fiveOk(s.prog)?TEAM_BIG:TEAM_BASE)||s.team.some(id=>!s.owned[id]))return "隊伍資料異常";
+  if(s.stored!=null){
+    const st=s.stored;if(!Array.isArray(st)||st.length>TEAM_BIG)return "存入角色資料異常";
+    const got=st.filter(Boolean);
+    if(got.some(id=>!s.owned[id])||new Set(got).size!==got.length||got.some(id=>s.team.includes(id)))return "存入角色資料異常";
+    if(st.slice(fiveOk(s.prog)?TEAM_BIG:TEAM_BASE).some(Boolean))return "存入角色資料異常";
+  }
   const uids=new Set();
   for(const g of s.gear||[]){
     const G=GEAR[g.base];if(!G)return "出現不存在的裝備";
@@ -1263,6 +1286,7 @@ function exportBackup(i){
 function checkIntegrity(){if(!SAVE||STALE)return true;const why=validSave(SAVE);if(why){wipeTampered(why);return false;}return true;}
 // 舊存檔補欄位：已逃出過禁閉室就算通關第1章
 function migrate(s){
+  if(!Array.isArray(s.stored))s.stored=[null,null,null,null,null]; // 存入角色（第 N 格加成給出戰第 N 位）
   if(!s.skin)s.skin={own:{},worn:{},claimed:{},seen:0}; // 造型（試用）：own 擁有、worn 各角色穿著、claimed 已領過的活動
   if(!s.junk)s.junk={}; // N 白卡數量 {代號:張數}
   if(s.prog&&s.prog.fatty==null)s.prog.fatty=0; // 《肥宅物語》進度（0～5）
@@ -1806,6 +1830,7 @@ function viewTeam(){
   return `<div class="row" style="align-items:baseline;gap:6px 14px"><h2 style="margin-right:0">出戰隊伍</h2>${fiveTip()}</div>
   <div class="teamslots ${teamMax()>3?"five":""}">${Array.from({length:teamMax()},(_,i)=>i).map(i=>{const id=SAVE.team[i];return id?cardTile(id,`showCard('${id}')`):`<div class="slot">空位</div>`;}).join("")}</div>
   <p class="dim small">點卡片查看技能、加入或移出隊伍。遠征與競技場都使用這支隊伍。不要的角色可以在卡片裡「遣散」換金條（R 🪙3／SR 🪙10／SSR 🪙30，每星計算），或用「合成」把 <b>5 張 N 白卡</b>換成 1 名 R、6★ 份的 R 換成 1 名 SR、6★ 份的 SR 換成 1 名 SSR，或用「熔煉」把 2 名同稀有度角色熔成 1 名同稀有度的其他角色（等級、星數、突破取較低的）。</p>
+  ${storePanel()}
   ${shardPanel()}
   ${junkPanel()}
   <div class="row"><h3 style="margin-right:auto">收藏（${ownedCount()}/${CARD_IDS.length}）</h3>
@@ -1892,6 +1917,7 @@ const SHARD_NAME={R:"R 碎片",SR:"SR 碎片",SSR:"SSR 碎片"};
 function sellBlock(id){
   if(storyOn(id))return "劇情角色，無法遣散";
   if(SAVE.team.includes(id))return "在出戰隊伍中，先移出隊伍才能遣散";
+  if(isStored(id))return "存入中，先取出才能遣散";
   if(SAVE.run&&SAVE.run.party.some(m=>!m.ally&&m.id===id))return "正在遠征中，結束後才能遣散";
   if(Object.keys(SAVE.owned).length<=3)return "至少要保留 3 名角色";
   return "";
@@ -1907,6 +1933,7 @@ function starUp(id,all){
 // 拆解 SSR：集中處理 SSR 的重複卡與多餘星數，換金條和碎片（不會拆掉整張角色）
 function dismantleBlock(id){
   if(SAVE.team.includes(id))return "出戰隊伍中";
+  if(isStored(id))return "存入中";
   if(SAVE.run&&SAVE.run.party.some(m=>!m.ally&&m.id===id))return "遠征中";
   return "";
 }
@@ -1958,6 +1985,7 @@ function sellHtml(id){
 function resetBlock(id){
   if(storyOn(id))return "劇情角色，無法重置";
   if(SAVE.team.includes(id))return "在出戰隊伍中，先移出隊伍才能重置";
+  if(isStored(id))return "存入中，先取出才能重置";
   if(SAVE.run&&SAVE.run.party.some(m=>!m.ally&&m.id===id))return "正在遠征中，結束後才能重置";
   return "";
 }
@@ -2007,6 +2035,7 @@ function synBlock(id){
   if(storyOn(id))return "劇情角色";
   if(id==="fatty")return "不提供合成";
   if(SAVE.team.includes(id))return "隊伍中";
+  if(isStored(id))return "存入中";
   if(SAVE.run&&SAVE.run.party.some(m=>!m.ally&&m.id===id))return "遠征中";
   if(trained(id))return "已練過";
   return "";
@@ -2129,6 +2158,7 @@ function smeltBlock(id){
   if(storyOn(id))return "劇情角色";
   if(trained(id))return "已練過";
   if(SAVE.team.includes(id))return "隊伍中";
+  if(isStored(id))return "存入中";
   if(SAVE.run&&SAVE.run.party.some(m=>!m.ally&&m.id===id))return "遠征中";
   return "";
 }
@@ -2271,8 +2301,28 @@ function doConvert(){
 
 function toggleTeam(id){
   if(SAVE.team.includes(id))SAVE.team=SAVE.team.filter(x=>x!==id);
+  else if(isStored(id)){toast("存入中，先取出才能出戰");return;}
   else if(SAVE.team.length<teamMax())SAVE.team.push(id);
   save();closeModal();render();
+}
+// 存入角色：第 slot 格（0 起算）存入／取出；存入的角色不能同時在出戰隊伍裡
+function storePick(slot){
+  if(!STORE_OPEN||slot>=storeMax())return;
+  const ids=sortedIds().filter(id=>SAVE.owned[id]&&!SAVE.team.includes(id)&&!isStored(id));
+  openModal(`<h3>存入第 ${slot+1} 格</h3><p class="dim small">存入的角色會把能力加給出戰第 ${slot+1} 位的角色；存入期間不能出戰、遣散或合成。</p>
+    <div class="cardgrid">${ids.map(id=>cardTile(id,`storeSet(${slot},'${id}')`)).join("")||"<span class='dim'>沒有可以存入的角色</span>"}</div>
+    <div class="row" style="margin-top:12px"><button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
+}
+function storeSet(slot,id){
+  if(!STORE_OPEN||slot>=storeMax()||!SAVE.owned[id]||SAVE.team.includes(id)||isStored(id))return;
+  SAVE.stored[slot]=id;save();closeModal();render();
+}
+function storeTake(slot){SAVE.stored[slot]=null;save();render();}
+function storePanel(){
+  if(!STORE_OPEN)return "";
+  return `<h3>存入角色</h3><p class="dim small">第 N 格存入的角色，會把能力加給出戰第 N 位的角色。</p>
+  <div class="teamslots ${teamMax()>3?"five":""}">${Array.from({length:storeMax()},(_,i)=>i).map(i=>{const id=SAVE.stored[i],b=id&&STORE_BONUS[id];
+    return id?`<div>${cardTile(id,`storeTake(${i})`)}<div class="small dim" style="text-align:center">${b?statStr(b):"沒有加成"}・點擊取出</div></div>`:`<div class="slot" onclick="storePick(${i})">存入 ${i+1}</div>`;}).join("")}</div>`;
 }
 
 /* ===================== GEAR ===================== */
@@ -2295,8 +2345,9 @@ function dropGear(q){return gearName(addGear(rollGear(q)))+`（${q}）`;}
 // eq 是「欄位→裝備 uid」的對照；預覽時可以傳入假設的組合
 function wornOf(id,eq){return Object.values(eq||{}).map(gearById).filter(g=>g&&lvOk(id,g.base));}
 function setCountsOf(id,eq){const c={};wornOf(id,eq).forEach(g=>{const q=setKeyOf(g.base);c[q]=(c[q]||0)+1;});return c;}
-function bonusOf(id,eq){
+function bonusOf(id,eq,noStore){
   const s={hp:0,atk:0,def:0,spd:0,crit:0,steal:0,dodge:0,dr:0};
+  if(!noStore){const t=storeBonusOf(id);for(const k in t)s[k]=(s[k]||0)+t[k];} // 存入角色加成（團隊賽不套用）
   wornOf(id,eq).forEach(g=>{const t=gearStats(g);for(const k in t)s[k]+=t[k];});
   Object.entries(setCountsOf(id,eq)).forEach(([q,n])=>[2,3].forEach(k=>{if(n>=k)for(const st in SETS[q][k])s[st]+=SETS[q][k][st];}));
   if(SAVE.owned[id]){const f=fruitOf(id),g=gfruitOf(id);s.atk+=f.atk+g.atk*GFRUIT_GAIN;s.def+=f.def+g.def*GFRUIT_GAIN;s.spd+=f.spd+g.spd*GFRUIT_GAIN;} // 能力果實（含金色）
@@ -2304,7 +2355,7 @@ function bonusOf(id,eq){
 }
 function wornGear(id){const o=SAVE.owned[id];return o?wornOf(id,o.eq):[];}
 function setCounts(id){const o=SAVE.owned[id];return o?setCountsOf(id,o.eq):{};}
-function equipBonus(id){const o=SAVE.owned[id];return bonusOf(id,o&&o.eq);}
+function equipBonus(id,noStore){const o=SAVE.owned[id];return bonusOf(id,o&&o.eq,noStore);}
 function setHtml(id){
   const c=setCounts(id),qs=Object.keys(c).filter(q=>c[q]>=1);
   if(!qs.length)return "";
@@ -2745,8 +2796,8 @@ function buySupply(id){
 }
 function buyFood(){if(SAVE.stash.food>=FOOD_MAX){toast("補給包已達上限");return;}if(!pay(FOOD_PRICE))return;SAVE.stash.food++;save();SFX.click();render();}
 // 我方隊伍成員（含等級與永久裝備加成），競技場、練功房用
-function teamUnit(id){
-  const o=SAVE.owned[id],e=equipBonus(id),sc=lvScale(id),br=brOf(id),s=cardStats(id,o.stars,sc,br);
+function teamUnit(id,noStore){
+  const o=SAVE.owned[id],e=equipBonus(id,noStore),sc=lvScale(id),br=brOf(id),s=cardStats(id,o.stars,sc,br);
   return {id,stars:o.stars,scale:sc,br,maxHp:s.maxHp+e.hp,atk:e.atk,def:e.def,spd:e.spd,gx:{crit:e.crit,steal:e.steal,dodge:e.dodge,dr:e.dr}};
 }
 
@@ -3669,7 +3720,7 @@ async function joinRoom(code){
 }
 // ---- 養成賽：雙方帶自己的隊伍（等級、星數、突破、裝備都算進去），不給任何獎勵 ----
 const isOwnMode=m=>m==="own"||m==="coop";
-function myOwnSpec(){return (NET&&NET.mode==="coop"?DUEL.coopPick:NET&&NET.mode==="t2"?(DUEL.t2Pick||[]):SAVE.team.slice(0,3)).map(id=>{const u=teamUnit(id);u.gx=u.gx||{};return u;});}
+function myOwnSpec(){return (NET&&NET.mode==="coop"?DUEL.coopPick:NET&&NET.mode==="t2"?(DUEL.t2Pick||[]):SAVE.team.slice(0,3)).map(id=>{const u=teamUnit(id,!!(NET&&NET.mode==="t2"));u.gx=u.gx||{};return u;});}
 // 房主不信任挑戰者送來的數字：只收合理範圍內的值
 function sanOwn(arr,max=3){
   const cl=(v,a,b)=>Math.min(b,Math.max(a,Number.isFinite(+v)?+v:a)),seen=new Set(),out=[];
@@ -3789,7 +3840,7 @@ function t2Toggle(id){
 // 房間內換裝：準備前才能改（準備時才會把裝備數值送出去）
 function t2Gear(id){
   if(!DUEL||DUEL.ownReady||DUEL.started||!SAVE.owned[id])return;
-  const o=SAVE.owned[id],e=equipBonus(id);
+  const o=SAVE.owned[id],e=equipBonus(id,true);
   openModal(`<h3>${CARDS[id].name} 的裝備 ${clsTag(id)}</h3>
     <div class="small">加成：${statStr(e)||"無"}</div>
     <div class="gslots">${Object.keys(SLOTS).map(sl=>{const g=gearById(o.eq&&o.eq[sl]);
@@ -5361,6 +5412,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-03",t:["新增「存入角色」系統的架構（目前尚未開放，玩家看不到也用不到）：存入第 N 格的角色，會把能力加給出戰第 N 位的角色；存入的角色不能同時出戰，也不能遣散、合成、熔煉；團隊賽 2v2 不套用加成"]},
   {d:"2026-11-03",t:["鞋子開放取得：恐龍蛋專區 10 關全部通過、領到獎勵時，額外擲一次鞋子掉落（最多掉一雙）：髒拖鞋 10%、沙灘拖鞋 10%、人化破拖鞋 7%，其餘不掉；商店、裝備箱、換裝、其他掉落仍然沒有鞋子。裝備圖鑑的「怎麼取得」也同步說明"]},
   {d:"2026-11-03",t:["魔王專屬裝備「死神之鐮」新增防禦 +1（攻擊 +12、防禦 +1、血量 +12）"]},
   {d:"2026-11-03",t:["新增稀有（R）鞋子「人化破拖鞋」（速度 +1、血量 +2），不限職業、可強化；和灰階鞋子一樣目前還不開放取得"]},

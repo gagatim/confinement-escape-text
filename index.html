@@ -898,7 +898,7 @@ const GEAR={
   stick:{name:"木棍",icon:"🪵",slot:"weapon",q:"N",st:{atk:1}},
   rags:{name:"破布衣",icon:"👕",slot:"armor",q:"N",st:{hp:3}},
   band:{name:"橡皮筋",icon:"➰",slot:"acc",q:"N",st:{hp:2}},
-  // off:1＝尚未開放取得（不進隨機掉落／換裝／商店；要開放時拿掉 off 即可）
+  // off:1＝不進通用的隨機掉落／換裝／商店；鞋子目前只從恐龍蛋專區通關掉落（DINO_DROP）
   slippers:{name:"髒拖鞋",icon:"🩴",slot:"boots",q:"N",off:1,st:{spd:1}},
   beachslip:{name:"沙灘拖鞋",icon:"🩴",slot:"boots",q:"N",off:1,st:{hp:2}},
   sadslip:{name:"人化破拖鞋",icon:"🩴",slot:"boots",q:"R",off:1,st:{spd:1,hp:2}},
@@ -2458,8 +2458,8 @@ function openDex(k){
     <div class="sk"><b>📊 數值</b><br>基礎：${statStr(G.st)}<br>品質浮動（${lo}%～${hi}%）：${rng}<br>強化到 +${ENH_MAX}：${max}（以 100% 品質計）</div>
     <div class="sk"><b>✦ 隨機詞條</b>（${cnt}）<br><span class="small">${aff}</span></div>
     <div class="sk"><b>🧩 套裝</b>：${SETS[setKeyOf(k)].name}<br>2 件：${statStr(SETS[setKeyOf(k)][2])}　3 件：${statStr(SETS[setKeyOf(k)][3])}</div>
-    <div class="sk"><b>🎁 怎麼取得</b><br>${GET_HOW[G.q]}${boss?`<br><b class="rEX">掉落自：${MONSTERS[boss].name}</b>`:""}</div>
-    <div class="row" style="margin-top:12px">${GEAR_PRICE[G.q]?`<button class="gold" onclick="closeModal();SHOP_TAB='gear';go('shop')">🛒 去商店</button>`:""}<button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
+    <div class="sk"><b>🎁 怎麼取得</b><br>${(d=>d?`🥚 恐龍蛋專區 ${DINO_WAVES} 關全部通過時有 ${Math.round(d[1]*100)}% 機率掉落（包含在每天 ${DINO_DAILY} 次獎勵內）`:G.off?"尚未開放取得":GET_HOW[G.q])(DINO_DROP.find(x=>x[0]===k))}${boss?`<br><b class="rEX">掉落自：${MONSTERS[boss].name}</b>`:""}</div>
+    <div class="row" style="margin-top:12px">${GEAR_PRICE[G.q]&&!G.off?`<button class="gold" onclick="closeModal();SHOP_TAB='gear';go('shop')">🛒 去商店</button>`:""}<button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
 }
 function fitSel(id){FIT_CHAR=id;FIT_PICK=0;SFX.click();render();}
 function fitSlot(sl){FIT_SLOT=sl;FIT_PICK=0;SFX.click();render();}
@@ -2838,10 +2838,13 @@ function startTrain(){
 
 /* ===================== 恐龍蛋專區 ===================== */
 // 遠征頁的獨立專區：連續 10 關，每關 5 顆恐龍蛋；打完一關立刻接下一關（同一場戰鬥，血量不回復）。
-// 獎勵：10 關全過才有 🪙DINO_GOLD，沒有其他掉落物；每人每天最多領 DINO_DAILY 次（用這台裝置的日期計算，跟合作討伐一樣）。
+// 獎勵：10 關全過才有 🪙DINO_GOLD，並擲一次鞋子掉落（DINO_DROP），沒有其他掉落物；每人每天最多領 DINO_DAILY 次（用這台裝置的日期計算，跟合作討伐一樣）。
 // 強度：血厚、傷害低。要調整就改下面幾個數字（hp／atk 是第 1 關的基礎值，每關再乘 dinoScale）
 const DINO_WAVES=10,DINO_EGGS=5,DINO_MAXROUND=1000,DINO_PICS=40,DINO_GOLD=400,DINO_DAILY=30;
 function dinoLeft(){const c=SAVE.dino;return c&&c.d===coopToday()?Math.max(0,DINO_DAILY-c.n):DINO_DAILY;}
+// 通關（領得到獎勵的那一次）擲一次，最多掉一雙鞋子：髒拖鞋 10%、沙灘拖鞋 10%、人化破拖鞋 7%、沒掉 73%
+const DINO_DROP=[["slippers",.10],["beachslip",.10],["sadslip",.07]];
+function dinoRoll(){let r=rnd();for(const [k,p] of DINO_DROP){if(r<p)return k;r-=p;}return null;}
 MONSTERS.dinoegg={name:"恐龍蛋",emoji:"🥚",r:"R",hp:800,atk:3,def:5,spd:3, // 生命 800（原本 80 的 10 倍）；防禦 5（每點讓每次受到的傷害少 0.7，防禦不隨關卡增加）
   skill:{name:"孵化震動",cd:3,t:"enemy",kind:"dmg",desc:"造成1.2倍攻擊傷害。",use(B,u,t){hit(B,u,t,1.2);}},
   passive:{name:"厚實蛋殼",desc:"防禦+15。"}};
@@ -2864,7 +2867,8 @@ function viewDino(){
       <li>恐龍蛋血很厚、傷害很低，考驗隊伍的持久力。</li>
       <li>每顆約 ❤${s.maxHp} ⚔${s.atk} 🛡${s.def+15}（第 1 關）→ ❤${e.maxHp} ⚔${e.atk} 🛡${e.def+15}（第 ${DINO_WAVES} 關）。防禦含被動「厚實蛋殼」+15。</li>
       <li>全隊倒下就結束；戰敗沒有懲罰，也沒有獎勵。</li>
-      <li>獎勵：<b>${DINO_WAVES} 關全部通過</b>可得 🪙${DINO_GOLD}，沒有其他掉落物。每天最多領 ${DINO_DAILY} 次（今天還剩 <b>${dinoLeft()}</b> 次，用這台裝置的日期計算）。</li>
+      <li>獎勵：<b>${DINO_WAVES} 關全部通過</b>可得 🪙${DINO_GOLD}，每天最多領 ${DINO_DAILY} 次（今天還剩 <b>${dinoLeft()}</b> 次，用這台裝置的日期計算）。</li>
+      <li>掉落：領到獎勵的那一次還會擲一次鞋子（最多掉一雙）：${DINO_DROP.map(([k,p])=>`${GEAR[k].name} ${Math.round(p*100)}%`).join("、")}。</li>
     </ul></div>
   <div class="row" style="margin-top:14px"><button class="pri" onclick="startDino()" ${SAVE.team.length?"":"disabled"}>⚔ 開始挑戰</button></div>
   <h3>出戰隊伍</h3><div class="cardgrid">${SAVE.team.map(id=>cardTile(id,`showCard('${id}')`)).join("")||"<span class='dim'>尚未編隊</span>"}</div>`;
@@ -2882,8 +2886,9 @@ function startDino(){
       if(win){
         if(dinoLeft()>0){
           const t=coopToday(),c=SAVE.dino;
-          SAVE.dino={d:t,n:(c&&c.d===t?c.n:0)+1};SAVE.gold+=DINO_GOLD;save();
-          note=`<br>🪙+${DINO_GOLD}（今天還可以領 ${dinoLeft()} 次）`;
+          SAVE.dino={d:t,n:(c&&c.d===t?c.n:0)+1};SAVE.gold+=DINO_GOLD;
+          const dk=dinoRoll(),dg=dk?addGear(dk):null;save();
+          note=`<br>🪙+${DINO_GOLD}（今天還可以領 ${dinoLeft()} 次）`+(dg?`<br>🎁 掉落了 <b class="r${GEAR[dk].q}">${qTag(GEAR[dk].q)}${gearName(dg)}</b>（${statStr(gearStats(dg))}，已放進裝備）`:"");
         }else note=`<br><span class="dim">今天的獎勵已經領滿 ${DINO_DAILY} 次了，明天再來。</span>`;
       }
       CUR_B=null;RUN_TAB="dino";VIEW="run";render();
@@ -5356,6 +5361,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-03",t:["鞋子開放取得：恐龍蛋專區 10 關全部通過、領到獎勵時，額外擲一次鞋子掉落（最多掉一雙）：髒拖鞋 10%、沙灘拖鞋 10%、人化破拖鞋 7%，其餘不掉；商店、裝備箱、換裝、其他掉落仍然沒有鞋子。裝備圖鑑的「怎麼取得」也同步說明"]},
   {d:"2026-11-03",t:["魔王專屬裝備「死神之鐮」新增防禦 +1（攻擊 +12、防禦 +1、血量 +12）"]},
   {d:"2026-11-03",t:["新增稀有（R）鞋子「人化破拖鞋」（速度 +1、血量 +2），不限職業、可強化；和灰階鞋子一樣目前還不開放取得"]},
   {d:"2026-11-03",t:["新增「鞋子」部位與 2 雙灰階（N）鞋子：髒拖鞋（速度 +1）、沙灘拖鞋（血量 +2），不限職業、可強化；角色卡、試穿畫面、裝備倉庫、圖鑑都多了鞋子欄位（頭盔、戒指仍未開放）。目前鞋子還不開放取得：商店、裝備箱、怪物掉落、換裝都不會出現"]},

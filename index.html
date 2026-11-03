@@ -1459,7 +1459,7 @@ function bgmWant(){
   if(VIEW==="duel")return "duel";
   if(VIEW==="run"&&RUN&&RUN.active)return RUN.ch===ABYSS?"abyss":"run";
   if(VIEW==="story")return "story"; // 老國王的故事頁：莊嚴的合唱曲
-  if(VIEW==="gacha"||VIEW==="team"||VIEW==="dex"||VIEW==="gear"||VIEW==="log"||VIEW==="qa")return "town"; // 招募、隊伍、裝備、更新說明、Q&A：輕鬆的中世紀風
+  if(VIEW==="gacha"||VIEW==="team"||VIEW==="dex"||VIEW==="gear"||VIEW==="log"||VIEW==="qa"||VIEW==="tips")return "town"; // 招募、隊伍、裝備、更新說明、Q&A：輕鬆的中世紀風
   return "main";
 }
 function syncBgm(){
@@ -1479,10 +1479,12 @@ let VIEW="home";
 const NAV=[["home","主頁"],["gacha","招募"],["team","整備室"],["story","檔案室"],["shop","商店"],["boss","魔王討伐"],["run","遠征"],["train","練功房"],["arena","競技場"],["log","更新說明"]];
 // 合併頁：一個導覽按鈕對應多個分頁（各頁的代號、內容、背景音樂維持原樣，只是共用上方的分頁列）
 //   檔案室＝圖鑑／故事／成就；整備室＝隊伍／裝備／轉換；競技場＝競技場／雙人對決
+// 攻略專區（更新說明旁邊的分頁）：純文字、沒有互動；內容寫在 TIPS。目前尚未開放，TIPS_OPEN 改成 true 才會出現分頁
+const TIPS_OPEN=false;
 const PAGE_GROUPS=[
   {nav:"story",title:"🗄 檔案室",tabs:[["story","👑 故事"],["ach","🏆 成就"],["dex","📖 圖鑑"]]},
   {nav:"team",title:"🛠 整備室",tabs:[["team","👥 隊伍"],["gear","🛡 裝備"],["convert","🔁 轉換"]]},
-  {nav:"log",title:"📝 更新說明",tabs:[["log","📝 更新紀錄"],["qa","❓ Q&A 問答"]]},
+  {nav:"log",title:"📝 更新說明",tabs:[["log","📝 更新紀錄"],["qa","❓ Q&A 問答"],...(TIPS_OPEN?[["tips","📖 攻略"]]:[])]},
   {nav:"arena",title:"🏟 競技場",tabs:[["arena","⚔ 競技場"],["duel","🆚 雙人對決"]]}
 ];
 const groupOf=v=>PAGE_GROUPS.find(g=>g.tabs.some(([k])=>k===v));
@@ -1525,7 +1527,7 @@ function render(){
 }
 function renderInner(){
   renderHeader();
-  const f={home:viewHome,gacha:viewGacha,team:viewTeam,convert:viewConvert,dex:viewCodex,gear:viewGear,shop:viewShop,run:viewRun,boss:viewBossPage,train:viewTrain,arena:viewArena,ach:viewAch,story:viewStory,log:viewChangelog,qa:viewQA,duel:viewDuel,battle:viewBattle}[VIEW]||viewHome;
+  const f={home:viewHome,gacha:viewGacha,team:viewTeam,convert:viewConvert,dex:viewCodex,gear:viewGear,shop:viewShop,run:viewRun,boss:viewBossPage,train:viewTrain,arena:viewArena,ach:viewAch,story:viewStory,log:viewChangelog,qa:viewQA,tips:TIPS_OPEN?viewTips:viewHome,duel:viewDuel,battle:viewBattle}[VIEW]||viewHome;
   $("#view").innerHTML=(groupOf(VIEW)?groupTabs(groupOf(VIEW)):"")+f();
   if(VIEW==="battle"){const l=$("#blog");if(l)l.scrollTop=l.scrollHeight;kbApply();}
   if(CUR_B&&CUR_B.online&&!CUR_B.guest)pushSnap(CUR_B);
@@ -5481,6 +5483,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-03",t:["新增「📖 攻略」專區的架構（更新說明旁邊的分頁，純文字文章，點標題展開），已寫好 1 篇：SSR 角色技能分析（含職業被動）；目前尚未開放，玩家看不到"]},
   {d:"2026-11-03",t:["暴擊的畫面閃白減弱（亮度減半），連續暴擊時比較不刺眼"]},
   {d:"2026-11-03",t:["戰鬥新增攻擊特效：攻擊者出手時會往目標前衝；命中時依職業有不同效果（戰士斬擊、坦克衝擊環、刺客交叉雙斬、遊俠箭矢飛行、法師魔法球飛行、輔助光環）；暴擊是金色放大加畫面閃白；使用技能時施放者會發光、畫面四周變暗。快速模式下特效時間縮短，只是畫面效果，不影響戰鬥結果"]},
   {d:"2026-11-03",t:["新增「存入角色」系統的架構（目前尚未開放，玩家看不到也用不到）：存入第 N 格的角色，會把能力加給出戰第 N 位的角色；存入的角色不能同時出戰，也不能遣散、合成、熔煉；團隊賽 2v2 不套用加成"]},
@@ -5575,6 +5578,69 @@ const QA=[
 function viewQA(){
   return `<h2>❓ Q&amp;A</h2><p class="dim small">常見問題。點問題展開答案。</p>
   ${QA.map(([q,a])=>`<details class="lorech"><summary><b>${q}</b></summary><div class="kingrow"><p>${a}</p></div></details>`).join("")}`;
+}
+/* ---- 攻略專區：純文字文章，點標題展開。規則有改動時，記得同步修改這裡的內容 ---- */
+const TIPS=[
+  ["SSR 角色技能分析（含職業被動）",`數值以 1★、Lv.1、不含裝備計算，已加上職業被動。<br><br>
+    <b>職業被動</b><br>
+    🛡 坦克：生命 +15%、防禦 +1<br>
+    ⚔ 戰士：攻擊 +15%（至少 +1）<br>
+    🗡 刺客：速度 +1、暴擊率 +6%<br>
+    🎯 射手：暴擊率 +12%<br>
+    ✚ 輔助：治療量 +30%（在自己的回合進行的治療才算）<br>
+    🔮 術士：技能傷害 +20%、施加的中毒每回合 +1<br>
+    目前 SSR 沒有射手和術士。9 位 SSR 的職業：戰士 4 位（屠夫、吸血鬼、狂戰士、阿燼）、輔助 3 位（黑社會老大、還魂師、晴）、刺客 1 位（暗影使者）、坦克 1 位（肥宅）。<br><br>
+    <b>⚔ 屠夫（戰士）</b><br>
+    素質：生命 32・攻擊 8・防禦 1・速度 3<br>
+    技能「屠宰」（冷卻 3）：對 1 名敵人造成 2.2 倍攻擊傷害。<br>
+    被動「鮮血盛宴」：每次造成傷害，恢復該傷害 30% 的生命（普通攻擊和技能都算）。<br>
+    用法：單體輸出加自我續戰，越多次出手越耐打。適合單挑強敵或魔王，對多個敵人時範圍不足。<br><br>
+    <b>🗡 暗影使者（刺客）</b><br>
+    素質：生命 26・攻擊 7・防禦 0・速度 7、基礎暴擊 14%<br>
+    技能「暗影突襲」（冷卻 3）：對 1 名敵人造成 1.6 倍傷害，無視防禦與防禦架勢；施放後獲得 1 次閃避。<br>
+    被動「暗影共鳴」：場上任何其他角色（敵我皆算）倒下時，自己恢復 5% 最大生命，攻擊永久 +3%（本場）。<br>
+    用法：速度最快、先手優勢大；無視防禦對高防禦敵人特別有效。血量和防禦偏低，要靠閃避和先手保護自己。<br><br>
+    <b>⚔ 吸血鬼（戰士）</b><br>
+    素質：生命 30・攻擊 7・防禦 1・速度 4<br>
+    技能「血宴」（冷卻 4）：對全體敵人各造成 0.8 倍傷害，把造成的總傷害的 50% 轉成自己的生命。<br>
+    被動「夜之血族」：每個自己的回合開始時，恢復 2% 最大生命（至少 1）。<br>
+    用法：範圍攻擊加回血，敵人越多回得越多；單體輸出較低，更偏向持久戰。<br><br>
+    <b>⚔ 狂戰士（戰士）</b><br>
+    素質：生命 37・攻擊 8・防禦 0・速度 4<br>
+    技能「狂暴旋風」（冷卻 3）：對全體敵人各造成 1.38 倍傷害；施放後自己失去 0.5% 最大生命（至少 1，最低留在 1）。<br>
+    被動「嗜殺」：生命低於一半時攻擊 +4%（依基礎攻擊計算）。<br>
+    用法：範圍輸出強，代價很小，適合面對多隻敵人的場合（例如恐龍蛋專區）。防禦 0，要避免被集火。<br><br>
+    <b>⚔ 阿燼（戰士・劇情角色）</b><br>
+    素質：生命 36・攻擊 8・防禦 1・速度 4<br>
+    技能「撿回來的刀」（冷卻 3）：對 1 名敵人造成 2.0 倍傷害；自己生命低於 50% 時改為 2.6 倍。<br>
+    被動「我不會丟下你」：隊友生命低於 35% 時，被攻擊有 40% 機率改由阿燼代受（代受傷害為原本的 60%）；每代受 1 次，攻擊永久 +6%（至少 +1），最多疊 3 次。<br>
+    羈絆「名冊合照」：與晴同時在場，阿燼攻擊 +4%。<br>
+    用法：單體輸出加保護隊友，越撐越痛；帶著晴能互相加成。<br><br>
+    <b>✚ 晴（輔助・劇情角色）</b><br>
+    素質：生命 28・攻擊 4・防禦 1・速度 4<br>
+    技能「唸出名字」（冷卻 4）：全體隊友各恢復 22.5% 最大生命（至少 5），並解除中毒與減益。輔助加成後約 29%。<br>
+    被動「我記得你」：每當有隊友倒下，全體隊友攻擊永久 +4%（至少 +1），最多疊 3 次。<br>
+    羈絆「名冊合照」：與阿燼同時在場，治療量再 +7.5%（合計約 31%）。<br>
+    用法：目前最強的全隊治療，還能淨化中毒和減益。自己攻擊力很低，要靠隊友輸出。<br><br>
+    <b>✚ 還魂師（輔助）</b><br>
+    素質：生命 28・攻擊 5・防禦 1・速度 4<br>
+    技能「安魂儀式」（冷卻 5）：有隊友倒下時，復活最大生命最高的 1 名，復活後恢復 40% 最大生命；沒人倒下時，全體隊友恢復 8%（至少 4），輔助加成後約 10%。<br>
+    被動「臨終祝禱」：每場戰鬥，自己第一次倒下時立刻復活，恢復 30% 最大生命，並防禦 +15（本場）。<br>
+    用法：偏保險型，技能冷卻長，但關鍵時刻能救回一名隊友；自己也有一次復活機會。<br><br>
+    <b>✚ 黑社會老大（輔助）</b><br>
+    素質：生命 36・攻擊 6・防禦 2・速度 3<br>
+    技能「一呼百應」（冷卻 3）：全體隊友（含自己）防禦 +10%（至少 +1，2 回合），並立刻恢復 12% 最大生命，輔助加成後約 15.6%。<br>
+    被動「你們先上」：自己被攻擊時，有 35% 機率改由 1 名隨機的活著的隊友代為承受，代受傷害為原本的 60%。沒有其他隊友可代時不會觸發。<br>
+    用法：全隊小幅回血加防禦，血量與防禦是輔助裡最高的。被動會把傷害分給隊友，要留意隊友的血量。<br><br>
+    <b>🛡 肥宅（坦克・劇情角色，由 SR 肥宅進化）</b><br>
+    素質：生命 62・攻擊 6・防禦 4・速度 3<br>
+    技能「肉盾坦克」（冷卻 3）：嘲諷 2 回合（敵人優先攻擊自己），防禦 +4（2 回合），並恢復 10% 最大生命。<br>
+    被動「LEVEL UP」：每次被攻擊後，防禦 +2（本場，可累加）；每被攻擊 5 次，防禦再額外 +2。防禦加成上限 +25。<br>
+    用法：吸收傷害的專職坦克，越被打越硬，適合拖長戰鬥；輸出很低，要搭配輸出角色。`]
+];
+function viewTips(){
+  return `<h2>📖 攻略</h2><p class="dim small">遊戲內的玩法說明。點標題展開。</p>
+  ${TIPS.map(([q,a])=>`<details class="lorech"><summary><b>${q}</b></summary><div class="kingrow"><p>${a}</p></div></details>`).join("")}`;
 }
 function viewChangelog(){
   return `<h2>📝 更新說明</h2><p class="dim small">每次更新的內容都會記在這裡，新的在最上面。</p>

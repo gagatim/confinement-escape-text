@@ -901,6 +901,7 @@ const GEAR={
   // off:1＝尚未開放取得（不進隨機掉落／換裝／商店；要開放時拿掉 off 即可）
   slippers:{name:"髒拖鞋",icon:"🩴",slot:"boots",q:"N",off:1,st:{spd:1}},
   beachslip:{name:"沙灘拖鞋",icon:"🩴",slot:"boots",q:"N",off:1,st:{hp:2}},
+  sadslip:{name:"人化破拖鞋",icon:"🩴",slot:"boots",q:"R",off:1,st:{spd:1,hp:2}},
   pipe:{name:"鐵管",icon:"🔧",slot:"weapon",q:"R",st:{atk:2}},
   axe:{name:"消防斧",icon:"🪓",slot:"weapon",q:"R",cls:["warrior","tank"],st:{atk:3,hp:3}},
   dagger:{name:"匕首",icon:"🔪",slot:"weapon",q:"R",cls:["assassin"],st:{atk:2,spd:1}},
@@ -1006,7 +1007,7 @@ function boxImg(k,cls=""){
   const b=BOXES[k];
   return `<img class="gimg ${cls}" src="images/boxes/${k}.webp" alt="${b.name}" draggable="false" onerror="this.outerHTML='${b.icon}'">`;
 }
-const GEAR_IMG=new Set(["stick","rags","band","slippers","beachslip","pipe","axe","dagger","rifle","doll","baton","jacket","coin","dogtag","chainsaw","katana","crossbow","grimoire","riot","vest","bracer","railgun","scythe","aegis","exo","watch","gavel","abyssmail","scales","endchain","reaperscythe","fatecompass","doomrifle","voidterm","nightrobe","overlordmantle","abysscrown"]);
+const GEAR_IMG=new Set(["stick","rags","band","slippers","beachslip","sadslip","pipe","axe","dagger","rifle","doll","baton","jacket","coin","dogtag","chainsaw","katana","crossbow","grimoire","riot","vest","bracer","railgun","scythe","aegis","exo","watch","gavel","abyssmail","scales","endchain","reaperscythe","fatecompass","doomrifle","voidterm","nightrobe","overlordmantle","abysscrown"]);
 function gearImg(base,cls=""){
   const G=GEAR[base];if(!GEAR_IMG.has(base))return G.icon;
   return `<img class="gimg ${cls}" src="images/equipment/${base}.webp" alt="${G.name}" draggable="false" loading="lazy" onerror="this.outerHTML='${G.icon}'">`;
@@ -5355,6 +5356,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-03",t:["新增稀有（R）鞋子「人化破拖鞋」（速度 +1、血量 +2），不限職業、可強化；和灰階鞋子一樣目前還不開放取得"]},
   {d:"2026-11-03",t:["新增「鞋子」部位與 2 雙灰階（N）鞋子：髒拖鞋（速度 +1）、沙灘拖鞋（血量 +2），不限職業、可強化；角色卡、試穿畫面、裝備倉庫、圖鑑都多了鞋子欄位（頭盔、戒指仍未開放）。目前鞋子還不開放取得：商店、裝備箱、怪物掉落、換裝都不會出現"]},
   {d:"2026-11-03",t:["團隊賽 2v2 房間內可以換裝備：「你的出戰角色」下方每個已選角色多了「🎽 換裝」按鈕，可以直接穿脫武器／防具／飾品；準備前隨時能改，準備後要先按「取消準備」。改好的裝備在你按「準備好了」時才算進戰鬥"]},
   {d:"2026-11-03",t:["團隊賽 2v2 大改版：①在房間內就能選角色（最多 3 名），準備前隨時改，準備後可按「取消準備」重選，不用離開房間；②打完一場回到同一個房間，座位和隊伍不變，重新準備就能再打；③準備期間看不到對面隊伍的角色（只顯示已加入／已準備），自己隊友的看得到；④隊伍自己選：每隊 2 人，按空位的「換到 A／B 隊」換隊，不再按加入順序硬分；⑤一進房就會看到玩家（⏳ 已加入・未準備），準備後才變 ✅ 已準備；⑥4 人都準備好後改成倒數 3 秒開打，倒數中有人取消準備就中止"]},

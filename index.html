@@ -3127,7 +3127,7 @@ function aiChoose(B,u){
 function startBattle(cfg){
   const B={title:cfg.title,units:[],log:[],round:0,ctrl:cfg.ctrl||{A:"human",B:"ai"},items:cfg.items||null,
     wall:{},flags:{},auto:false,fast:false,wait:null,done:false,over:null,cfg,labels:cfg.labels||{A:"我方",B:"敵方"},
-    online:cfg.online||null,rseq:0,mySide:"A",coop:!!cfg.coop,t2:!!cfg.t2,mySeat:"0",wave:1};
+    online:cfg.online||null,rseq:0,mySide:cfg.mySide||"A",coop:!!cfg.coop,t2:!!cfg.t2,mySeat:"0",wave:1};
   B.units=cfg.A.map(o=>mkUnit({...o,side:"A"})).concat(cfg.B.map(o=>mkUnit({...o,side:"B"})));
   B.units.forEach(u=>{if(FRENZY_IDS.includes(u.id)&&B.units.filter(x=>x.side!==u.side).length>=5){u.flags.frenzy=1;blog(B,`🔥 ${nm(u)} 面對五人的隊伍，進入了激動模式！`,"bad");}});
   CUR_B=B;BATTLE_HOME=cfg.home||"arena";VIEW="battle";
@@ -3611,9 +3611,12 @@ async function hostRoom(mode){
     }
     if(!code)throw new Error("無法建立房間");
     ref.onDisconnect().remove();
-    NET={ref,code,side:"A",status:"room",gone:false,mode:md,seat:0,team:"A"};
-    if(md==="t2"){ // 團隊賽：房主是座位 0（A 隊），訪客座位 1～3（1 在 A 隊，2、3 在 B 隊）
-      DUEL={phase:"own",step:0,picks:{A:[],B:[]},online:true,own:{},seats:{}};
+    NET={ref,code,side:"A",status:"room",gone:false,mode:md,seat:0};
+    if(md==="t2"){ // 團隊賽：房主是座位 0，訪客座位 1～3；隊伍（tm/座位 = A 或 B）由玩家自己選，每隊最多 2 人，房主預設在 A 隊
+      DUEL={phase:"own",step:0,picks:{A:[],B:[]},online:true,own:{},seats:{},tm:{0:"A"}};
+      t2Init();
+      ref.child("tm/0").set("A");
+      ref.child("tm").on("value",onTmT2);
       ref.child("g").on("value",onSeatsT2);
       ref.child("own").on("value",onOwnT2);
       ref.child("gl").on("value",onGoneT2);
@@ -3657,7 +3660,7 @@ async function joinRoom(code){
 }
 // ---- 養成賽：雙方帶自己的隊伍（等級、星數、突破、裝備都算進去），不給任何獎勵 ----
 const isOwnMode=m=>m==="own"||m==="coop";
-function myOwnSpec(){return (NET&&NET.mode==="coop"?DUEL.coopPick:SAVE.team.slice(0,3)).map(id=>{const u=teamUnit(id);u.gx=u.gx||{};return u;});}
+function myOwnSpec(){return (NET&&NET.mode==="coop"?DUEL.coopPick:NET&&NET.mode==="t2"?(DUEL.t2Pick||[]):SAVE.team.slice(0,3)).map(id=>{const u=teamUnit(id);u.gx=u.gx||{};return u;});}
 // 房主不信任挑戰者送來的數字：只收合理範圍內的值
 function sanOwn(arr,max=3){
   const cl=(v,a,b)=>Math.min(b,Math.max(a,Number.isFinite(+v)?+v:a)),seen=new Set(),out=[];
@@ -3686,8 +3689,10 @@ function readyOwn(){
     if(!DUEL.coopPick.length){toast("至少要選 1 名角色");return;}
   }else if(!SAVE.team.length){toast("先到「隊伍」編好角色");return;}
   if(NET.mode==="t2"){ // 隊友已經先帶了同樣的角色：全部重複的話沒有角色能上場，不讓準備
-    const mate=DUEL.own&&DUEL.own[NET.seat^1],taken=mate?mate.map(x=>x.id):[];
-    if(!myOwnSpec().some(u=>!taken.includes(u.id))){toast("你的出戰角色全都被隊友先帶走了，請先離開房間，到「隊伍」換掉前 3 名再加入");return;}
+    if(!t2Team(NET.seat)){toast("還在分配隊伍，請稍等");return;}
+    if(!(DUEL.t2Pick||[]).length){toast("至少要選 1 名角色");return;}
+    const taken=t2Taken();
+    if(!myOwnSpec().some(u=>!taken.includes(u.id))){toast("你選的角色全都被隊友先帶走了，請換別的角色");return;}
   }
   DUEL.ownReady=true;NET.ref.child("own/"+(NET.mode==="t2"?NET.seat:NET.side)).set(myOwnSpec()).catch(netFail);SFX.click();render();
 }
@@ -3755,19 +3760,66 @@ function startOwnBattle(){
     A:a,B:b,intro:"連線建立。兩支養成過的隊伍在禁閉室中央對峙。",
     onEnd(){leaveOnline();}});
 }
-// ---- 團隊賽 2v2（養成賽規則）：4 個座位，房主 = 座位 0；座位 0、1 是 A 隊，座位 2、3 是 B 隊。每人帶隊伍前 3 名，沒有獎勵 ----
-// 資料庫：g/{1~3} 訪客佔位、gl/{1~3} 訪客離開、own/{0~3} 各人的出戰隊伍、act（訪客操作，帶座位 s）、snap（房主推送的戰況）
+// 團隊賽的隊伍：tm/{座位} = "A" 或 "B"，由玩家自己選，每隊最多 2 人
+const T2_COUNTDOWN=3000; // 4 人都準備好後的倒數（毫秒），倒數中任何人取消準備就中止
+const t2Team=k=>(DUEL&&DUEL.tm&&DUEL.tm[k])||null;
+function t2Init(){DUEL.t2Pick=SAVE.team.filter(id=>SAVE.owned[id]).slice(0,3);}
+// 同隊隊友已準備好、帶走的角色
+function t2Taken(){
+  const my=t2Team(NET.seat),out=[];
+  [0,1,2,3].forEach(k=>{if(k!==NET.seat&&my&&t2Team(k)===my&&DUEL.own&&DUEL.own[k])DUEL.own[k].forEach(x=>out.push(x.id));});
+  return out;
+}
+function t2Toggle(id){
+  if(!DUEL||DUEL.ownReady)return;
+  if(t2Taken().includes(id)){toast("這個角色已被隊友帶走");return;}
+  const p=DUEL.t2Pick,i=p.indexOf(id);
+  if(i>=0)p.splice(i,1);else if(p.length<3)p.push(id);else{toast("最多帶 3 名");return;}
+  SFX.click();render();
+}
+function t2Unready(){
+  if(!NET||NET.mode!=="t2"||!DUEL||DUEL.started||!DUEL.ownReady)return;
+  DUEL.ownReady=false;NET.ref.child("own/"+NET.seat).remove().catch(netFail);SFX.click();render();
+}
+// 換隊：只能在還沒準備時換，目標隊伍要有空位（用交易避免兩人同時搶位）
+function t2Switch(t){
+  if(!NET||NET.mode!=="t2"||!DUEL||DUEL.ownReady||DUEL.started)return;
+  if(t2Team(NET.seat)===t)return;
+  NET.ref.child("tm").transaction(cur=>{
+    cur=cur||{};const cnt=[0,1,2,3].filter(k=>k!==NET.seat&&cur[k]===t).length;
+    if(cnt>=2)return;
+    const o={};[0,1,2,3].forEach(k=>{if(cur[k])o[k]=cur[k];});o[NET.seat]=t;return o;
+  }).then(r=>{if(!r.committed)toast("那一隊已經滿了");}).catch(netFail);
+}
+function onTmT2(s){
+  if(!DUEL||!NET||NET.mode!=="t2")return;
+  const v=s.val()||{},tm={};[0,1,2,3].forEach(k=>{if(v[k])tm[k]=v[k];});
+  DUEL.tm=tm;
+  if(VIEW==="duel")render();
+  onOwnT2(null);
+}
+// ---- 團隊賽 2v2（養成賽規則）：4 個座位，房主 = 座位 0；隊伍由玩家自己選（每隊 2 人）。每人在房間內挑最多 3 名角色，獎勵見 T2_GOLD ----
+// 資料庫：g/{1~3} 訪客佔位、tm/{0~3} 所屬隊伍、gl/{1~3} 訪客離開、own/{0~3} 各人的出戰隊伍（開打時由房主清空）、act（訪客操作，帶座位 s）、snap（房主推送的戰況）
 async function joinT2(ref,code){
-  if(!SAVE.team.length)throw new Error("這是團隊賽，請先到「隊伍」編好角色");
+  if(!Object.keys(SAVE.owned).length)throw new Error("這是團隊賽，你還沒有角色");
   let seat=0;
   for(let n=1;n<=3&&!seat;n++){
     const tx=await ref.child("g/"+n).transaction(cur=>cur?undefined:Date.now());
     if(tx.committed)seat=n;
   }
   if(!seat)throw new Error("房間已經滿了（最多 4 人）");
+  // 自動分到人比較少的隊伍（一樣多就 A 隊），進房後可以自己換隊
+  const tt=await ref.child("tm").transaction(cur=>{
+    cur=cur||{};const cnt={A:0,B:0};[0,1,2,3].forEach(k=>{if(cur[k]&&k!==seat)cnt[cur[k]]++;});
+    const t=cnt.A<=cnt.B?"A":"B";if(cnt[t]>=2)return;
+    const o={};[0,1,2,3].forEach(k=>{if(cur[k]&&k!==seat)o[k]=cur[k];});o[seat]=t;return o;
+  });
+  if(!tt.committed){ref.child("g/"+seat).remove();throw new Error("房間已經滿了（最多 4 人）");}
   ref.child("gl/"+seat).onDisconnect().set(true);
-  NET={ref,code,side:"B",status:"room",gone:false,mode:"t2",seat,team:seat===1?"A":"B"};
-  DUEL={phase:"own",step:0,picks:{A:[],B:[]},online:true,own:{},seats:{}};
+  NET={ref,code,side:"B",status:"room",gone:false,mode:"t2",seat};
+  DUEL={phase:"own",step:0,picks:{A:[],B:[]},online:true,own:{},seats:{},tm:{}};
+  t2Init();
+  ref.child("tm").on("value",onTmT2);
   ref.child("g").on("value",onSeatsT2);
   ref.child("own").on("value",onOwnT2);
   ref.child("t").on("value",s=>{if(!s.exists())hostLeft();});
@@ -3789,9 +3841,17 @@ function onOwnT2(s){
   }
   const v=DUEL.ownRaw||{};DUEL.own={};DUEL.ownOrder=(DUEL.ownOrder||[]).filter(k=>v[k]); // 誰先按準備，同隊同一角色就算誰的
   [0,1,2,3].forEach(k=>{const x=v[k];DUEL.own[k]=x?Object.values(x):null;if(x&&!DUEL.ownOrder.includes(k))DUEL.ownOrder.push(k);});
+  if(!DUEL.started)DUEL.ownReady=!!v[NET.seat];
   if(VIEW==="duel")render();
-  const seats=DUEL.seats||{};
-  if(NET.side==="A"&&!DUEL.started&&[0,1,2,3].every(k=>DUEL.own[k]&&(k===0||seats[k])))setTimeout(startT2Battle,900);
+  t2CheckStart();
+}
+const t2AllReady=()=>{const seats=DUEL.seats||{};return [0,1,2,3].every(k=>DUEL.own[k]&&(k===0||seats[k])&&t2Team(k));};
+// 房主：4 人都準備好就倒數開打；倒數中有人取消準備或離開就中止
+function t2CheckStart(){
+  if(!NET||NET.side!=="A"||!DUEL||DUEL.started||NET.mode!=="t2")return;
+  const d=DUEL;
+  if(t2AllReady()){if(!d.cdT)d.cdT=setTimeout(()=>{d.cdT=null;if(DUEL===d)startT2Battle();},T2_COUNTDOWN);}
+  else if(d.cdT){clearTimeout(d.cdT);d.cdT=null;}
 }
 // 房主：訪客離開。開打前把座位讓出來；開打後只讓 AI 接手那個人的角色，其他人繼續打
 function onGoneT2(s){
@@ -3807,17 +3867,16 @@ function onGoneT2(s){
       if(B.rwait&&B.rwait.pl===String(n)&&B.remoteResolve)B.remoteResolve({ai:true});
       render();
     }else if(!DUEL.started){
-      ["g/","own/","gl/"].forEach(p=>NET.ref.child(p+n).remove().catch(()=>{}));
+      ["g/","own/","gl/","tm/"].forEach(p=>NET.ref.child(p+n).remove().catch(()=>{}));
     }
   });
 }
 function startT2Battle(){
   if(!NET||!DUEL||DUEL.started||NET.mode!=="t2")return;
-  const seats=DUEL.seats||{};
-  if(![0,1,2,3].every(k=>DUEL.own[k]&&(k===0||seats[k])))return; // 等待的 0.9 秒內有人離開：不開打，等人補上
-  const seen={A:new Set(),B:new Set()},dup=[],team={A:[],B:[]};
+  if(!t2AllReady())return; // 倒數期間有人離開：不開打，等人補上
+  const seen={A:new Set(),B:new Set()},dup=[],team={A:[],B:[]},tm=DUEL.tm;
   (DUEL.ownOrder||[]).forEach(k=>{
-    const sd=k<2?"A":"B";
+    const sd=tm[k];if(!sd)return;
     sanOwn(DUEL.own[k],3).forEach(u=>{
       if(seen[sd].has(u.id)){dup.push(CARDS[u.id].name);return;}
       seen[sd].add(u.id);team[sd].push({...u,pl:String(k)});
@@ -3826,30 +3885,58 @@ function startT2Battle(){
   if(!team.A.length||!team.B.length){toast("有玩家的隊伍資料異常");leaveOnline();return;}
   ["A","B"].forEach(sd=>team[sd].sort((a,b)=>a.pl-b.pl));
   DUEL.started=true;DUEL.phase="battle";
-  startBattle({title:"團隊賽 2v2 · 房間 "+NET.code,home:"duel",t2:true,maxRound:100,ctrl:{A:"remote",B:"remote"},labels:{A:"A隊",B:"B隊"},online:NET,
+  NET.ref.child("own").remove().catch(()=>{}); // 清掉準備狀態，打完回到房間時大家重新準備
+  const ps=sd=>[0,1,2,3].filter(k=>tm[k]===sd).map(k=>"玩家"+(k+1)).join("、");
+  startBattle({title:"團隊賽 2v2 · 房間 "+NET.code,home:"duel",t2:true,maxRound:100,mySide:tm[0],ctrl:{A:"remote",B:"remote"},labels:{A:"A隊",B:"B隊"},online:NET,
     A:team.A,B:team.B,
-    intro:`連線建立。A 隊（玩家1、玩家2）對上 B 隊（玩家3、玩家4）。${dup.length?`（${dup.join("、")} 在同隊已被先準備的玩家帶上場，後面的玩家不能重複上場）`:""}`,
+    intro:`連線建立。A 隊（${ps("A")}）對上 B 隊（${ps("B")}）。${dup.length?`（${dup.join("、")} 在同隊已被先準備的玩家帶上場，後面的玩家不能重複上場）`:""}`,
     resultNote:t2Note,
-    onEnd(win,B){t2Reward(B);leaveOnline();}});
+    onEnd(win,B){t2Reward(B);t2Back();}});
+}
+// 打完一場：留在同一個房間，座位和隊伍不變，回到準備畫面（斷線的玩家座位由房主釋出）
+function t2Back(){
+  if(!NET||NET.mode!=="t2"||!DUEL){leaveOnline();return;}
+  const ref=NET.ref,host=NET.side==="A";
+  clearTimeout(SNAP_T);SNAP_T=null;
+  if(DUEL.cdT){clearTimeout(DUEL.cdT);DUEL.cdT=null;}
+  CUR_B=null;NET.gs={};
+  Object.assign(DUEL,{phase:"own",started:false,ownReady:false});
+  VIEW="duel";onOwnT2(null);render();
+  if(host){
+    ref.child("snap").remove().catch(()=>{});ref.child("act").remove().catch(()=>{});
+    ref.child("gl").once("value").then(s=>{const v=s.val()||{};[1,2,3].forEach(n=>{if(v[n])["g/","tm/","gl/","own/"].forEach(p=>ref.child(p+n).remove().catch(()=>{}));});onOwnT2(null);}).catch(()=>{});
+  }else ref.child("t").once("value").then(s=>{if(!s.exists()&&NET){toast("房主離開了，連線結束");leaveOnline();}}).catch(()=>{});
 }
 function viewT2(){
-  const leave=`<button onclick="leaveOnline()">離開房間</button>`,me=NET.seat,own=DUEL.own||{},seats=DUEL.seats||{};
-  const here=k=>k===0||!!seats[k];
+  const leave=`<button onclick="leaveOnline()">離開房間</button>`,me=NET.seat,own=DUEL.own||{},seats=DUEL.seats||{},tm=DUEL.tm||{};
+  const here=k=>k===0||!!seats[k],myT=tm[me];
   const av=u=>`<div class="ccard ${CARDS[u.id].r}"><div class="av">${avatar(u.id)}</div><div class="nm">${CARDS[u.id].name}</div><div class="small">${u.stars}★${u.br?" 突破"+u.br:""}</div></div>`;
-  const box=k=>{const x=own[k];
+  // 只有自己隊伍的角色看得到；對面隊伍開打前保密，只顯示「已加入／已準備」
+  const box=k=>{const x=own[k],mine=tm[k]===myT;
+    const st=x?`<span style="color:#7bd88f">✅ 已準備</span>`:`<span class="dim">⏳ 已加入・未準備</span>`;
     return `<div class="panel" style="flex:1;min-width:200px;${k===me?"border-color:var(--gold)":""}"><b>玩家${k+1}${k===0?"（房主）":""}${k===me?"（你）":""}</b>
-      <span class="dim small">${here(k)?(x?"✅ 已準備":"準備中……"):"等待加入……"}</span>${x?`<div class="cardgrid">${sanOwn(x).map(av).join("")}</div>`:""}</div>`;};
-  const team=(t,ks)=>`<h3>${t} 隊${ks.includes(me)?"（你的隊伍）":""}</h3><div class="row">${ks.map(box).join("")}</div>`;
+      <span class="small" style="margin-left:6px">${st}</span>${x&&mine?`<div class="cardgrid">${sanOwn(x).map(av).join("")}</div>`:x?`<div class="dim small">🔒 角色開打前保密</div>`:""}</div>`;};
+  const slot=(t,full)=>`<div class="panel" style="flex:1;min-width:200px;border-style:dashed;text-align:center"><span class="dim">空位</span>
+    ${myT!==t&&!DUEL.ownReady&&!full?`<div style="margin-top:6px"><button class="gold" onclick="t2Switch('${t}')">換到 ${t} 隊</button></div>`:""}</div>`;
+  const team=t=>{
+    const ks=[0,1,2,3].filter(k=>here(k)&&tm[k]===t),empty=Math.max(0,2-ks.length);
+    return `<h3>${t} 隊${t===myT?"（你的隊伍）":""}</h3><div class="row">${ks.map(box).join("")}${Array.from({length:empty},()=>slot(t,false)).join("")}</div>`;
+  };
   const link=location.origin+location.pathname+"?room="+NET.code;
+  const taken=t2Taken(),pick=DUEL.t2Pick||[];
+  const ids=Object.keys(SAVE.owned).sort((a,b)=>R_ORDER[CARDS[a].r]-R_ORDER[CARDS[b].r]||lvOf(b)-lvOf(a));
+  const ready=DUEL.ownReady;
   return `<div class="row"><span class="dim">房間 ${NET.code}・團隊賽 2v2</span><span style="margin-left:auto">${leave}</span></div>
     ${me===0?`<div class="panel" style="text-align:center"><div class="dim">房號</div>
       <div style="font-size:44px;font-weight:900;letter-spacing:10px;color:var(--gold)">${NET.code}</div>
       <div class="small dim" style="word-break:break-all">${link}</div>
       <div class="row" style="justify-content:center;margin-top:10px"><button class="gold" onclick="copyLink('${link}')">📋 複製邀請連結</button></div></div>`:""}
-    ${team("A",[0,1])}${team("B",[2,3])}
-    ${own[me]?"":`<h3>你的出戰角色</h3><div class="cardgrid">${myOwnSpec().map(av).join("")}</div>`}
-    <div class="row" style="margin-top:12px">${DUEL.ownReady?`<span class="dim">已準備，等其他玩家……（4 人都準備好會自動開始）</span>`:`<button class="pri" onclick="readyOwn()">✅ 準備好了</button>`}</div>
-    <p class="dim small">玩家 1、2 組成 A 隊，玩家 3、4 組成 B 隊（依加入順序）。每人帶「隊伍」頁編好的前 3 名角色（等級、星數、突破、裝備都算）。獲勝且戰鬥超過 ${T2_MIN_ROUND} 回合，每人可得 🪙${T2_GOLD}（每天最多 ${T2_DAILY} 次，你今天還剩 ${t2Left()} 次）。同隊不能重複帶同一個角色，先按準備的先用。你只操作自己的角色；${T2_TIMEOUT/1000} 秒沒動作或斷線，改由 AI 代打。房主關掉網頁，對戰就結束。</p>`;
+    ${team("A")}${team("B")}
+    <h3>你的出戰角色（${pick.length}／3）</h3>
+    <div class="cardgrid">${ids.map(id=>{const c=CARDS[id],on=pick.includes(id),tk=taken.includes(id);
+      return `<div class="ccard ${c.r} ${tk?"locked":""}" style="${on?"outline:3px solid var(--gold)":tk||ready?"opacity:.5":""}" onclick="${tk?"":`t2Toggle('${id}')`}"><div class="av">${avatar(id)}</div><div class="nm">${c.name}</div><div class="small">Lv.${lvOf(id)}${tk?"・隊友已選":""}</div></div>`;}).join("")}</div>
+    <div class="row" style="margin-top:12px">${ready?`<button onclick="t2Unready()">↩ 取消準備（可換角色、換隊）</button><span class="dim">${t2AllReady()?`4 人都準備好了，${T2_COUNTDOWN/1000} 秒後自動開始（現在取消準備可中止）`:"已準備，等其他玩家……（4 人都準備好會自動倒數開始）"}</span>`:`<button class="pri" onclick="readyOwn()">✅ 準備好了</button>`}</div>
+    <p class="dim small">每隊 2 人，進房後可以按空位的「換到 X 隊」自己選隊伍。在房間內從你擁有的角色挑最多 3 名出戰（等級、星數、突破、裝備都算）；準備前都能改，準備後想改就按「取消準備」。對面隊伍開打前看不到角色，隊友的看得到。獲勝且戰鬥超過 ${T2_MIN_ROUND} 回合，每人可得 🪙${T2_GOLD}（每天最多 ${T2_DAILY} 次，你今天還剩 ${t2Left()} 次）。同隊不能重複帶同一個角色，先按準備的先用。你只操作自己的角色；${T2_TIMEOUT/1000} 秒沒動作或斷線，改由 AI 代打。打完會回到這個房間，不用重新開房；房主關掉網頁，房間就解散。</p>`;
 }
 function onDraft(s){
   if(!DUEL||!DUEL.online||!NET)return;
@@ -3921,10 +4008,11 @@ function opponentLeft(){
 function applySnap(s){
   if(!s||!NET||NET.side!=="B")return;
   const prev=CUR_B&&CUR_B.guest?CUR_B:null;
+  if(!prev&&s.over)return; // 回到房間後遇到上一場殘留的結束快照：忽略
   // Firebase 不存空陣列／空物件，要補回預設值
   const units=(s.units||[]).map(u=>Object.assign(u,{buffs:u.buffs||[],st:u.st||{},perm:u.perm||{},flags:{p2:u.p2||0,frenzy:u.fr||0}}));
-  const B=prev||(s.t2?{guest:true,t2:true,ctrl:{A:"remote",B:"remote"},labels:{A:"A隊",B:"B隊"},mySide:NET.team,mySeat:String(NET.seat),items:null,flags:{},done:false,online:NET,
-    cfg:{resultNote:t2Note,onEnd:(win,B)=>{t2Reward(B);leaveOnline();}}}:s.coop?{guest:true,coop:true,ctrl:{A:"remote",B:"ai"},labels:{A:"我方",B:"偽王"},mySide:"A",items:null,flags:{},done:false,online:NET,
+  const B=prev||(s.t2?{guest:true,t2:true,ctrl:{A:"remote",B:"remote"},labels:{A:"A隊",B:"B隊"},mySide:t2Team(NET.seat)||"B",mySeat:String(NET.seat),items:null,flags:{},done:false,online:NET,
+    cfg:{resultNote:t2Note,onEnd:(win,B)=>{t2Reward(B);t2Back();}}}:s.coop?{guest:true,coop:true,ctrl:{A:"remote",B:"ai"},labels:{A:"我方",B:"偽王"},mySide:"A",items:null,flags:{},done:false,online:NET,
     cfg:{onEnd:win=>{coopReward(win);leaveOnline();}}}:{guest:true,ctrl:{A:"remote",B:"human"},labels:{A:"對手",B:"你"},mySide:"B",items:null,flags:{},done:false,online:NET,
     cfg:{onEnd:()=>leaveOnline()}});
   const diffs=[];
@@ -3956,12 +4044,13 @@ function hostLeft(){
 function leaveOnline(){
   const n=NET;NET=null;
   if(n&&n.ref){
-    ["guest","gl","draft","own","act","t","snap","g"].forEach(k=>n.ref.child(k).off());
+    ["guest","gl","draft","own","act","t","snap","g","tm"].forEach(k=>n.ref.child(k).off());
     const gk=n.mode==="t2"?"gl/"+n.seat:"gl";
     if(n.side==="A"){n.ref.onDisconnect().cancel();n.ref.remove().catch(()=>{});}
     else{n.ref.child(gk).onDisconnect().cancel();n.ref.child(gk).set(true).catch(()=>{});}
   }
   clearTimeout(SNAP_T);SNAP_T=null;
+  if(DUEL&&DUEL.cdT){clearTimeout(DUEL.cdT);DUEL.cdT=null;}
   if(CUR_B&&CUR_B.online)CUR_B.done=true;
   CUR_B=null;DUEL=null;VIEW="duel";render();
 }
@@ -3978,7 +4067,7 @@ function viewOnline(){
     <div class="row"><input id="joinCode" maxlength="5" placeholder="5碼房號" value="${JOIN_CODE}" autocomplete="off"
       style="font:inherit;font-size:18px;letter-spacing:4px;text-transform:uppercase;width:150px;padding:6px 10px;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px">
     <button class="gold" onclick="joinRoom($('#joinCode').value)">加入</button></div>
-    <p class="dim small">標準：雙方都以 3★ 參戰，蛇形選角。養成賽：雙方帶自己的隊伍（等級、星數、突破、裝備都算），沒有公平限制，也沒有獎勵；加入房間時會自動判斷是哪種。合作討伐：兩人各帶 4 名角色，一起打偽永夜帝王（測試階段，不掉落裝備）。團隊賽 2v2：4 位玩家（2 對 2）各帶隊伍前 3 名角色，規則同養成賽；獲勝且戰鬥超過 ${T2_MIN_ROUND} 回合，每人可得 🪙${T2_GOLD}（每天最多 ${T2_DAILY} 次）。房主的裝置負責計算戰鬥：房主關掉網頁，對戰就結束；挑戰者斷線或 60 秒沒動作，改由 AI 代打。</p></div>`;
+    <p class="dim small">標準：雙方都以 3★ 參戰，蛇形選角。養成賽：雙方帶自己的隊伍（等級、星數、突破、裝備都算），沒有公平限制，也沒有獎勵；加入房間時會自動判斷是哪種。合作討伐：兩人各帶 4 名角色，一起打偽永夜帝王（測試階段，不掉落裝備）。團隊賽 2v2：4 位玩家（2 對 2）在房間內自選隊伍和最多 3 名角色，規則同養成賽，打完可在同一房間再打；獲勝且戰鬥超過 ${T2_MIN_ROUND} 回合，每人可得 🪙${T2_GOLD}（每天最多 ${T2_DAILY} 次）。房主的裝置負責計算戰鬥：房主關掉網頁，對戰就結束；挑戰者斷線或 60 秒沒動作，改由 AI 代打。</p></div>`;
   if(NET.status==="connecting")return `<div class="panel">🌐 連線中……</div>`;
   if(NET.mode==="t2")return viewT2();
   const leave=`<button onclick="leaveOnline()">離開房間</button>`;
@@ -5238,6 +5327,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-03",t:["團隊賽 2v2 大改版：①在房間內就能選角色（最多 3 名），準備前隨時改，準備後可按「取消準備」重選，不用離開房間；②打完一場回到同一個房間，座位和隊伍不變，重新準備就能再打；③準備期間看不到對面隊伍的角色（只顯示已加入／已準備），自己隊友的看得到；④隊伍自己選：每隊 2 人，按空位的「換到 A／B 隊」換隊，不再按加入順序硬分；⑤一進房就會看到玩家（⏳ 已加入・未準備），準備後才變 ✅ 已準備；⑥4 人都準備好後改成倒數 3 秒開打，倒數中有人取消準備就中止"]},
   {d:"2026-11-02",t:["恐龍蛋專區的通關獎勵調整：10 關全部通過可得 🪙400（原本 200），每天最多領 30 次（原本 50 次）"]},
   {d:"2026-11-02",t:["團隊賽 2v2 新增獎勵：你的隊伍獲勝，且戰鬥超過 10 回合，每位獲勝者可得 🪙666，每人每天最多領 10 次（以這台裝置的日期計算）；輸了、平手或 10 回合內就結束都沒有獎勵。獎勵在結算畫面按「繼續」時入帳"]},
   {d:"2026-11-02",t:["恐龍蛋專區的戰鬥新增專屬配樂：JungleXcessive（Tozan，OpenGameArt，CC0），頁尾已補上出處與授權"]},
@@ -5315,7 +5405,7 @@ const QA=[
   ["遠征中怎麼補血？","背包的藥片、酒可以一個一個選隊員使用，也可以按「一鍵補血」：從隊伍最前面開始補滿，先用藥片，藥片用完才用酒。酒的效果是隨機的，可能補 6、補 2，也可能扣 2。"],
   ["遠征中放棄會怎樣？","視同全隊覆沒，只帶回一半的金條。"],
   ["魔王討伐一定要打嗎？","不用，是支線。8 位魔王打倒一位才會出現下一位；打倒第一條命後魔王會爆氣進入第二階段。打贏有機會掉落魔王專屬的 EX 裝備。"],
-  ["團隊賽 2v2（4 人網路對戰）怎麼玩？規則與流程","<b>是什麼</b>：4 位玩家各用自己的帳號連線，分成 2 對 2 對打。屬於養成賽規則：等級、星數、突破、裝備都算進去。<b>獎勵</b>：你的隊伍獲勝，且戰鬥超過 10 回合，每位獲勝者可得 🪙666，每人每天最多領 10 次（以這台裝置的日期計算）；輸了、平手、或 10 回合內就結束都沒有獎勵，也不會影響你的其他存檔內容。獎勵在結算畫面按「繼續」時入帳。<br><br><b>事前準備</b>：每位玩家先到「整備室 → 隊伍」編好隊伍，出戰的是<b>隊伍前 3 名</b>角色。隊伍是空的不能加入。<br><br><b>流程</b><br>① 房主：「競技場 → 雙人對決 → 🌐 網路對戰」按「🏠 建立房間（團隊賽 2v2・4 人）」，會得到 5 碼房號和邀請連結。<br>② 其他 3 人：輸入房號按「加入」，或直接點邀請連結。依加入順序成為玩家 2、3、4，房間滿 4 人後就不能再加入。<br>③ 分隊：<b>玩家 1（房主）＋玩家 2 ＝ A 隊</b>，<b>玩家 3 ＋玩家 4 ＝ B 隊</b>，不能自己換。想跟朋友同隊，請約好加入順序。<br>④ 準備：每人看過自己的出戰角色後按「✅ 準備好了」，<b>4 人都準備好會自動開打</b>。按下準備後不能換人，要換請先離開房間。<br>⑤ 戰鬥：全場依速度排出行動順序，輪到你的角色時才會出現操作按鈕（攻擊、技能、防禦），其他人只看戰況。角色名稱旁的「我」是你的角色，「P1」到「P4」是其他玩家的角色。<br>⑥ 結束：一隊全員倒下，另一隊獲勝；打滿 100 回合還沒分勝負，判<b>平手</b>。結算後按「繼續」離開房間。<br><br><b>重複角色</b>：同一隊內不能重複帶同一個角色，先按準備的人先用，後面的人那一隻不會上場（戰鬥開頭會提示）。不同隊可以帶同一個角色。<br><br><b>逾時與斷線</b>：輪到你 60 秒沒操作，這一手會自動出招。有人斷線或關掉網頁，只有他的角色改由 AI 代打，其他人繼續打。開打前有人離開，座位會空出來讓別人加入。<br><br><b>注意</b>：戰鬥由房主的裝置負責計算，<b>房主關掉網頁或離線，整場就直接結束</b>，請選網路穩定的人當房主。建議 4 人都先按 Ctrl＋F5 更新到最新版再開房。"],
+  ["團隊賽 2v2（4 人網路對戰）怎麼玩？規則與流程","<b>是什麼</b>：4 位玩家各用自己的帳號連線，分成 2 對 2 對打。屬於養成賽規則：等級、星數、突破、裝備都算進去。<b>獎勵</b>：你的隊伍獲勝，且戰鬥超過 10 回合，每位獲勝者可得 🪙666，每人每天最多領 10 次（以這台裝置的日期計算）；輸了、平手、或 10 回合內就結束都沒有獎勵，也不會影響你的其他存檔內容。獎勵在結算畫面按「繼續」時入帳。<br><br><b>事前準備</b>：每位玩家先到「整備室 → 隊伍」編好隊伍，出戰的是<b>隊伍前 3 名</b>角色。隊伍是空的不能加入。<br><br><b>流程</b><br>① 房主：「競技場 → 雙人對決 → 🌐 網路對戰」按「🏠 建立房間（團隊賽 2v2・4 人）」，會得到 5 碼房號和邀請連結。<br>② 其他 3 人：輸入房號按「加入」，或直接點邀請連結。依加入順序成為玩家 2、3、4，房間滿 4 人後就不能再加入。一進房就看得到誰已加入（⏳ 已加入・未準備），準備後變成 ✅ 已準備。<br>③ 分隊：進房時系統會先分到人較少的隊伍，<b>每隊 2 人，可以自己按空位的「換到 A／B 隊」換隊</b>（準備前才能換）。想跟朋友同隊，直接進房後自己換就好。<br>④ 選角與準備：在房間內從你擁有的角色挑<b>最多 3 名</b>出戰（預設是「隊伍」頁前 3 名），按「✅ 準備好了」。準備後想改角色或換隊，按「↩ 取消準備」。<b>4 人都準備好會倒數 3 秒自動開打</b>，倒數中有人取消就中止。<b>對面隊伍的角色開打前看不到</b>（只看得到對方已加入／已準備），自己的隊友看得到。<br>⑤ 戰鬥：全場依速度排出行動順序，輪到你的角色時才會出現操作按鈕（攻擊、技能、防禦），其他人只看戰況。角色名稱旁的「我」是你的角色，「P1」到「P4」是其他玩家的角色。<br>⑥ 結束：一隊全員倒下，另一隊獲勝；打滿 100 回合還沒分勝負，判<b>平手</b>。結算後按「繼續」<b>回到同一個房間</b>，座位和隊伍不變，大家重新準備就能再打一場，不用重新開房（想走就按「離開房間」）。<br><br><b>重複角色</b>：同一隊內不能重複帶同一個角色，隊友已準備帶走的角色在你的選角畫面會鎖住。不同隊可以帶同一個角色。<br><br><b>逾時與斷線</b>：輪到你 60 秒沒操作，這一手會自動出招。有人斷線或關掉網頁，只有他的角色改由 AI 代打，其他人繼續打。開打前有人離開，座位會空出來讓別人加入；打完回房間時，中途斷線的人座位也會空出來。<br><br><b>注意</b>：戰鬥由房主的裝置負責計算，<b>房主關掉網頁或離線，整場就直接結束</b>，請選網路穩定的人當房主。建議 4 人都先按 Ctrl＋F5 更新到最新版再開房。"],
   ["畫面提示「請重新整理」是什麼意思？","遊戲更新後，舊頁面讀到新版存檔時會提示。重新整理頁面載入新版即可，存檔不會消失。"],
   ["存檔被清掉了怎麼辦？","遊戲偵測到存檔異常而清空時，會先自動備份，跳出的提示裡有「♻ 還原備份」按鈕可以還原（還原時會再檢查一次）。"],
   ["遊戲卡住或畫面出錯怎麼辦？","按右上角的「🐞」開啟「卡住了／回報問題」視窗，複製紀錄回報；遠征卡住可以先試「重置這一層」。"]

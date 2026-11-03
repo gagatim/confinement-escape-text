@@ -928,7 +928,7 @@ const GEAR={
   scales:{name:"天秤徽章",icon:"⚖️",slot:"acc",q:"UR",st:{atk:4,spd:2,hp:8}},
   // 魔王專屬（EX）：只從支線魔王掉落，全職業可用
   doomrifle:{name:"滅世狙擊槍",icon:"🎯",slot:"weapon",q:"EX",st:{atk:13,spd:1}},
-  reaperscythe:{name:"死神之鐮",icon:"⚰️",slot:"weapon",q:"EX",st:{atk:12,hp:12}},
+  reaperscythe:{name:"死神之鐮",icon:"⚰️",slot:"weapon",q:"EX",st:{atk:12,def:1,hp:12}},
   fatecompass:{name:"命運羅盤",icon:"🧭",slot:"weapon",q:"EX",st:{atk:10,def:3,hp:10}},
   endchain:{name:"終焉鎖鏈",icon:"⛓️",slot:"weapon",q:"EX",set:"throne",st:{atk:20,def:10,spd:10}},
   nightrobe:{name:"永夜王袍",icon:"🦇",slot:"armor",q:"EX",st:{hp:30,def:5,atk:3}},
@@ -5356,6 +5356,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-03",t:["魔王專屬裝備「死神之鐮」新增防禦 +1（攻擊 +12、防禦 +1、血量 +12）"]},
   {d:"2026-11-03",t:["新增稀有（R）鞋子「人化破拖鞋」（速度 +1、血量 +2），不限職業、可強化；和灰階鞋子一樣目前還不開放取得"]},
   {d:"2026-11-03",t:["新增「鞋子」部位與 2 雙灰階（N）鞋子：髒拖鞋（速度 +1）、沙灘拖鞋（血量 +2），不限職業、可強化；角色卡、試穿畫面、裝備倉庫、圖鑑都多了鞋子欄位（頭盔、戒指仍未開放）。目前鞋子還不開放取得：商店、裝備箱、怪物掉落、換裝都不會出現"]},
   {d:"2026-11-03",t:["團隊賽 2v2 房間內可以換裝備：「你的出戰角色」下方每個已選角色多了「🎽 換裝」按鈕，可以直接穿脫武器／防具／飾品；準備前隨時能改，準備後要先按「取消準備」。改好的裝備在你按「準備好了」時才算進戰鬥"]},

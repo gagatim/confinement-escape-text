@@ -898,6 +898,9 @@ const GEAR={
   stick:{name:"木棍",icon:"🪵",slot:"weapon",q:"N",st:{atk:1}},
   rags:{name:"破布衣",icon:"👕",slot:"armor",q:"N",st:{hp:3}},
   band:{name:"橡皮筋",icon:"➰",slot:"acc",q:"N",st:{hp:2}},
+  // off:1＝尚未開放取得（不進隨機掉落／換裝／商店；要開放時拿掉 off 即可）
+  slippers:{name:"髒拖鞋",icon:"🩴",slot:"boots",q:"N",off:1,st:{spd:1}},
+  beachslip:{name:"沙灘拖鞋",icon:"🩴",slot:"boots",q:"N",off:1,st:{hp:2}},
   pipe:{name:"鐵管",icon:"🔧",slot:"weapon",q:"R",st:{atk:2}},
   axe:{name:"消防斧",icon:"🪓",slot:"weapon",q:"R",cls:["warrior","tank"],st:{atk:3,hp:3}},
   dagger:{name:"匕首",icon:"🔪",slot:"weapon",q:"R",cls:["assassin"],st:{atk:2,spd:1}},
@@ -993,9 +996,9 @@ const SETS={
   throne:{name:"終焉王座套裝",cls:"EX",2:{atk:11,hp:20,def:2},3:{crit:12,steal:15,dodge:8,dr:10}} // ＝魔王套裝 ＋攻擊+5（2件）＋減傷+10%（3件）
 };
 const setKeyOf=base=>GEAR[base].set||GEAR[base].q;
-const SLOTS={weapon:"武器",armor:"防具",acc:"飾品"};
+const SLOTS={weapon:"武器",armor:"防具",acc:"飾品",boots:"鞋子"};
 // 尚未開放的部位：只顯示鎖住的欄位，沒有對應裝備、也不能點；開放時搬進 SLOTS 即可
-const LOCKED_SLOTS={helmet:"頭盔",ring:"戒指",boots:"鞋子"};
+const LOCKED_SLOTS={helmet:"頭盔",ring:"戒指"};
 const lockedSlotsHtml=()=>Object.keys(LOCKED_SLOTS).map(sl=>`<div class="gslot locked"><div class="small dim">${LOCKED_SLOTS[sl]}</div><div class="gi">🔒</div><span class="dim small">尚未開放</span></div>`).join("");
 // 有插圖的裝備（images/equipment/{代號}.webp，256×256 透明底）。沒有插圖的（目前只有狗牌）、或圖片載入失敗時，退回用表情符號
 // 裝備箱插圖（images/boxes/{箱子代號}.webp），載入失敗時退回表情符號
@@ -1003,7 +1006,7 @@ function boxImg(k,cls=""){
   const b=BOXES[k];
   return `<img class="gimg ${cls}" src="images/boxes/${k}.webp" alt="${b.name}" draggable="false" onerror="this.outerHTML='${b.icon}'">`;
 }
-const GEAR_IMG=new Set(["stick","rags","band","pipe","axe","dagger","rifle","doll","baton","jacket","coin","dogtag","chainsaw","katana","crossbow","grimoire","riot","vest","bracer","railgun","scythe","aegis","exo","watch","gavel","abyssmail","scales","endchain","reaperscythe","fatecompass","doomrifle","voidterm","nightrobe","overlordmantle","abysscrown"]);
+const GEAR_IMG=new Set(["stick","rags","band","slippers","beachslip","pipe","axe","dagger","rifle","doll","baton","jacket","coin","dogtag","chainsaw","katana","crossbow","grimoire","riot","vest","bracer","railgun","scythe","aegis","exo","watch","gavel","abyssmail","scales","endchain","reaperscythe","fatecompass","doomrifle","voidterm","nightrobe","overlordmantle","abysscrown"]);
 function gearImg(base,cls=""){
   const G=GEAR[base];if(!GEAR_IMG.has(base))return G.icon;
   return `<img class="gimg ${cls}" src="images/equipment/${base}.webp" alt="${G.name}" draggable="false" loading="lazy" onerror="this.outerHTML='${G.icon}'">`;
@@ -2285,7 +2288,7 @@ function addGear(base,lv=0){
   keys.forEach(k=>fx.push({k,v:affixRoll(k,q)}));
   const g={uid:++SAVE.gearUid,base,lv,roll:ri(lo,hi),fx};SAVE.gear.push(g);return g;
 }
-function rollGear(q){return pick(Object.keys(GEAR).filter(k=>GEAR[k].q===q));}
+function rollGear(q){return pick(Object.keys(GEAR).filter(k=>GEAR[k].q===q&&!GEAR[k].off));}
 function dropGear(q){return gearName(addGear(rollGear(q)))+`（${q}）`;}
 // 身上生效的裝備（等級不足的不算）
 // eq 是「欄位→裝備 uid」的對照；預覽時可以傳入假設的組合
@@ -2401,7 +2404,7 @@ function affixTable(){
     <p class="dim small" style="margin:6px 0 0">數值是固定加值，不吃強化。普通（N）裝備沒有詞條。骰到該欄最大值會顯示 🌟 發光；另有 ${Math.round(AFFIX_RARE*100)}% 機率出現 💎 稀有詞條，數值為該欄最大值 +1（百分比 +1%、數字 +1）。</p></details>`;
 }
 function viewDex(){
-  const keys=Object.keys(GEAR).sort((a,b)=>GQ.indexOf(GEAR[a].q)-GQ.indexOf(GEAR[b].q)||["weapon","armor","acc"].indexOf(GEAR[a].slot)-["weapon","armor","acc"].indexOf(GEAR[b].slot));
+  const keys=Object.keys(GEAR).sort((a,b)=>GQ.indexOf(GEAR[a].q)-GQ.indexOf(GEAR[b].q)||Object.keys(SLOTS).indexOf(GEAR[a].slot)-Object.keys(SLOTS).indexOf(GEAR[b].slot));
   const have=keys.filter(k=>dexOwned(k).n).length,show=keys.filter(k=>!DEX_Q||GEAR[k].q===DEX_Q);
   return `<h2>裝備</h2>${modeToggle()}
   <div class="panel"><b>圖鑑收集 ${have}／${keys.length} 種</b><div class="ratebar"><i style="width:${have/keys.length*100}%"></i></div>
@@ -2655,7 +2658,7 @@ function viewShop(){
   if(SHOP_TAB==="gear"){
     body=`<h3>裝備箱</h3><div class="shopsec">${Object.entries(BOXES).map(([k,b])=>`<div class="sitem"><div class="gi">${boxImg(k,"box")}</div><b>${b.name}</b><div class="small dim">${b.desc}</div>
         <button class="gold" onclick="buyBox('${k}')" ${SAVE.gold<b.price?"disabled":""}>🪙${b.price}</button></div>`).join("")}</div>
-      <h3>直接購買</h3><div class="shopsec">${Object.keys(GEAR).filter(k=>GEAR_PRICE[GEAR[k].q]).map(k=>{const G=GEAR[k];
+      <h3>直接購買</h3><div class="shopsec">${Object.keys(GEAR).filter(k=>GEAR_PRICE[GEAR[k].q]&&!GEAR[k].off).map(k=>{const G=GEAR[k];
         return `<div class="sitem" style="border-color:${G.q==="SR"?"var(--purple)":G.q==="R"?"#2c5a86":"#4a525c"}"><div class="gi">${gearImg(k)}</div><b class="r${G.q}">${qTag(G.q)}${G.name}</b>
         <div class="small">${statStr(G.st)} <span class="dim">（±浮動）</span></div><div class="small dim">${GQ_NAME[G.q]}・${SLOTS[G.slot]}・${gearCls(k)} ${reqTag(null,k)}</div>
         <button onclick="buyGear('${k}')" ${SAVE.gold<GEAR_PRICE[G.q]?"disabled":""}>🪙${GEAR_PRICE[G.q]}</button></div>`;}).join("")}</div>
@@ -5352,6 +5355,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-03",t:["新增「鞋子」部位與 2 雙灰階（N）鞋子：髒拖鞋（速度 +1）、沙灘拖鞋（血量 +2），不限職業、可強化；角色卡、試穿畫面、裝備倉庫、圖鑑都多了鞋子欄位（頭盔、戒指仍未開放）。目前鞋子還不開放取得：商店、裝備箱、怪物掉落、換裝都不會出現"]},
   {d:"2026-11-03",t:["團隊賽 2v2 房間內可以換裝備：「你的出戰角色」下方每個已選角色多了「🎽 換裝」按鈕，可以直接穿脫武器／防具／飾品；準備前隨時能改，準備後要先按「取消準備」。改好的裝備在你按「準備好了」時才算進戰鬥"]},
   {d:"2026-11-03",t:["團隊賽 2v2 大改版：①在房間內就能選角色（最多 3 名），準備前隨時改，準備後可按「取消準備」重選，不用離開房間；②打完一場回到同一個房間，座位和隊伍不變，重新準備就能再打；③準備期間看不到對面隊伍的角色（只顯示已加入／已準備），自己隊友的看得到；④隊伍自己選：每隊 2 人，按空位的「換到 A／B 隊」換隊，不再按加入順序硬分；⑤一進房就會看到玩家（⏳ 已加入・未準備），準備後才變 ✅ 已準備；⑥4 人都準備好後改成倒數 3 秒開打，倒數中有人取消準備就中止"]},
   {d:"2026-11-02",t:["恐龍蛋專區的通關獎勵調整：10 關全部通過可得 🪙400（原本 200），每天最多領 30 次（原本 50 次）"]},

@@ -186,7 +186,7 @@ b.sA{color:var(--sideA)} b.sB{color:var(--sideB)}
 .vfx.ring{width:40px;height:40px;border:3px solid var(--col);border-radius:50%;box-shadow:0 0 12px var(--col),inset 0 0 8px var(--col);animation:vring .38s ease-out forwards}
 .vfx.arrow{width:46px;height:3px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--col));box-shadow:0 0 8px var(--col);transform:translate(-50%,-50%) rotate(var(--ang,0rad))}
 .vfx.orb{width:20px;height:20px;border-radius:50%;background:radial-gradient(circle,#fff 0,var(--col) 45%,transparent 72%);box-shadow:0 0 16px var(--col);transform:translate(-50%,-50%)}
-@keyframes vflash{0%{opacity:.5}100%{opacity:0}}
+@keyframes vflash{0%{opacity:.25}100%{opacity:0}}
 .vflash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;animation:vflash .2s ease-out forwards}
 @keyframes vdim{0%{opacity:0}25%{opacity:1}100%{opacity:0}}
 .vdim{position:fixed;inset:0;background:radial-gradient(circle,transparent 30%,rgba(0,0,0,.55));opacity:0;pointer-events:none;animation:vdim .6s ease-out forwards}
@@ -5481,6 +5481,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-03",t:["暴擊的畫面閃白減弱（亮度減半），連續暴擊時比較不刺眼"]},
   {d:"2026-11-03",t:["戰鬥新增攻擊特效：攻擊者出手時會往目標前衝；命中時依職業有不同效果（戰士斬擊、坦克衝擊環、刺客交叉雙斬、遊俠箭矢飛行、法師魔法球飛行、輔助光環）；暴擊是金色放大加畫面閃白；使用技能時施放者會發光、畫面四周變暗。快速模式下特效時間縮短，只是畫面效果，不影響戰鬥結果"]},
   {d:"2026-11-03",t:["新增「存入角色」系統的架構（目前尚未開放，玩家看不到也用不到）：存入第 N 格的角色，會把能力加給出戰第 N 位的角色；存入的角色不能同時出戰，也不能遣散、合成、熔煉；團隊賽 2v2 不套用加成"]},
   {d:"2026-11-03",t:["鞋子開放取得：恐龍蛋專區 10 關全部通過、領到獎勵時，額外擲一次鞋子掉落（最多掉一雙）：髒拖鞋 10%、沙灘拖鞋 10%、人化破拖鞋 7%，其餘不掉；商店、裝備箱、換裝、其他掉落仍然沒有鞋子。裝備圖鑑的「怎麼取得」也同步說明"]},

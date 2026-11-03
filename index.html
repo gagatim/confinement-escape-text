@@ -3777,6 +3777,30 @@ function t2Toggle(id){
   if(i>=0)p.splice(i,1);else if(p.length<3)p.push(id);else{toast("最多帶 3 名");return;}
   SFX.click();render();
 }
+// 房間內換裝：準備前才能改（準備時才會把裝備數值送出去）
+function t2Gear(id){
+  if(!DUEL||DUEL.ownReady||DUEL.started||!SAVE.owned[id])return;
+  const o=SAVE.owned[id],e=equipBonus(id);
+  openModal(`<h3>${CARDS[id].name} 的裝備 ${clsTag(id)}</h3>
+    <div class="small">加成：${statStr(e)||"無"}</div>
+    <div class="gslots">${Object.keys(SLOTS).map(sl=>{const g=gearById(o.eq&&o.eq[sl]);
+      return `<div class="gslot ${g?"has "+GEAR[g.base].q:""}" onclick="t2Slot('${id}','${sl}')"><div class="gi">${g?gearImg(g.base):"＋"}</div>${g?`<b class="r${GEAR[g.base].q}">${qTag(GEAR[g.base].q)}${GEAR[g.base].name}${g.lv?" +"+g.lv:""}</b>${lvOk(id,g.base)?"":`<div class="req bad">⚠ 需 Lv.${GEAR_REQ[GEAR[g.base].q]}，未生效</div>`}`:`<span class="dim">${SLOTS[sl]}</span>`}</div>`;}).join("")}</div>
+    ${setHtml(id)}
+    <div class="row" style="margin-top:12px"><button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
+}
+function t2Slot(id,sl){
+  if(!DUEL||DUEL.ownReady||DUEL.started)return;
+  const cur=SAVE.owned[id].eq&&SAVE.owned[id].eq[sl];
+  const list=SAVE.gear.filter(g=>GEAR[g.base].slot===sl&&g.uid!==cur).sort(gearSort);
+  const ok=list.filter(g=>canWear(id,g.base)&&lvOk(id,g.base));
+  openModal(`<h3>${CARDS[id].name} 的${SLOTS[sl]} ${clsTag(id)}</h3>
+    ${cur?`<div class="row" style="margin-bottom:8px"><span>目前：<b>${qTag(GEAR[gearById(cur).base].q)}${gearName(gearById(cur))}</b> ${statStr(gearStats(gearById(cur)))}</span><button class="mini" style="margin-left:auto" onclick="t2TakeOff('${id}','${sl}')">卸下</button></div>`:""}
+    <div class="ggrid">${ok.map(g=>gearCard(g,`t2Wear('${id}',${g.uid})`)).join("")||`<span class="dim">沒有可以穿的${SLOTS[sl]}。</span>`}</div>
+    <p class="dim small">穿在別的角色身上的裝備也能直接換過來。穿戴等級：普通／稀有 不限、精良 Lv.5、史詩 Lv.10、傳說 Lv.15。</p>
+    <div class="row" style="margin-top:12px"><button onclick="t2Gear('${id}')">← 返回角色</button></div>`);
+}
+function t2Wear(id,uid){if(!DUEL||DUEL.ownReady||DUEL.started)return;equipTo(id,uid);t2Gear(id);render();}
+function t2TakeOff(id,sl){if(!DUEL||DUEL.ownReady||DUEL.started)return;delete SAVE.owned[id].eq[sl];save();t2Gear(id);render();}
 function t2Unready(){
   if(!NET||NET.mode!=="t2"||!DUEL||DUEL.started||!DUEL.ownReady)return;
   DUEL.ownReady=false;NET.ref.child("own/"+NET.seat).remove().catch(netFail);SFX.click();render();
@@ -3935,6 +3959,7 @@ function viewT2(){
     <h3>你的出戰角色（${pick.length}／3）</h3>
     <div class="cardgrid">${ids.map(id=>{const c=CARDS[id],on=pick.includes(id),tk=taken.includes(id);
       return `<div class="ccard ${c.r} ${tk?"locked":""}" style="${on?"outline:3px solid var(--gold)":tk||ready?"opacity:.5":""}" onclick="${tk?"":`t2Toggle('${id}')`}"><div class="av">${avatar(id)}</div><div class="nm">${c.name}</div><div class="small">Lv.${lvOf(id)}${tk?"・隊友已選":""}</div></div>`;}).join("")}</div>
+    ${pick.length&&!ready?`<div class="row" style="margin-top:8px"><span class="dim small">換裝：</span>${pick.map(id=>`<button class="mini" onclick="t2Gear('${id}')">🎽 ${CARDS[id].name}</button>`).join("")}</div>`:""}
     <div class="row" style="margin-top:12px">${ready?`<button onclick="t2Unready()">↩ 取消準備（可換角色、換隊）</button><span class="dim">${t2AllReady()?`4 人都準備好了，${T2_COUNTDOWN/1000} 秒後自動開始（現在取消準備可中止）`:"已準備，等其他玩家……（4 人都準備好會自動倒數開始）"}</span>`:`<button class="pri" onclick="readyOwn()">✅ 準備好了</button>`}</div>
     <p class="dim small">每隊 2 人，進房後可以按空位的「換到 X 隊」自己選隊伍。在房間內從你擁有的角色挑最多 3 名出戰（等級、星數、突破、裝備都算）；準備前都能改，準備後想改就按「取消準備」。對面隊伍開打前看不到角色，隊友的看得到。獲勝且戰鬥超過 ${T2_MIN_ROUND} 回合，每人可得 🪙${T2_GOLD}（每天最多 ${T2_DAILY} 次，你今天還剩 ${t2Left()} 次）。同隊不能重複帶同一個角色，先按準備的先用。你只操作自己的角色；${T2_TIMEOUT/1000} 秒沒動作或斷線，改由 AI 代打。打完會回到這個房間，不用重新開房；房主關掉網頁，房間就解散。</p>`;
 }
@@ -5327,6 +5352,7 @@ function npcBox(n){
 /* ---- 故事頁：老國王說過的話與魔王的背景，通關或聽過就會解鎖 ---- */
 /* ---- 更新說明：以後每次更新，都在 CHANGELOG 最前面加一筆（新的在上） ---- */
 const CHANGELOG=[
+  {d:"2026-11-03",t:["團隊賽 2v2 房間內可以換裝備：「你的出戰角色」下方每個已選角色多了「🎽 換裝」按鈕，可以直接穿脫武器／防具／飾品；準備前隨時能改，準備後要先按「取消準備」。改好的裝備在你按「準備好了」時才算進戰鬥"]},
   {d:"2026-11-03",t:["團隊賽 2v2 大改版：①在房間內就能選角色（最多 3 名），準備前隨時改，準備後可按「取消準備」重選，不用離開房間；②打完一場回到同一個房間，座位和隊伍不變，重新準備就能再打；③準備期間看不到對面隊伍的角色（只顯示已加入／已準備），自己隊友的看得到；④隊伍自己選：每隊 2 人，按空位的「換到 A／B 隊」換隊，不再按加入順序硬分；⑤一進房就會看到玩家（⏳ 已加入・未準備），準備後才變 ✅ 已準備；⑥4 人都準備好後改成倒數 3 秒開打，倒數中有人取消準備就中止"]},
   {d:"2026-11-02",t:["恐龍蛋專區的通關獎勵調整：10 關全部通過可得 🪙400（原本 200），每天最多領 30 次（原本 50 次）"]},
   {d:"2026-11-02",t:["團隊賽 2v2 新增獎勵：你的隊伍獲勝，且戰鬥超過 10 回合，每位獲勝者可得 🪙666，每人每天最多領 10 次（以這台裝置的日期計算）；輸了、平手或 10 回合內就結束都沒有獎勵。獎勵在結算畫面按「繼續」時入帳"]},

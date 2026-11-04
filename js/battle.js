@@ -33,6 +33,8 @@ function stat(u,k){
   return Math.max(k==="atk"?1:0,v);
 }
 // 同一陣營裡有沒有另一名活著的指定角色（羈絆判定用）
+// 單位目前顯示的被動：恐龍蛋依區域與關卡（cfg.eggPas）；其他單位用資料裡的被動
+function pasOf(u,d){return u.id.startsWith("dinoegg")&&CUR_B&&CUR_B.cfg&&CUR_B.cfg.eggPas?CUR_B.cfg.eggPas(CUR_B.wave):d.passive;}
 function hasBond(u,id){return !!CUR_B&&CUR_B.units.some(x=>x.side===u.side&&x.alive&&x.id===id);}
 function blog(B,html,cls=""){B.log.push({html,cls});if(B.log.length>120)B.log.shift();}
 // 對自己施加的增益多算1，因為回合結束時就會先扣1次
@@ -473,7 +475,7 @@ function unitCard(B,u){
   if(u.buffs.some(b=>b.v>0))st.push("▲");
   if(u.buffs.some(b=>b.v<0))st.push("▼");
   const d=DEF(u.id),cl=CARDS[u.id]?CLASSES[CARDS[u.id].cls]:null;
-  return `<div class="ucard s${u.side} ${CARDS[u.id]?"q-"+CARDS[u.id].r:""} ${d.boss2?"bossu":""} ${u.flags&&u.flags.p2?"p2":""} ${u.flags&&u.flags.frenzy?"frenzy":""} ${u.br?brTier(u.br):""} ${u.alive?"":"dead"} ${B.active===u&&!B.over?"active":""} ${tg?"targetable":""}" id="u${u.uid}" onclick="onUnitClick(${u.uid})" title="${d.skill.name}：${d.skill.desc}\n${d.passive.name}：${d.passive.desc}">
+  return `<div class="ucard s${u.side} ${CARDS[u.id]?"q-"+CARDS[u.id].r:""} ${d.boss2?"bossu":""} ${u.flags&&u.flags.p2?"p2":""} ${u.flags&&u.flags.frenzy?"frenzy":""} ${u.br?brTier(u.br):""} ${u.alive?"":"dead"} ${B.active===u&&!B.over?"active":""} ${tg?"targetable":""}" id="u${u.uid}" onclick="onUnitClick(${u.uid})" title="${d.skill.name}：${d.skill.desc}\n${pasOf(u,d).name}：${pasOf(u,d).desc}">
     <div class="uav">${avatar(u.id,u.flags&&u.flags.p2)}</div>
     ${u.cd>0&&u.alive&&SAVE.showCd!==false?`<div class="cdbadge">✦${u.cd}</div>`:""}
     <div class="uname">${cl?`<span title="${cl.name}：${cl.desc}">${cl.icon}</span>`:""}${u.ally?"🤝":""}${(B.coop||B.t2)&&u.pl?`<span class="tag" style="margin-right:3px">${B.t2?(u.pl===B.mySeat?"我":"P"+(+u.pl+1)):u.pl===(B.guest?"B":"A")?"我":"隊友"}</span>`:""}${u.name}${u.br?`<span class="brkname">突破${u.br}</span>`:""}</div>
@@ -501,7 +503,7 @@ function actionPanel(B){
     <button data-kb="skill" onclick="act('skill')" ${canUseSkill(B,u)?"":"disabled"} class="${canUseSkill(B,u)?"pri":""}">✦ ${sk.name}${u.cd>0?`（${u.cd}）`:""}</button>
     <button data-kb="guard" onclick="act('guard')">🛡 防禦</button>
     ${B.items?`<button data-kb="items" onclick="act('items')" ${usable?"":"disabled"}>🎒 道具 ${usable}</button>`:""}
-  </div>${KB_HINT}${B.guest?`<div class="skdesc">（${(B.t2?T2_TIMEOUT:REMOTE_TIMEOUT)/1000} 秒內沒有行動會自動出手）</div>`:""}<div class="skdesc">✦ ${sk.desc}　◈ ${DEF(u.id).passive.name}：${DEF(u.id).passive.desc}</div></div>`;
+  </div>${KB_HINT}${B.guest?`<div class="skdesc">（${(B.t2?T2_TIMEOUT:REMOTE_TIMEOUT)/1000} 秒內沒有行動會自動出手）</div>`:""}<div class="skdesc">✦ ${sk.desc}　◈ ${pasOf(u,DEF(u.id)).name}：${pasOf(u,DEF(u.id)).desc}</div></div>`;
 }
 
 /* ---- 鍵盤操作（戰鬥中） ----

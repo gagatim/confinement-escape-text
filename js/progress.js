@@ -89,8 +89,9 @@ function startTrain(){
 // 遠征頁的獨立專區：連續 10 關，每關 5 顆恐龍蛋；打完一關立刻接下一關（同一場戰鬥，血量不回復）。
 // 獎勵：10 關全過才有 🪙DINO_GOLD，並擲一次鞋子掉落（DINO_DROP），沒有其他掉落物；每人每天最多領 DINO_DAILY 次（用這台裝置的日期計算，跟合作討伐一樣）。
 // 強度：血厚、傷害低。要調整就改下面幾個數字（hp／atk 是第 1 關的基礎值，每關再乘 dinoScale）
-const DINO_WAVES=10,DINO_EGGS=5,DINO_MAXROUND=1000,DINO_PICS=40,DINO_GOLD=400,DINO_DAILY=30;
+const DINO_WAVES=10,DINO_EGGS=5,DINO_MAXROUND=1000,DINO_PICS=40,DINO_GOLD=400,DINO_DAILY=30,DINO_TRIES=10; // DINO_TRIES＝第一區每天最多挑戰幾次（一開打就算一次，戰敗也算）
 function dinoLeft(){const c=SAVE.dino;return c&&c.d===coopToday()?Math.max(0,DINO_DAILY-c.n):DINO_DAILY;}
+function dinoTriesLeft(){const c=SAVE.dino;return c&&c.d===coopToday()?Math.max(0,DINO_TRIES-(c.a||0)):DINO_TRIES;}
 // 通關（領得到獎勵的那一次）擲一次，最多掉一雙鞋子：髒拖鞋 10%、沙灘拖鞋 10%、人化破拖鞋 7%、沒掉 73%
 const DINO_DROP=[["slippers",.10],["beachslip",.10],["sadslip",.07]];
 function dinoRoll(){let r=rnd();for(const [k,p] of DINO_DROP){if(r<p)return k;r-=p;}return null;}
@@ -116,14 +117,16 @@ function viewDino(){
       <li>恐龍蛋血很厚、傷害很低，考驗隊伍的持久力。</li>
       <li>每顆約 ❤${s.maxHp} ⚔${s.atk} 🛡${s.def+15}（第 1 關）→ ❤${e.maxHp} ⚔${e.atk} 🛡${e.def+15}（第 ${DINO_WAVES} 關）。防禦含被動「厚實蛋殼」+15。</li>
       <li>全隊倒下就結束；戰敗沒有懲罰，也沒有獎勵。</li>
+      <li>每天最多挑戰 <b>${DINO_TRIES}</b> 次（今天還剩 <b>${dinoTriesLeft()}</b> 次；一開打就算一次，戰敗也算，用完就不能再挑戰）。</li>
       <li>獎勵：<b>${DINO_WAVES} 關全部通過</b>可得 🪙${DINO_GOLD}，每天最多領 ${DINO_DAILY} 次（今天還剩 <b>${dinoLeft()}</b> 次，用這台裝置的日期計算）。</li>
       <li>掉落：領到獎勵的那一次還會擲一次鞋子（最多掉一雙）：${DINO_DROP.map(([k,p])=>`${GEAR[k].name} ${Math.round(p*100)}%`).join("、")}。</li>
     </ul></div>
-  <div class="row" style="margin-top:14px"><button class="pri" onclick="startDino()" ${SAVE.team.length?"":"disabled"}>⚔ 開始挑戰</button></div>
+  <div class="row" style="margin-top:14px"><button class="pri" onclick="startDino()" ${SAVE.team.length&&dinoTriesLeft()>0?"":"disabled"}>⚔ 開始挑戰</button></div>
   <h3>出戰隊伍</h3><div class="cardgrid">${SAVE.team.map(id=>cardTile(id,`showCard('${id}')`)).join("")||"<span class='dim'>尚未編隊</span>"}</div>`;
 }
 function startDino(){
-  if(!SAVE.team.length)return;
+  if(!SAVE.team.length||dinoTriesLeft()<=0)return;
+  {const t=coopToday(),c=SAVE.dino,same=c&&c.d===t;SAVE.dino={d:t,n:same?c.n:0,a:(same?c.a||0:0)+1};save();} // 開打就記一次挑戰
   const ids=SAVE.team.slice(),waveTitle=w=>`恐龍蛋專區 第 ${w}／${DINO_WAVES} 關`;
   startBattle({title:waveTitle(1),home:"run",maxRound:DINO_MAXROUND,bgm:"dino",A:ids.map(teamUnit),B:dinoWave(1),
     waves:Array.from({length:DINO_WAVES-1},(_,i)=>dinoWave(i+2)),waveTitle, // 後面 9 關：前一關的蛋全倒，立刻補上下一批
@@ -135,14 +138,14 @@ function startDino(){
       if(win){
         if(dinoLeft()>0){
           const t=coopToday(),c=SAVE.dino;
-          SAVE.dino={d:t,n:(c&&c.d===t?c.n:0)+1};SAVE.gold+=DINO_GOLD;
+          SAVE.dino={d:t,n:(c&&c.d===t?c.n:0)+1,a:c&&c.d===t?c.a||0:0};SAVE.gold+=DINO_GOLD;
           const dk=dinoRoll(),dg=dk?addGear(dk):null;save();
           note=`<br>🪙+${DINO_GOLD}（今天還可以領 ${dinoLeft()} 次）`+(dg?`<br>🎁 掉落了 <b class="r${GEAR[dk].q}">${qTag(GEAR[dk].q)}${gearName(dg)}</b>（${statStr(gearStats(dg))}，已放進裝備）`:"");
         }else note=`<br><span class="dim">今天的獎勵已經領滿 ${DINO_DAILY} 次了，明天再來。</span>`;
       }
       CUR_B=null;RUN_TAB="dino";VIEW="run";render();
       openModal(`<h3>🥚 恐龍蛋專區${win?"・全數通過":""}</h3><p>${win?`${DINO_WAVES} 關全部打完了！${note}`:`通過了 ${n}／${DINO_WAVES} 關，第 ${B.wave} 關倒下了。`}</p>
-        <div class="row"><button class="pri" onclick="closeModal();startDino()">再挑戰一次</button><button onclick="closeModal()">關閉</button></div>`);
+        <div class="row"><button class="pri" onclick="closeModal();startDino()" ${dinoTriesLeft()>0?"":"disabled"}>再挑戰一次${dinoTriesLeft()>0?`（剩 ${dinoTriesLeft()} 次）`:"（今天次數已用完）"}</button><button onclick="closeModal()">關閉</button></div>`);
     }});
 }
 

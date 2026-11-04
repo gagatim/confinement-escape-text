@@ -96,7 +96,7 @@ const DINO_DROP=[["slippers",.10],["beachslip",.10],["sadslip",.07]];
 function dinoRoll(){let r=rnd();for(const [k,p] of DINO_DROP){if(r<p)return k;r-=p;}return null;}
 MONSTERS.dinoegg={name:"恐龍蛋",emoji:"🥚",r:"R",hp:800,atk:3,def:5,spd:3, // 生命 800（原本 80 的 10 倍）；防禦 5（每點讓每次受到的傷害少 0.7，防禦不隨關卡增加）
   skill:{name:"孵化震動",cd:3,t:"enemy",kind:"dmg",desc:"造成1.2倍攻擊傷害。",use(B,u,t){hit(B,u,t,1.2);}},
-  passive:{name:"厚實蛋殼",desc:"防禦+15。"}};
+  passive:{name:"厚實蛋殼",desc:"防禦+15。（第 1 關為 lv1：防禦+3）"}};
 // 40 張不同的蛋圖（images/monsters/dinoegg1～40.webp），每顆蛋隨機挑一張；素質都和 dinoegg 一樣
 for(let i=1;i<=DINO_PICS;i++)MONSTERS["dinoegg"+i]={...MONSTERS.dinoegg,pic:true};
 const dinoScale=w=>1+(w-1)*.35;

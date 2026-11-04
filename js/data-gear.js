@@ -150,6 +150,7 @@ function statStr(o){return Object.keys(ST_LBL).filter(k=>o[k]).map(k=>ST_PCT[k]?
 function fxStr(g){const q=GEAR[g.base].q,sl=GEAR[g.base].slot;return (g.fx||[]).map(f=>{
   const s=`${AFFIX[f.k].n}+${f.v}${AFFIX[f.k].pct?"%":""}`;
   const top=affixTop(f.k,q,sl);
+  if(f.oc)return `<span class="fxoc" style="color:var(--gold)" title="超頻額外詞條（強化轉移會一起轉走）">⚡${s}</span>`;
   if(f.v>affixSpan(f.k,q,sl)[1])return `<span class="fxrare" title="稀有詞條：超過上限 +1">💎${s}</span>`;
   return top&&f.v>=top?`<span class="fxmax" title="滿值詞條">🌟${s}</span>`:`✦${s}`;}).join(" ");}
 // 稀有度標籤：N／R／SR／SSR／UR／EX，放在裝備名稱旁邊

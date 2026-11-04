@@ -9,6 +9,7 @@ const GEAR={
   slippers:{name:"髒拖鞋",icon:"🩴",slot:"boots",q:"N",off:1,st:{spd:1}},
   beachslip:{name:"沙灘拖鞋",icon:"🩴",slot:"boots",q:"N",off:1,st:{hp:2}},
   sadslip:{name:"人化破拖鞋",icon:"🩴",slot:"boots",q:"R",off:1,st:{spd:1,hp:2}},
+  oldslip:{name:"破拖鞋",icon:"🩴",slot:"boots",q:"R",off:1,st:{spd:2,hp:3}}, // 先封住，尚未開放取得
   pipe:{name:"鐵管",icon:"🔧",slot:"weapon",q:"R",st:{atk:2}},
   axe:{name:"消防斧",icon:"🪓",slot:"weapon",q:"R",cls:["warrior","tank"],st:{atk:3,hp:3}},
   dagger:{name:"匕首",icon:"🔪",slot:"weapon",q:"R",cls:["assassin"],st:{atk:2,spd:1}},
@@ -114,7 +115,7 @@ function boxImg(k,cls=""){
   const b=BOXES[k];
   return `<img class="gimg ${cls}" src="images/boxes/${k}.webp" alt="${b.name}" draggable="false" onerror="this.outerHTML='${b.icon}'">`;
 }
-const GEAR_IMG=new Set(["stick","rags","band","slippers","beachslip","sadslip","pipe","axe","dagger","rifle","doll","baton","jacket","coin","dogtag","chainsaw","katana","crossbow","grimoire","riot","vest","bracer","railgun","scythe","aegis","exo","watch","gavel","abyssmail","scales","endchain","reaperscythe","fatecompass","doomrifle","voidterm","nightrobe","overlordmantle","abysscrown"]);
+const GEAR_IMG=new Set(["stick","rags","band","slippers","beachslip","sadslip","oldslip","pipe","axe","dagger","rifle","doll","baton","jacket","coin","dogtag","chainsaw","katana","crossbow","grimoire","riot","vest","bracer","railgun","scythe","aegis","exo","watch","gavel","abyssmail","scales","endchain","reaperscythe","fatecompass","doomrifle","voidterm","nightrobe","overlordmantle","abysscrown"]);
 function gearImg(base,cls=""){
   const G=GEAR[base];if(!GEAR_IMG.has(base))return G.icon;
   return `<img class="gimg ${cls}" src="images/equipment/${base}.webp" alt="${G.name}" draggable="false" loading="lazy" onerror="this.outerHTML='${G.icon}'">`;

@@ -319,46 +319,42 @@ function doGearSwap(){
     <div class="row" style="margin-top:12px"><button class="pri" onclick="openGearSwap()">繼續換裝</button><button onclick="closeModal()">關閉</button></div>`);
 }
 // 強化：成功率依目前等級遞減；幸運符 +10%；保護符防止失敗時掉級。裝備不會因強化失敗而損毀
-// 強化轉移：把一件裝備的強化等級（連同 +20 超頻額外詞條，有 oc 標記的）完整轉給同品質、等級比它低的另一件；來源變 +0，目標原本的等級與額外詞條直接蓋掉
-// 只開放 SR／UR／EX，費用依品質（XFER_COST）。舊裝備的額外詞條沒有 oc 標記，不會被轉走
+// 強化轉移：只轉強化等級，把一件裝備的強化等級完整轉給同品質、同類型、等級比它低的另一件；來源變 +0，目標原本的等級直接蓋掉。詞條（含超頻額外詞條）都不動
+// 目標身上如果有 ⚡ 超頻額外詞條（oc 標記）就不能當目標。只開放 SR／UR／EX，費用依品質（XFER_COST）
 const XFER_COST={SR:1000,UR:1500,EX:2000};
 function canXfer(g){return !!XFER_COST[GEAR[g.base].q]&&g.lv>0;}
 // 目標條件：同品質、同欄位（武器轉武器、防具轉防具…）、等級比來源低
 function xferOk(g,t){return t.uid!==g.uid&&GEAR[t.base].q===GEAR[g.base].q&&GEAR[t.base].slot===GEAR[g.base].slot&&t.lv<g.lv;}
 function xferTargets(g){return SAVE.gear.filter(x=>xferOk(g,x));}
-// 要轉過去的額外詞條，和目標「留下來的一般詞條」種類重複時不能轉（同一件裝備不能有兩條同種詞條）
-function xferConflict(s,t){const keep=new Set((t.fx||[]).filter(f=>!f.oc).map(f=>f.k));return (s.fx||[]).some(f=>f.oc&&keep.has(f.k));}
+// 目標身上有 ⚡ 超頻額外詞條就不能當目標
+function xferBlocked(t){return (t.fx||[]).some(f=>f.oc);}
 function openXfer(uid){
   const g=gearById(uid);if(!g||!canXfer(g))return closeModal();
   const q=GEAR[g.base].q,cost=XFER_COST[q],list=xferTargets(g).sort((a,b)=>b.lv-a.lv);
-  const row=t=>{const w=gearOwner(t.uid),bad=xferConflict(g,t);
-    return `<button class="mini" style="display:block;width:100%;text-align:left;margin:3px 0" ${bad?"disabled":""} onclick="confirmXfer(${uid},${t.uid})">${GEAR[t.base].icon} ${gearName(t)}${t.lv?` +${t.lv}`:" +0"}　<span class="dim small">${SLOTS[GEAR[t.base].slot]}${w?`・👤${CARDS[w].name}`:""}${bad?"・額外詞條種類重複，不能轉":""}</span></button>`;};
+  const row=t=>{const w=gearOwner(t.uid),bad=xferBlocked(t);
+    return `<button class="mini" style="display:block;width:100%;text-align:left;margin:3px 0" ${bad?"disabled":""} onclick="confirmXfer(${uid},${t.uid})">${GEAR[t.base].icon} ${gearName(t)}${t.lv?` +${t.lv}`:" +0"}　<span class="dim small">${SLOTS[GEAR[t.base].slot]}${w?`・👤${CARDS[w].name}`:""}${bad?"・身上有 ⚡ 超頻額外詞條，不能當目標":""}</span></button>`;};
   openModal(`<h3>🔁 強化轉移</h3>
     <p>來源：${qTag(q)}${gearName(g)} <b style="color:var(--gold)">+${g.lv}</b>　費用 🪙${cost}</p>
-    <p class="dim small">選一件同品質、同類型（同一個欄位，例如武器轉武器）、等級比來源低的裝備當目標。來源會變 +0，目標直接變成 +${g.lv}（目標原本的強化等級與超頻額外詞條會被蓋掉）。只轉強化等級與 ⚡ 額外詞條，其他詞條、品質浮動都不變。</p>
+    <p class="dim small">選一件同品質、同類型（同一個欄位，例如武器轉武器）、等級比來源低的裝備當目標。來源會變 +0，目標直接變成 +${g.lv}（目標原本的強化等級會被蓋掉）。只轉強化等級，所有詞條（包含 ⚡ 超頻額外詞條）與品質浮動都不變；身上有 ⚡ 超頻額外詞條的裝備不能當目標。</p>
     ${list.length?`<div style="max-height:46vh;overflow:auto">${list.map(row).join("")}</div>`:`<p class="dim">沒有可以轉移的目標（需要另一件同品質、同類型、等級比 +${g.lv} 低的裝備）。</p>`}
     <div class="row" style="margin-top:12px"><button onclick="openGear(${uid})">返回</button><button style="margin-left:auto" onclick="closeModal()">關閉</button></div>`);
 }
 function confirmXfer(uid,tid){
-  const g=gearById(uid),t=gearById(tid);if(!g||!t||!canXfer(g)||!xferOk(g,t)||xferConflict(g,t))return openXfer(uid);
-  const q=GEAR[g.base].q,cost=XFER_COST[q],oc=(g.fx||[]).filter(f=>f.oc),tOc=(t.fx||[]).filter(f=>f.oc);
+  const g=gearById(uid),t=gearById(tid);if(!g||!t||!canXfer(g)||!xferOk(g,t)||xferBlocked(t))return openXfer(uid);
+  const q=GEAR[g.base].q,cost=XFER_COST[q];
   const after={...t,lv:g.lv};
   openModal(`<h3>🔁 確認強化轉移</h3>
     <div>${qTag(q)}${gearName(g)}　<b style="color:var(--gold)">+${g.lv} → +0</b></div>
     <div style="margin-top:4px">${qTag(q)}${gearName(t)}　<b style="color:var(--gold)">+${t.lv} → +${g.lv}</b></div>
     <div class="small" style="margin-top:6px">目標數值：${statStr(gearStats(t))} <b>→</b> <span style="color:var(--green)">${statStr(gearStats(after))}</span></div>
-    ${oc.length?`<div class="small" style="margin-top:6px">⚡ 超頻額外詞條會一起轉過去：${fxStr({base:g.base,fx:oc})}${tOc.length?`（目標原本的 ${fxStr({base:t.base,fx:tOc})} 會被蓋掉）`:""}</div>`:""}
     <p class="dim small">轉移後無法復原。</p>
     <div class="row"><button class="pri" onclick="doXfer(${uid},${tid})" ${SAVE.gold<cost?"disabled":""}>轉移（🪙${cost}）</button><button onclick="openXfer(${uid})">返回</button></div>`);
 }
 function doXfer(uid,tid){
-  const g=gearById(uid),t=gearById(tid);if(!g||!t||!canXfer(g)||!xferOk(g,t)||xferConflict(g,t))return openXfer(uid);
+  const g=gearById(uid),t=gearById(tid);if(!g||!t||!canXfer(g)||!xferOk(g,t)||xferBlocked(t))return openXfer(uid);
   const cost=XFER_COST[GEAR[g.base].q];if(SAVE.gold<cost){toast("金條不足");return;}
   SAVE.gold-=cost;
-  const moved=(g.fx||[]).filter(f=>f.oc),slot=GEAR[t.base].slot,q=GEAR[t.base].q;
-  g.fx=(g.fx||[]).filter(f=>!f.oc);
-  // 轉到鞋子時，數值超過鞋子（範圍減半）的上限就壓回上限
-  t.fx=(t.fx||[]).filter(f=>!f.oc).concat(moved.map(f=>({...f,v:slot==="boots"?Math.min(f.v,affixSpan(f.k,q,"boots")[1]):f.v})));
+  const q=GEAR[t.base].q;
   t.lv=g.lv;g.lv=0;
   SFX.sr();save();renderHeader();
   openModal(`<h3>🔁 轉移完成</h3><div>${qTag(q)}${gearName(t)}　<b style="color:var(--gold)">+${t.lv}</b></div><div class="small">${statStr(gearStats(t))}${t.fx&&t.fx.length?" "+fxStr(t):""}</div>

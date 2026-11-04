@@ -66,7 +66,7 @@ function toast(msg){
   document.body.appendChild(d);setTimeout(()=>d.remove(),2200);
 }
 function openModal(html){$("#mbox").innerHTML=html;$("#modal").classList.add("show");}
-function closeModal(){$("#modal").classList.remove("show");}
+function closeModal(){document.querySelectorAll("#mbox video").forEach(v=>{try{v.pause();}catch(e){}});$("#modal").classList.remove("show");}
 
 /* ===================== GUIDE ===================== */
 // 超簡單導引：第一次進來自動打開，之後按右上角 ⚙ 設定裡的「玩法導引」重看

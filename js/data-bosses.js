@@ -133,15 +133,23 @@ function openBoss(id){
       專屬裝備 <b class="rEX">${GEAR_IMG.has(BOSS_DROP[id])?gearImg(BOSS_DROP[id],"inl"):G.icon}${G.name}</b>（${statStr(G.st)}）：${n?"2% 機率掉落":"首次討伐必定掉落"}</div>
     <div class="row" style="margin-top:12px"><button class="pri" onclick="startBoss('${id}')" ${SAVE.team.length?"":"disabled"}>⚔ 挑戰</button><button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
 }
+// 魔王短片（videos/{魔王代號}.mp4）：圖鑑點開播放；戰鬥開場每天第一次挑戰該魔王時播放，沒有短片的魔王維持立繪
+const BOSS_VIDEO={doomhunter:1};
+function bossVideoHtml(id,auto){
+  return `<video src="videos/${id}.mp4" ${auto?"autoplay":""} controls playsinline ${SAVE.muted?"muted":""} poster="images/bosses/${id}_1.webp" style="width:100%;border-radius:10px;background:#000;margin-bottom:8px"></video>`;
+}
 // 開打前先讓魔王說台詞：立繪＋名字＋台詞，按「開戰」才進入戰鬥
 function startBoss(id){
   if(!SAVE.team.length)return;
-  const M=MONSTERS[id];
-  openModal(`<div style="text-align:center"><img src="images/bosses/${id}_1.webp" alt="" style="max-width:220px;width:60%;filter:drop-shadow(0 0 18px rgba(255,60,60,.55))">
+  const M=MONSTERS[id],today=dateStr();
+  SAVE.bossVid=SAVE.bossVid||{};
+  const vid=BOSS_VIDEO[id]&&SAVE.bossVid[id]!==today;
+  if(vid){SAVE.bossVid[id]=today;save();}
+  openModal(`<div style="text-align:center">${vid?bossVideoHtml(id,true):`<img src="images/bosses/${id}_1.webp" alt="" style="max-width:220px;width:60%;filter:drop-shadow(0 0 18px rgba(255,60,60,.55))">`}
     <div class="rEX" style="margin-top:6px">支線魔王</div><h2 style="margin:2px 0">${M.name}</h2>
     <p style="font-size:18px;font-style:italic;margin:14px 8px;line-height:1.6;text-shadow:0 0 12px rgba(229,72,77,.6)">「${M.quote}」</p>
     <div class="row" style="justify-content:center"><button class="pri" onclick="beginBoss('${id}')">⚔ 開戰</button><button onclick="bossVoice('${id}')" title="再聽一次">🔊</button><button onclick="stopBossVoice();closeModal()">撤退</button></div></div>`);
-  bossVoice(id);
+  if(!vid)bossVoice(id);
 }
 // 魔王台詞配音（voice/{魔王代號}.mp3，edge-tts 生成）；音效關閉時不播，檔案載入失敗就靜音略過
 let BOSS_VOICE=null;

@@ -81,7 +81,7 @@ let BOSS_PH=1;
 function openBossShow(id,ph){
   if(ph)BOSS_PH=ph;
   const M=MONSTERS[id],i=BOSS_LIST.indexOf(id);
-  openModal(`<div class="detail"><div class="av" style="width:150px;min-width:150px;box-shadow:0 0 18px ${BOSS_PH===2?"rgba(229,72,77,.8)":"rgba(176,124,255,.5)"}"><img class="avimg" src="images/bosses/${id}_${BOSS_PH}.webp" alt=""></div>
+  openModal(`${BOSS_VIDEO[id]?bossVideoHtml(id,!ph):""}<div class="detail"><div class="av" style="width:150px;min-width:150px;box-shadow:0 0 18px ${BOSS_PH===2?"rgba(229,72,77,.8)":"rgba(176,124,255,.5)"}"><img class="avimg" src="images/bosses/${id}_${BOSS_PH}.webp" alt=""></div>
     <div style="flex:1"><div class="rEX">魔王 ${i+1}／8・無法獲取</div><h2 style="margin:2px 0">${M.name}</h2>
     <div class="small" style="font-style:italic">「${M.quote}」</div>
     <div class="row" style="margin-top:8px"><button class="mini ${BOSS_PH===1?"pri":""}" onclick="openBossShow('${id}',1)">一般型態</button><button class="mini ${BOSS_PH===2?"pri":""}" onclick="openBossShow('${id}',2)">💢 爆氣型態</button></div></div></div>

@@ -89,7 +89,7 @@ function startTrain(){
 // 遠征頁的獨立專區：連續 10 關，每關 5 顆恐龍蛋；打完一關立刻接下一關（同一場戰鬥，血量不回復）。
 // 獎勵：10 關全過才有 🪙DINO_GOLD，並擲一次鞋子掉落（DINO_DROP），沒有其他掉落物；每人每天最多領 DINO_DAILY 次（用這台裝置的日期計算，跟合作討伐一樣）。
 // 強度：血厚、傷害低。要調整就改下面幾個數字（hp／atk 是第 1 關的基礎值，每關再乘 dinoScale）
-const DINO_WAVES=10,DINO_EGGS=5,DINO_MAXROUND=1000,DINO_PICS=40,DINO_GOLD=400,DINO_DAILY=30,DINO_TRIES=10; // DINO_TRIES＝第一區每天最多挑戰幾次（一開打就算一次，戰敗也算）
+const DINO_WAVES=10,DINO_EGGS=5,DINO_MAXROUND=1000,DINO_PICS=40,DINO_GOLD=500,DINO_DAILY=30,DINO_TRIES=10; // DINO_TRIES＝第一區每天最多挑戰幾次（一開打就算一次，戰敗也算）
 function dinoLeft(){const c=SAVE.dino;return c&&c.d===coopToday()?Math.max(0,DINO_DAILY-c.n):DINO_DAILY;}
 function dinoTriesLeft(){const c=SAVE.dino;return c&&c.d===coopToday()?Math.max(0,DINO_TRIES-(c.a||0)):DINO_TRIES;}
 // 通關（領得到獎勵的那一次）擲一次，最多掉一雙鞋子：髒拖鞋 10%、沙灘拖鞋 10%、人化破拖鞋 7%、沒掉 73%

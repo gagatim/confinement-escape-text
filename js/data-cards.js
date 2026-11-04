@@ -26,8 +26,8 @@ const CARDS={
     skill:{name:"狂暴旋風",cd:3,t:"none",kind:"dmg",desc:"對全體敵人各造成1.38倍攻擊傷害；施放後自己失去0.5%最大生命（至少1），生命最低會留在1，不會因此倒下。",
       use(B,u){foes(B,u).forEach(t=>hit(B,u,t,1.38));u.hp=Math.max(1,u.hp-Math.max(1,Math.round(u.maxHp*.005)));}},
     passive:{name:"嗜殺",desc:"自己生命低於最大生命一半時，攻擊+4%（依基礎攻擊計算）；回到一半以上就恢復原狀。"}},
-  // 占卜師（暫名）：預計中的新 SSR 術士。off:1＝尚未開放取得（不進招募池、不進合成熔煉、不算收藏數），只在圖鑑展示；開放時拿掉 off 即可
-  diviner:{name:"占卜師",r:"SSR",off:1,hp:28,atk:6,def:1,spd:5,
+  // 占卜師（暫名）：新 SSR 術士，已開放取得（進招募池、合成、熔煉）。想先封住就加回 off:1（只在圖鑑展示，不算收藏數）
+  diviner:{name:"占卜師",r:"SSR",hp:28,atk:6,def:1,spd:5,
     skill:{name:"厄運宣告",cd:3,t:"enemy",kind:"dmg",desc:"對1名敵人造成1.2倍攻擊傷害，並標記2回合：該敵人受到的傷害+15%；同時使敵方全體攻擊-10%（2回合，每人至少-1）。",
       use(B,u,t){hit(B,u,t,1.2);if(t.alive){t.st.curse=2;fx(B,t,"厄運","sk");poison(B,t,5,3);}
         foes(B,u).forEach(x=>{if(x.alive)buff(B,x,"atk",-Math.max(1,Math.round(stat(x,"atk")*.1)),2);});blog(B,`${nm(u)} 翻開書頁：「你的運氣，到此為止。」`);}},

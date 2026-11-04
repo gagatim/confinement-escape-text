@@ -26,6 +26,12 @@ const CARDS={
     skill:{name:"狂暴旋風",cd:3,t:"none",kind:"dmg",desc:"對全體敵人各造成1.38倍攻擊傷害；施放後自己失去0.5%最大生命（至少1），生命最低會留在1，不會因此倒下。",
       use(B,u){foes(B,u).forEach(t=>hit(B,u,t,1.38));u.hp=Math.max(1,u.hp-Math.max(1,Math.round(u.maxHp*.005)));}},
     passive:{name:"嗜殺",desc:"自己生命低於最大生命一半時，攻擊+4%（依基礎攻擊計算）；回到一半以上就恢復原狀。"}},
+  // 占卜師（暫名）：預計中的新 SSR 術士。off:1＝尚未開放取得（不進招募池、不進合成熔煉、不算收藏數），只在圖鑑展示；開放時拿掉 off 即可
+  diviner:{name:"占卜師",r:"SSR",off:1,hp:28,atk:6,def:1,spd:5,
+    skill:{name:"厄運宣告",cd:3,t:"enemy",kind:"dmg",desc:"對1名敵人造成1.2倍攻擊傷害，並標記2回合：該敵人受到的傷害+15%；同時使敵方全體攻擊-10%（2回合，每人至少-1）。",
+      use(B,u,t){hit(B,u,t,1.2);if(t.alive){t.st.curse=2;fx(B,t,"厄運","sk");poison(B,t,5,3);}
+        foes(B,u).forEach(x=>{if(x.alive)buff(B,x,"atk",-Math.max(1,Math.round(stat(x,"atk")*.1)),2);});blog(B,`${nm(u)} 翻開書頁：「你的運氣，到此為止。」`);}},
+    passive:{name:"毒傷",desc:"自己攻擊時（普通攻擊與技能），使目標中毒：每回合受到5點傷害，持續3回合（技能施放時因術士加成為6點）。毒傷不受防禦與減傷影響，不會疊加（取最強），可被淨化解除。"}},
 
   merc:{name:"雇傭兵",r:"SR",hp:28,atk:6,def:2,spd:3,
     skill:{name:"霰彈掃射",cd:3,t:"none",kind:"dmg",desc:"對全體敵人各造成0.75倍攻擊傷害。",use(B,u){foes(B,u).forEach(t=>hit(B,u,t,.75));}},
@@ -270,7 +276,7 @@ const DEF=id=>CARDS[id]||MONSTERS[id];
 // 有插圖的主線小怪與魔王（images/monsters/{代號}.webp）；沒有圖的小怪、或圖片載入失敗時，退回用表情符號
 ["ghost","guard","drone","mutant","doppel","echo","deepone","mirror","cameraman","fanatic","rookie","guardian","warden","zero","chief","host","kraken","judge","loopkeeper","origin","producer","audience","castingdir","pastchamp","scrapbot","reclaimer","eraser","editor","shadowling","nameless"].forEach(k=>{if(MONSTERS[k])MONSTERS[k].pic=true;});
 const POOL={SSR:[],SR:[],R:[]};
-Object.keys(CARDS).forEach(id=>{if(!CARDS[id].story)POOL[CARDS[id].r].push(id);});
+Object.keys(CARDS).forEach(id=>{if(!CARDS[id].story&&!CARDS[id].off)POOL[CARDS[id].r].push(id);});
 // N 白卡（雜物）：只能遣散換金條，不能組隊、升星、合成、熔煉；用數量堆疊在 SAVE.junk。圖片放 images/avatars/{代號}.webp，沒圖時用表情符號
 const JUNK={
   tin:{name:"過期罐頭",emoji:"🥫",r:"N"},
@@ -285,7 +291,7 @@ const junkCount=()=>JUNK_IDS.reduce((a,k)=>a+((SAVE.junk&&SAVE.junk[k])||0),0);
 const storyOn=id=>!!CARDS[id].story;
 // 抽卡實際用的池子：一般角色＋已解鎖（通關到 gachaCh 章）的劇情角色。合成、熔煉的結果池不含劇情角色
 function gachaPool(r){return POOL[r].concat(Object.keys(CARDS).filter(id=>CARDS[id].story&&CARDS[id].r===r&&SAVE.prog.cleared>=CARDS[id].gachaCh));}
-const CARD_IDS=Object.keys(CARDS).filter(id=>!CARDS[id].story); // 招募池內的角色（不含劇情角色）
+const CARD_IDS=Object.keys(CARDS).filter(id=>!CARDS[id].story&&!CARDS[id].off); // 招募池內的角色（不含劇情角色、尚未開放的角色）
 const hasCardOrEvo=(own,id)=>!!own[id]||(id==="fatty"&&!!own.fatty2); // 肥宅進化成 SSR 後，仍算收集到肥宅
 const ownedCount=()=>CARD_IDS.filter(id=>hasCardOrEvo(SAVE.owned,id)).length;
 const R_ORDER={SSR:0,SR:1,R:2};
@@ -307,7 +313,7 @@ const CARD_CLS={
   gambler:"warrior",scavenger:"ranger",trucker:"tank",bartender:"support",herbalist:"support",runner:"assassin",chef:"support",
   survivor:"tank",diver:"assassin",miner:"warrior",mediocre:"warrior",courier:"support",gourmet:"tank",climber:"assassin",
   hacker:"mage",tycoon:"mage",lucky:"ranger",arsonist:"mage",sentinel:"tank",janitor:"support",detective:"ranger",
-  ashen:"warrior",qing:"support",fatty2:"tank"
+  ashen:"warrior",qing:"support",fatty2:"tank",diviner:"mage"
 };
 Object.keys(CARDS).forEach(id=>CARDS[id].cls=CARD_CLS[id]||"warrior");
 const clsOf=u=>CARDS[u.id]?CARDS[u.id].cls:null;

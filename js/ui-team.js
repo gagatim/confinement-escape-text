@@ -1,7 +1,7 @@
 "use strict";
 /* ===================== TEAM ===================== */
 let SHOW_LOCKED=false;
-function sortedIds(){return Object.keys(CARDS).filter(id=>!CARDS[id].story||SAVE.owned[id]).sort((a,b)=>R_ORDER[CARDS[a].r]-R_ORDER[CARDS[b].r]||a.localeCompare(b));}
+function sortedIds(){return Object.keys(CARDS).filter(id=>(!CARDS[id].story&&!CARDS[id].off)||SAVE.owned[id]).sort((a,b)=>R_ORDER[CARDS[a].r]-R_ORDER[CARDS[b].r]||a.localeCompare(b));}
 function cardTile(id,onclick,extraCls=""){
   const c=CARDS[id],o=SAVE.owned[id];
   return `<div class="ccard ${c.r} ${o?"":"locked"} ${o&&o.br?brTier(o.br):""} ${SAVE.team.includes(id)?"inteam":""} ${extraCls}" onclick="${onclick}">
@@ -65,7 +65,7 @@ function viewTeam(){
 let DEX_CLS="";
 function setDexCls(k){DEX_CLS=k;render();}
 function viewCodex(){
-  const ids=sortedIds().filter(id=>!DEX_CLS||CARDS[id].cls===DEX_CLS);
+  const ids=sortedIds().concat(Object.keys(CARDS).filter(id=>CARDS[id].off&&!SAVE.owned[id])).filter(id=>!DEX_CLS||CARDS[id].cls===DEX_CLS); // 尚未開放取得的角色也在圖鑑展示
   return `<h2>圖鑑</h2>
   <h3>遊戲角色（${ownedCount()}/${CARD_IDS.length}）</h3>
   ${clsFilter(DEX_CLS,"setDexCls")}
@@ -110,6 +110,7 @@ function showCard(id){
     ${c.evolveFrom?`<div class="sk small"><b>🆙 進化角色</b><br>《肥宅物語》通關後由 SR 肥宅進化，或用 10 張 SR 肥宅兌換取得，不進招募池。<b>無法合成、熔煉、遣散</b>，不能當「轉換」的來源（可以當轉換的目標）。</div>`:""}
     ${id==="fatty"?`<div class="sk small"><b>🔁 SSR 肥宅</b><br>抽到 SR 肥宅 ${fattyCopies()}／${FATTY_EXCHANGE} 張，${fattyExchangeOpen()?`滿 ${FATTY_EXCHANGE} 張可以換 1 張 SSR 肥宅。`:`🔒 通關肥宅物語第 5 章後，滿 ${FATTY_EXCHANGE} 張可以換 1 張 SSR 肥宅。`}SR 肥宅不提供合成。<div class="row" style="margin-top:6px"><button class="mini ${fattyCanExchange()?"pri":""}" onclick="closeModal();confirmFattyExchange()" ${fattyCanExchange()?"":"disabled"}>${fattyExchangeOpen()?"🔁 兌換 SSR 肥宅":"🔒 兌換（尚未開放）"}</button></div></div>`:""}
     ${id==="fatty"&&o&&(SAVE.prog.fatty||0)>=5&&!SAVE.owned.fatty2?`<div class="sk small"><b>🆙 可以進化！</b><br>《肥宅物語》已通關，這位肥宅可以進化成 SSR。<div class="row" style="margin-top:6px"><button class="pri" onclick="closeModal();confirmEvolve()">🆙 進化成 SSR</button></div></div>`:""}
+    ${c.off?`<div class="sk small"><b>🔒 尚未開放</b><br>這位角色還在準備中，目前無法取得，只先在圖鑑展示。</div>`:""}
     ${c.story&&!c.evolveFrom?`<div class="sk small"><b>📖 劇情角色</b><br>《名冊》故事線的同伴。通關第 ${c.gachaCh} 章後可以在招募所抽到。<b>無法合成、熔煉、遣散</b>，不能當「轉換」的來源（可以當轉換的目標）。</div>`:""}
     ${o&&fruitVisible(id)?fruitHtml(id):""}
     <div class="row" style="margin-top:12px">

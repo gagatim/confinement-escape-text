@@ -113,6 +113,7 @@ function hit(B,a,t,mult,o={}){
   }
   if(a.flags&&a.flags.frenzy)d*=1.1; // 激動模式
   if(t.st.mark)d*=1.5;
+  if(t.st.curse)d*=1.15; // 占卜師「厄運宣告」的標記：另一個狀態，和偵探的標記相乘
   if(a.id==="editor"&&t.st.mark)d*=1.25; // 剪輯師「無情剪輯」
   if(t.st.guard&&!o.pierce)d*=.5;
   if(B.wall[t.side]){const w=B.units.find(x=>x.uid===B.wall[t.side]);if(w&&w.alive)d*=.5;}
@@ -405,10 +406,10 @@ async function takeTurn(B,u){
 }
 function endTurn(u){
   u.buffs.forEach(b=>b.t--);u.buffs=u.buffs.filter(b=>b.t>0);
-  ["taunt","mark","counter"].forEach(k=>{if(u.st[k]>0)u.st[k]--;});
+  ["taunt","mark","curse","counter"].forEach(k=>{if(u.st[k]>0)u.st[k]--;});
 }
 function doAction(B,u,a){
-  if(a.type==="attack"){if(a.target)hit(B,u,a.target,1);}
+  if(a.type==="attack"){if(a.target){hit(B,u,a.target,1);if(u.id==="diviner"&&a.target.alive)poison(B,a.target,5,3);}} // 占卜師被動「毒傷」（技能的毒寫在技能裡）
   else if(a.type==="skill"){
     const sk=DEF(u.id).skill;
     blog(B,`✦ ${nm(u)} 發動【${sk.name}】`);fx(B,u,sk.name,"sk");castFx(B,u);
@@ -470,6 +471,7 @@ function unitCard(B,u){
   if(u.st.evade)st.push("💨×"+u.st.evade);
   if(u.st.guard)st.push("🛡");
   if(u.st.mark)st.push("🎯");
+  if(u.st.curse)st.push("🔮");
   if(u.st.counter)st.push("⚡");
   if(B.wall[u.side])st.push("🧱");
   if(u.buffs.some(b=>b.v>0))st.push("▲");

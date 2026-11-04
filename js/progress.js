@@ -97,7 +97,7 @@ function dinoTriesLeft(z){const Z=DINO_ZONES[z-1],c=SAVE[dinoKey(z)];return c&&c
 // 通關（領得到獎勵的那一次）擲一次，最多掉一雙鞋子：髒拖鞋 10%、沙灘拖鞋 10%、人化破拖鞋 7%、沒掉 73%
 const DINO_DROP=[["slippers",.10],["beachslip",.10],["sadslip",.07]];
 function dinoRoll(list){let r=rnd();for(const [k,p] of list){if(r<p)return k;r-=p;}return null;}
-MONSTERS.dinoegg={name:"恐龍蛋",emoji:"🥚",r:"R",hp:800,atk:3,def:5,spd:3, // 生命 800（原本 80 的 10 倍）；防禦 5（每點讓每次受到的傷害少 0.7；和生命、攻擊一樣每關乘 dinoScale，再加被動「厚實蛋殼」）
+MONSTERS.dinoegg={name:"恐龍蛋",emoji:"🥚",r:"R",hp:800,atk:3,def:3,spd:3, // 生命 800（原本 80 的 10 倍）；防禦 3（每點讓每次受到的傷害少 0.7；和生命、攻擊一樣每關乘 dinoScale，再加被動「厚實蛋殼」）
   skill:{name:"孵化震動",cd:3,t:"enemy",kind:"dmg",desc:"造成1.2倍攻擊傷害。",use(B,u,t){hit(B,u,t,1.2);}},
   passive:{name:"厚實蛋殼",desc:"防禦加成依區域與關卡而定（第一區 lv1 +3；第二區 lv2 +6）。"}}; // 戰鬥中實際顯示的名稱與數值見 dinoPassive()
 // 40 張不同的蛋圖（images/monsters/dinoegg1～40.webp），每顆蛋隨機挑一張；素質都和 dinoegg 一樣

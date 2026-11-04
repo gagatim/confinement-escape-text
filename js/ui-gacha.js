@@ -32,7 +32,7 @@ function shardPanel(){
     <button class="mini gold" style="margin-left:8px" onclick="openShards('SSR')">兌換角色</button>
     <button class="mini" onclick="openDismantle()">🔨 拆解 SSR</button>
     <div class="dim small" style="margin-top:6px;line-height:1.7">
-      <b>怎麼取得</b>：只有拆解 SSR 角色（點「🔨 拆解 SSR」，或到角色頁遣散）會得到，每張重複卡／每星 +3。R、SR 不會產生碎片，其他地方也不會掉。<br>
+      <b>怎麼取得</b>：只有拆解 SSR 角色（點「🔨 拆解 SSR」，或到角色頁遣散）會得到，每張重複卡／每星 +${SHARD_SELL.SSR}。R、SR 不會產生碎片，其他地方也不會掉。<br>
       <b>怎麼用</b>：碎片分稀有度，R 碎片只能換 R 角色，SR、SSR 同理。沒有的角色：R 25／SR 80／SSR 200 換 1★。已擁有但未滿 5★ 的角色：R 8／SR 25／SSR 70 補 1★。<br>
       <b>提醒</b>：價格故意訂得很高，抽卡仍是主要的取得方式。</div></div>`;
 }

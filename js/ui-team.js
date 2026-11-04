@@ -126,7 +126,7 @@ function showCard(id){
 // 遣散：每顆星算一張卡的價值。期望值低於抽卡價（約5／抽），不會變成刷錢手段
 const SELL_PRICE={R:3,SR:10,SSR:30};
 // 碎片：只有遣散 SSR 角色（含重複卡）才會有；R、SR 不再產生碎片
-const SHARD_SELL={R:0,SR:0,SSR:3};
+const SHARD_SELL={R:0,SR:0,SSR:5};
 const SHARD_NEW={R:25,SR:80,SSR:200},SHARD_STAR={R:8,SR:25,SSR:70};
 const SHARD_NAME={R:"R 碎片",SR:"SR 碎片",SSR:"SSR 碎片"};
 function sellBlock(id){

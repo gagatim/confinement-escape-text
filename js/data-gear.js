@@ -9,7 +9,7 @@ const GEAR={
   slippers:{name:"髒拖鞋",icon:"🩴",slot:"boots",q:"N",off:1,st:{spd:1}},
   beachslip:{name:"沙灘拖鞋",icon:"🩴",slot:"boots",q:"N",off:1,st:{hp:2}},
   sadslip:{name:"人化破拖鞋",icon:"🩴",slot:"boots",q:"R",off:1,st:{spd:1,hp:2}},
-  oldslip:{name:"破拖鞋",icon:"🩴",slot:"boots",q:"R",off:1,st:{spd:2,hp:3}}, // 先封住，尚未開放取得
+  oldslip:{name:"破拖鞋",icon:"🩴",slot:"boots",q:"R",off:1,st:{spd:2,hp:3}}, // 只從恐龍蛋專區第二區通關掉落（20%）
   pipe:{name:"鐵管",icon:"🔧",slot:"weapon",q:"R",st:{atk:2}},
   axe:{name:"消防斧",icon:"🪓",slot:"weapon",q:"R",cls:["warrior","tank"],st:{atk:3,hp:3}},
   dagger:{name:"匕首",icon:"🔪",slot:"weapon",q:"R",cls:["assassin"],st:{atk:2,spd:1}},

@@ -108,7 +108,7 @@ const dinoWave=w=>Array.from({length:DINO_EGGS},()=>({id:"dinoegg"+ri(1,DINO_PIC
 // tries＝每天最多挑戰幾次；gold＝通關金幣；daily＝每天最多領幾次獎勵；def(w)＝第 w 關恐龍蛋被動「厚實蛋殼」的防禦加成；drop＝通關擲一次鞋子的掉落表（[裝備, 機率]，最多掉一雙）
 const DINO_ZONES=[
   {n:"第一區",open:true,tries:10,gold:500,daily:30,drop:DINO_DROP,pas:"第 1 關 lv1 +3，第 2～10 關 +15",def:w=>w===1?3:15},
-  {n:"第二區",open:true,tries:20,gold:450,daily:20,drop:null,pas:"lv2 +6",def:()=>6},
+  {n:"第二區",open:true,tries:20,gold:450,daily:20,drop:[["oldslip",.20]],pas:"lv2 +6",def:()=>6},
   {n:"第三區"},{n:"第四區"},{n:"第五區"}];
 let DINO_ZONE=1;
 function viewDino(){

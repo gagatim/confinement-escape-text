@@ -29,7 +29,7 @@ function stat(u,k){
   if(k==="atk"&&u.id==="reclaimer"&&u.hp<u.maxHp/2)v+=Math.max(2,Math.round(u.atk*.12));
   if(k==="atk"&&u.id==="ashen"&&hasBond(u,"qing"))v+=Math.max(1,Math.round(u.atk*.04)); // 羈絆「名冊合照」
   if(k==="def"&&u.id==="chief"&&u.hp<u.maxHp/2)v+=2;
-  if(k==="def"&&u.id.startsWith("dinoegg"))v+=(CUR_B&&CUR_B.wave===1)?3:15; // 恐龍蛋被動「厚實蛋殼」：第 1 關 lv1＝+3；其他關還沒設定，暫時維持 +15
+  if(k==="def"&&u.id.startsWith("dinoegg"))v+=(CUR_B&&CUR_B.cfg&&CUR_B.cfg.eggDef)?CUR_B.cfg.eggDef(CUR_B.wave):15; // 恐龍蛋被動「厚實蛋殼」：各區各關的加成由 cfg.eggDef(關數) 決定（見 progress.js 的 DINO_ZONES）
   return Math.max(k==="atk"?1:0,v);
 }
 // 同一陣營裡有沒有另一名活著的指定角色（羈絆判定用）

@@ -195,6 +195,7 @@ function migrate(s){
   if(!s.bosses)s.bosses={};
   if(!s.coop)s.coop={d:"",n:0};
   if(!s.dino)s.dino={d:"",n:0};
+  if(!s.dino2)s.dino2={d:"",n:0};
   if(!s.t2)s.t2={d:"",n:0};
   if(!s.ach)s.ach={};
   if(!s.lore)s.lore={};

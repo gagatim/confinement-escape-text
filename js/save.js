@@ -196,6 +196,8 @@ function migrate(s){
   if(!s.coop)s.coop={d:"",n:0};
   if(!s.dino)s.dino={d:"",n:0};
   if(!s.dino2)s.dino2={d:"",n:0};
+  if(!s.dino3)s.dino3={d:"",n:0};
+  if(!s.dinoWins)s.dinoWins={};
   if(!s.t2)s.t2={d:"",n:0};
   if(!s.ach)s.ach={};
   if(!s.lore)s.lore={};

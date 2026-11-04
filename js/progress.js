@@ -89,7 +89,7 @@ function startTrain(){
 // 遠征頁的獨立專區：連續 10 關，每關 5 顆恐龍蛋；打完一關立刻接下一關（同一場戰鬥，血量不回復）。
 // 獎勵：10 關全過才有金幣（各區的 gold）；第一區另外擲一次鞋子掉落（DINO_DROP），沒有其他掉落物；每人每天最多領的次數見 DINO_ZONES（用這台裝置的日期計算，跟合作討伐一樣）。
 // 強度：血厚、傷害低。要調整就改下面幾個數字（hp／atk 是第 1 關的基礎值，每關再乘 dinoScale）
-const DINO_WAVES=10,DINO_EGGS=5,DINO_MAXROUND=1000,DINO_PICS=40,DINO_DAILY=30; // 各區的獎勵／次數／被動等設定在下面的 DINO_ZONES
+const DINO_WAVES=10,DINO_EGGS=5,DINO_MAXROUND=1000,DINO_PICS=40; // 各區的獎勵／次數／被動等設定在下面的 DINO_ZONES
 // 次數紀錄：第一區存在 SAVE.dino，第二區存在 SAVE.dino2（d＝日期，n＝今天領過獎勵幾次，a＝今天挑戰過幾次）
 const dinoKey=z=>z===1?"dino":"dino"+z;
 function dinoLeft(z){const Z=DINO_ZONES[z-1],c=SAVE[dinoKey(z)];return c&&c.d===coopToday()?Math.max(0,Z.daily-c.n):Z.daily;}
@@ -111,7 +111,7 @@ const dinoWave=w=>Array.from({length:DINO_EGGS},()=>({id:"dinoegg"+ri(1,DINO_PIC
 // 區域：都是 10 關、每關 5 顆恐龍蛋；第三到第五區先佔位，還沒有怪物，之後要開放就補上設定並把 open 改成 true
 // tries＝每天最多挑戰幾次；gold＝通關金幣；daily＝每天最多領幾次獎勵；pas(w)＝第 w 關恐龍蛋被動「厚實蛋殼」的等級 lv 與防禦加成 v；drop＝通關擲一次鞋子的掉落表（[裝備, 機率]，最多掉一雙）
 const DINO_ZONES=[
-  {n:"第一區",open:true,tries:10,gold:500,daily:30,drop:DINO_DROP,pasTxt:"lv1 +3",pas:()=>({lv:1,v:3})},
+  {n:"第一區",open:true,tries:10,gold:500,daily:10,drop:DINO_DROP,pasTxt:"lv1 +3",pas:()=>({lv:1,v:3})},
   {n:"第二區",open:true,tries:20,gold:450,daily:20,drop:[["oldslip",.20]],pasTxt:"lv2 +6",pas:()=>({lv:2,v:6})},
   {n:"第三區",open:true,need:{z:2,n:5},tries:20,gold:450,daily:20,drop:null,pasTxt:"lv3 +9",pas:()=>({lv:3,v:9})}, // need＝解鎖條件：第 z 區累計通關 n 次
   {n:"第四區",pasTxt:"lv4 +12",pas:()=>({lv:4,v:12})},  // 第四、五區暫時不開放：被動先設好，其他（次數、金幣、掉落、解鎖條件）開放時再補

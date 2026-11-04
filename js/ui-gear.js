@@ -10,7 +10,7 @@ function reqTag(id,base){const r=GEAR_REQ[GEAR[base].q];if(r<=1)return "";return
 function addGear(base,lv=0){
   const q=GEAR[base].q,[lo,hi]=GEAR_ROLL[q],fx=[];
   const keys=pickAffixKeys(affixCount(q));
-  keys.forEach(k=>fx.push({k,v:affixRoll(k,q)}));
+  keys.forEach(k=>fx.push({k,v:affixRoll(k,q,GEAR[base].slot)}));
   const g={uid:++SAVE.gearUid,base,lv,roll:ri(lo,hi),fx};SAVE.gear.push(g);return g;
 }
 function rollGear(q){return pick(Object.keys(GEAR).filter(k=>GEAR[k].q===q&&!GEAR[k].off));}
@@ -127,7 +127,7 @@ function affixTable(){
     <tr><th style="${cell}">詞條</th>${qs.map(q=>`<th style="${cell}" class="r${q}">${q}</th>`).join("")}</tr>
     ${Object.keys(AFFIX).map(k=>`<tr><td style="${cell}">${AFFIX[k].n}</td>${qs.map(q=>{const [a,b]=affixSpan(k,q),p=AFFIX[k].pct?"%":"";return `<td style="${cell}">${a===b?a:a+"～"+b}${p}</td>`;}).join("")}</tr>`).join("")}
     <tr><td style="${cell}">詞條數量</td>${qs.map(q=>`<td style="${cell}">${cnt[q]} 條</td>`).join("")}</tr></table></div>
-    <p class="dim small" style="margin:6px 0 0">數值是固定加值，不吃強化。普通（N）裝備沒有詞條。骰到該欄最大值會顯示 🌟 發光；另有 ${Math.round(AFFIX_RARE*100)}% 機率出現 💎 稀有詞條，數值為該欄最大值 +1（百分比 +1%、數字 +1）。</p></details>`;
+    <p class="dim small" style="margin:6px 0 0">數值是固定加值，不吃強化；鞋子的詞條數值範圍減半（上下限各除以 2、四捨五入、最小 1）。普通（N）裝備沒有詞條。骰到該欄最大值會顯示 🌟 發光；另有 ${Math.round(AFFIX_RARE*100)}% 機率出現 💎 稀有詞條，數值為該欄最大值 +1（百分比 +1%、數字 +1）。</p></details>`;
 }
 function viewDex(){
   const keys=Object.keys(GEAR).sort((a,b)=>GQ.indexOf(GEAR[a].q)-GQ.indexOf(GEAR[b].q)||Object.keys(SLOTS).indexOf(GEAR[a].slot)-Object.keys(SLOTS).indexOf(GEAR[b].slot));
@@ -174,7 +174,7 @@ function openDex(k){
   const rng=Object.keys(G.st).map(s=>{const a=Math.max(1,Math.round(G.st[s]*lo/100)),b=Math.max(1,Math.round(G.st[s]*hi/100));return `${ST_LBL[s]}${a===b?a:a+"～"+b}`;}).join(" ");
   const max=Object.keys(G.st).map(s=>`${ST_LBL[s]}${Math.max(1,Math.round(G.st[s]*(1+.08*ENH_MAX)))}`).join(" ");
   const cnt={N:"0 條",R:"0～1 條",SR:"1 條",SSR:"1～2 條",UR:"2～3 條",EX:"3 條"}[G.q];
-  const aff=Object.entries(AFFIX).map(([a,A])=>{const [x,y]=affixSpan(a,G.q);return `${A.n} +${x===y?x:x+"～"+y}${A.pct?"%":""}`;}).join("、");
+  const aff=Object.entries(AFFIX).map(([a,A])=>{const [x,y]=affixSpan(a,G.q,G.slot);return `${A.n} +${x===y?x:x+"～"+y}${A.pct?"%":""}`;}).join("、");
   const boss=Object.keys(BOSS_DROP).find(b=>BOSS_DROP[b]===k);
   openModal(`<div class="detail"><div class="bigicon fx-${G.q}">${gearImg(k)}</div><div style="flex:1">
     <div class="r${G.q}">${G.q}（${GQ_NAME[G.q]}）・${SLOTS[G.slot]}</div><h2 style="margin:2px 0">${qTag(G.q)}${G.name}</h2>
@@ -351,7 +351,7 @@ function doEnhance(uid){
   if(rnd()*100<rate){g.lv++;ENH.res={ok:true,msg:`✨ 強化成功！+${from} → +${g.lv}`};g.lv>=7?SFX.ssr():SFX.sr();
     if(g.lv===ENH_OC){ // +20：額外增加 1 條隨機詞條（不與現有的重複）
       g.fx=g.fx||[];const [k]=pickAffixKeys(1,g.fx.map(f=>f.k));
-      if(k){g.fx.push({k,v:affixRoll(k,GEAR[g.base].q)});ENH.res.msg+=`<br>⚡ 超頻完成！獲得額外詞條：${fxStr({base:g.base,fx:[g.fx[g.fx.length-1]]})}`;}
+      if(k){g.fx.push({k,v:affixRoll(k,GEAR[g.base].q,GEAR[g.base].slot)});ENH.res.msg+=`<br>⚡ 超頻完成！獲得額外詞條：${fxStr({base:g.base,fx:[g.fx[g.fx.length-1]]})}`;}
       SFX.ssr();}}
   else if(from<4){ENH.res={ok:false,msg:`💥 強化失敗……（+${from}，沒有損失）`};SFX.lose();}
   else if(prot){SAVE.charms.protect--;ENH.res={ok:false,msg:`💥 強化失敗！🧿 保護符碎了，等級保住在 +${from}`};SFX.miss();}

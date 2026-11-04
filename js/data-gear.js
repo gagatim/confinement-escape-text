@@ -68,9 +68,9 @@ function bellRoll(lo,hi){
     if(band===0?t<.3-e:band===2?t>.7+e:t>=.3-e&&t<=.7+e)c.push(lo+i);}
   return c.length?pick(c):(rnd()<.5?lo:hi);
 }
-function affixRoll(k,q){
-  if(rnd()<AFFIX_RARE)return affixSpan(k,q)[1]+1;
-  const [lo,hi]=affixSpan(k,q);return bellRoll(lo,hi);
+function affixRoll(k,q,slot){
+  if(rnd()<AFFIX_RARE)return affixSpan(k,q,slot)[1]+1;
+  const [lo,hi]=affixSpan(k,q,slot);return bellRoll(lo,hi);
 }
 // 依權重不重複地抽 n 種詞條
 function pickAffixKeys(n,skip=[]){
@@ -83,14 +83,18 @@ function pickAffixKeys(n,skip=[]){
   return out;
 }
 // 該詞條在這個稀有度的 [最小值, 最大值]
-function affixSpan(k,q){
-  const f=AFFIX_FIX[q]&&AFFIX_FIX[q][k];if(f)return f;
-  const [a,b]=AFFIX[k].r,m=AFFIX_MULT[q];return [Math.max(1,Math.round(a*m)),Math.max(1,Math.round(b*m))];
+// slot 是 "boots"（鞋子）時，範圍上下限各除以 2、四捨五入、最小 1（鞋子的詞條數值範圍減半）
+function affixSpan(k,q,slot){
+  const f=AFFIX_FIX[q]&&AFFIX_FIX[q][k],m=AFFIX_MULT[q];
+  let [x,y]=f||[Math.max(1,Math.round(AFFIX[k].r[0]*m)),Math.max(1,Math.round(AFFIX[k].r[1]*m))];
+  if(slot==="boots"){x=Math.max(1,Math.round(x/2));y=Math.max(1,Math.round(y/2));}
+  return [x,y];
 }
 // 該詞條在這個稀有度的最大值；範圍沒有浮動（只有一種值）時回傳 0
-function affixTop(k,q){
-  const f=AFFIX_FIX[q]&&AFFIX_FIX[q][k];if(f)return f[1];
-  const [a,b]=AFFIX[k].r;return b>a?Math.round(b*AFFIX_MULT[q]):0;
+function affixTop(k,q,slot){
+  const [lo,hi]=affixSpan(k,q,slot);
+  const f=AFFIX_FIX[q]&&AFFIX_FIX[q][k];if(f)return hi;
+  const [a,b]=AFFIX[k].r;return b>a?hi:0;
 }
 function affixCount(q){return q==="N"?0:q==="R"?(rnd()<.3?1:0):q==="SR"?1:q==="SSR"?1+(rnd()<.5?1:0):q==="EX"?3:2+(rnd()<.3?1:0);}
 // 套裝：同稀有度的裝備穿 2 件、3 件有額外效果（3 件會同時拿到 2 件的效果）
@@ -143,10 +147,10 @@ function gearStats(g){
 }
 function statStr(o){return Object.keys(ST_LBL).filter(k=>o[k]).map(k=>ST_PCT[k]?`${ST_LBL[k]}+${o[k]}%`:`${ST_LBL[k]}+${o[k]}`).join(" ");}
 // 詞條滿值（該稀有度能骰到的最大值）會用金色閃光標示
-function fxStr(g){const q=GEAR[g.base].q;return (g.fx||[]).map(f=>{
+function fxStr(g){const q=GEAR[g.base].q,sl=GEAR[g.base].slot;return (g.fx||[]).map(f=>{
   const s=`${AFFIX[f.k].n}+${f.v}${AFFIX[f.k].pct?"%":""}`;
-  const top=affixTop(f.k,q);
-  if(f.v>affixSpan(f.k,q)[1])return `<span class="fxrare" title="稀有詞條：超過上限 +1">💎${s}</span>`;
+  const top=affixTop(f.k,q,sl);
+  if(f.v>affixSpan(f.k,q,sl)[1])return `<span class="fxrare" title="稀有詞條：超過上限 +1">💎${s}</span>`;
   return top&&f.v>=top?`<span class="fxmax" title="滿值詞條">🌟${s}</span>`:`✦${s}`;}).join(" ");}
 // 稀有度標籤：N／R／SR／SSR／UR／EX，放在裝備名稱旁邊
 function qTag(q){return `<span class="qtag r${q}">${q}</span>`;}

@@ -99,7 +99,7 @@ function validSave(s){
     if(!isInt(g.lv,0,GEAR_LV_SANE))return `${G.name} 強化等級異常`;
     if(g.roll!=null&&!isInt(g.roll,GEAR_ROLL[G.q][0],GEAR_ROLL[G.q][1]))return `${G.name} 品質異常`;
     const fx=g.fx||[];if(fx.length>GEAR_FX_SANE||new Set(fx.map(f=>f.k)).size!==fx.length)return `${G.name} 詞條異常`;
-    for(const f of fx){const A=AFFIX[f.k];if(!A||!isInt(f.v,1,Math.ceil(affixSpan(f.k,G.q)[1]*1.5)+2))return `${G.name} 詞條數值異常`;}
+    for(const f of fx){const A=AFFIX[f.k];if(!A||!isInt(f.v,1,Math.ceil(affixSpan(f.k,G.q,G.slot)[1]*1.5)+2))return `${G.name} 詞條數值異常`;}
   }
   for(const k in s.charms)if(!isInt(s.charms[k],0,99999))return "強化道具數量異常";
   if(s.fruits)for(const k in s.fruits)if(!isInt(s.fruits[k],0,99999))return "能力果實數量異常";
@@ -186,7 +186,7 @@ function migrate(s){
   if(!s.gear){s.gear=[];s.gearUid=0;}
   // 詞條上限調降（例如吸血 -3）：舊裝備超過「新上限 +1（稀有詞條）」的數值壓回新上限，避免存檔檢查誤判
   for(const g of s.gear){const G=GEAR[g.base];if(!G||!Array.isArray(g.fx))continue;
-    g.fx.forEach(f=>{if(!AFFIX[f.k]||!Number.isInteger(f.v))return;const hi=affixSpan(f.k,G.q)[1];if(f.v>hi+1)f.v=hi;});}
+    g.fx.forEach(f=>{if(!AFFIX[f.k]||!Number.isInteger(f.v))return;const hi=affixSpan(f.k,G.q,G.slot)[1];if(f.v>hi+1)f.v=hi;});}
   if(!s.stash)s.stash={items:[],food:0};
   if(!s.charms)s.charms={protect:0,luck:0};
   if(!s.fruits)s.fruits={atk:0,def:0,spd:0};

@@ -99,7 +99,7 @@ const DINO_DROP=[["slippers",.15],["beachslip",.15],["sadslip",.07]];
 function dinoRoll(list){let r=rnd();for(const [k,p] of list){if(r<p)return k;r-=p;}return null;}
 MONSTERS.dinoegg={name:"恐龍蛋",emoji:"🥚",r:"R",hp:800,atk:3,def:3,spd:3, // 生命 800（原本 80 的 10 倍）；防禦 3（每點讓每次受到的傷害少 0.7；和生命、攻擊一樣每關乘 dinoScale，再加被動「厚實蛋殼」）
   skill:{name:"孵化震動",cd:3,t:"enemy",kind:"dmg",desc:"造成1.2倍攻擊傷害。",use(B,u,t){hit(B,u,t,1.2);}},
-  passive:{name:"厚實蛋殼",desc:"防禦加成依區域與關卡而定（第一區 lv1 +3；第二區 lv2 +6）。"}}; // 戰鬥中實際顯示的名稱與數值見 dinoPassive()
+  passive:{name:"厚實蛋殼",desc:"防禦加成依區域與關卡而定（第一區 lv1 +3；第二區 lv2 +4）。"}}; // 戰鬥中實際顯示的名稱與數值見 dinoPassive()
 // 40 張不同的蛋圖（images/monsters/dinoegg1～40.webp），每顆蛋隨機挑一張；素質都和 dinoegg 一樣
 for(let i=1;i<=DINO_PICS;i++)MONSTERS["dinoegg"+i]={...MONSTERS.dinoegg,pic:true};
 // 第 w 關恐龍蛋被動的顯示內容（戰鬥畫面的提示文字用）
@@ -112,10 +112,10 @@ const dinoWave=w=>Array.from({length:DINO_EGGS},()=>({id:"dinoegg"+ri(1,DINO_PIC
 // tries＝每天最多挑戰幾次；gold＝通關金幣；daily＝每天最多領幾次獎勵；pas(w)＝第 w 關恐龍蛋被動「厚實蛋殼」的等級 lv 與防禦加成 v；drop＝通關擲一次鞋子的掉落表（[裝備, 機率]，最多掉一雙）
 const DINO_ZONES=[
   {n:"第一區",open:true,tries:10,gold:500,daily:10,drop:DINO_DROP,pasTxt:"lv1 +3",pas:()=>({lv:1,v:3})},
-  {n:"第二區",open:true,tries:20,gold:450,daily:20,drop:[["oldslip",.20]],pasTxt:"lv2 +6",pas:()=>({lv:2,v:6})},
-  {n:"第三區",open:true,need:{z:2,n:5},tries:20,gold:450,daily:20,drop:[["energyslip",.23]],pasTxt:"lv3 +9",pas:()=>({lv:3,v:9})}, // need＝解鎖條件：第 z 區累計通關 n 次
-  {n:"第四區",open:true,need:{z:3,n:3},tries:20,gold:450,daily:20,drop:[["emperorslip",.22]],pasTxt:"lv4 +12",pas:()=>({lv:4,v:12})},  // 第五區暫時不開放：被動、解鎖條件先設好，其他（次數、金幣、掉落）開放時再補
-  {n:"第五區",need:{z:4,n:3},soon:"預計 11/8 之後開放 SSR 鞋子",pasTxt:"lv5 +15",pas:()=>({lv:5,v:15})}];
+  {n:"第二區",open:true,tries:20,gold:450,daily:20,drop:[["oldslip",.20]],pasTxt:"lv2 +4",pas:()=>({lv:2,v:4})},
+  {n:"第三區",open:true,need:{z:2,n:5},tries:20,gold:450,daily:20,drop:[["energyslip",.23]],pasTxt:"lv3 +5",pas:()=>({lv:3,v:5})}, // need＝解鎖條件：第 z 區累計通關 n 次
+  {n:"第四區",open:true,need:{z:3,n:3},tries:20,gold:450,daily:20,drop:[["emperorslip",.22]],pasTxt:"lv4 +6",pas:()=>({lv:4,v:6})},  // 第五區暫時不開放：被動、解鎖條件先設好，其他（次數、金幣、掉落）開放時再補
+  {n:"第五區",need:{z:4,n:3},soon:"預計 11/8 之後開放 SSR 鞋子",pasTxt:"lv5 +7",pas:()=>({lv:5,v:7})}];
 // 各區累計通關次數存在 SAVE.dinoWins（{區號:次數}）；解鎖條件沒達成時回傳目前進度，達成了回傳 null
 function dinoLock(z){const Z=DINO_ZONES[z-1];if(!Z.need)return null;const have=(SAVE.dinoWins||{})[Z.need.z]||0;return have>=Z.need.n?null:{have,need:Z.need.n,from:DINO_ZONES[Z.need.z-1].n};}
 let DINO_ZONE=1;

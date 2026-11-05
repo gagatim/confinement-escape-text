@@ -355,6 +355,7 @@ footer.credit a{color:var(--gold)}
 .bigicon{font-size:64px;text-align:center;min-width:90px}
 /* 裝備插圖：圖片本身已經帶光暈，所以有圖時不再疊 CSS 的發光濾鏡 */
 .gimg{display:block;margin:0 auto;object-fit:contain;max-width:100%;pointer-events:none}
+.gimg[src$="/emperorslip.webp"]{filter:drop-shadow(0 0 5px rgba(245,196,81,.55))} /* 皇帝拖鞋：圖片外圍泛一圈淡淡的黃光 */
 .gcard .gi .gimg{width:64px;height:64px}
 .gslot .gi .gimg{width:44px;height:44px}
 .sitem .gi .gimg{width:56px;height:56px}

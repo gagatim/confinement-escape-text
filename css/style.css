@@ -13,6 +13,10 @@ button.pri{background:#4a1518;border-color:var(--red);color:#fff}
 button.pri:hover:not(:disabled){background:#62191d}
 button.gold{background:#3d300c;border-color:var(--gold);color:#ffe6a3}
 button.ok{background:#123522;border-color:var(--green)}
+/* 立體按鈕（⚙ 設定可開關，預設關）：下緣陰影＋上緣高光，按下去會下沉 */
+body.btn3d button{box-shadow:0 3px 0 rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.14);transition:.15s,transform .05s,box-shadow .05s}
+body.btn3d button:active:not(:disabled){transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.08)}
+body.btn3d button:disabled{box-shadow:none}
 #app{max-width:1200px;margin:0 auto;padding:0 16px 40px}
 header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(12,14,17,.92);backdrop-filter:blur(6px);z-index:20}
 .logo{font-weight:900;letter-spacing:2px;font-size:20px;color:var(--red);text-shadow:0 0 12px rgba(229,72,77,.5);cursor:pointer}

@@ -105,7 +105,7 @@ MONSTERS.dinoegg={name:"恐龍蛋",emoji:"🥚",r:"R",hp:800,atk:3,def:3,spd:3, 
 MONSTERS.babydragon={name:"寶貝龍",emoji:"🐉",emoji2:"🐲",transform:true,r:"SSR",hp:900,atk:72,def:10,spd:24, // transform：有變身形態（戰鬥卡片會套魔王樣式）；emoji2：變身後的暫用圖
   skill:{name:"龍息灼燒",cd:3,t:"none",kind:"dmg",desc:"對全體敵人各造成0.7倍攻擊傷害，並使其中毒（每回合約4點、持續3回合）。變身成巨龍後改為1倍傷害、毒每回合約9點，冷卻縮短1回合。",
     use(B,u){const p=u.flags.p2;blog(B,p?"🔥 巨龍仰天長嘯，噴出滾燙的龍息！":"🔥 寶貝龍張開嘴，吐出一大口火焰！","bad");const d=Math.max(3,Math.round(stat(u,"atk")*(p?.09:.06)));foes(B,u).forEach(t=>{hit(B,u,t,p?1:.7,{noSpread:true});if(t.alive)poison(B,t,d,3);});}},
-  passive:{name:"護蛋本能／巨龍覺醒",desc:"護蛋本能：場上每有 1 顆活著的恐龍蛋，寶貝龍受到的傷害減少 5%（最多減少 20%）。｜巨龍覺醒：生命降到 50% 以下，牠的下一個回合開始時變身成巨龍：回復 15% 最大生命、攻擊 +40%、防禦 +4、速度 +4，清除負面狀態、技能冷卻歸零；變身後不再有護蛋本能。"}};
+  passive:{name:"護蛋本能／巨龍覺醒",desc:"護蛋本能：場上每有 1 顆活著的恐龍蛋，寶貝龍受到的傷害減少 5%（最多減少 20%）。｜巨龍覺醒：生命降到 50% 以下，牠的下一個回合開始時變身成巨龍：回復 30% 最大生命、攻擊 +40%、防禦 +4、速度 +4，清除負面狀態、技能冷卻歸零；變身後不再有護蛋本能。"}};
 // 40 張不同的蛋圖（images/monsters/dinoegg1～40.webp），每顆蛋隨機挑一張；素質都和 dinoegg 一樣
 for(let i=1;i<=DINO_PICS;i++)MONSTERS["dinoegg"+i]={...MONSTERS.dinoegg,pic:true};
 // 第 w 關恐龍蛋被動的顯示內容（戰鬥畫面的提示文字用）

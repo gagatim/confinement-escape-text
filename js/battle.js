@@ -385,7 +385,7 @@ async function takeTurn(B,u){
   if(u.id==="babydragon"&&!u.flags.p2&&u.hp<=u.maxHp*.5){ // 寶貝龍「巨龍覺醒」：生命降到一半以下，回合開始時變身成巨龍
     u.flags.p2=1;u.name="巨龍";u.st={};u.buffs=u.buffs.filter(b=>b.v>0);
     u.perm.atk=(u.perm.atk||0)+Math.round(u.atk*.4);u.perm.def=(u.perm.def||0)+4;u.perm.spd=(u.perm.spd||0)+4;u.cd=0;
-    heal(B,u,Math.round(u.maxHp*.15));
+    heal(B,u,Math.round(u.maxHp*.3));
     blog(B,`🐲 ${nm(u)} 的蛋殼碎裂，體型暴漲——變身成了巨龍！`,"bad");fx(B,u,"變身！","crit");SFX.ssr();
   }
   if(u.id==="medic"){const h=mates(B,u).filter(m=>m.hp<m.maxHp).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0];if(h)heal(B,h,2);}

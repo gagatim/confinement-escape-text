@@ -193,6 +193,11 @@ b.sA{color:var(--sideA)} b.sB{color:var(--sideB)}
 .vfx.ring{width:40px;height:40px;border:3px solid var(--col);border-radius:50%;box-shadow:0 0 12px var(--col),inset 0 0 8px var(--col);animation:vring .38s ease-out forwards}
 .vfx.arrow{width:46px;height:3px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--col));box-shadow:0 0 8px var(--col);transform:translate(-50%,-50%) rotate(var(--ang,0rad))}
 .vfx.orb{width:20px;height:20px;border-radius:50%;background:radial-gradient(circle,#fff 0,var(--col) 45%,transparent 72%);box-shadow:0 0 16px var(--col);transform:translate(-50%,-50%)}
+/* 寶貝龍的火焰噴射（橘紅）：flame 從攻擊者噴向目標，fireburst 在目標身上炸開 */
+@keyframes vflame{0%{opacity:0;transform:translate(0,-50%) rotate(var(--ang,0rad)) scale(.05,.5)}25%{opacity:1}100%{opacity:0;transform:translate(0,-50%) rotate(var(--ang,0rad)) scale(1,1.25)}}
+.vfx.flame{width:var(--len,120px);height:var(--th,36px);transform-origin:0 50%;border-radius:0 60% 60% 0/0 50% 50% 0;background:linear-gradient(90deg,rgba(255,244,170,.95),#ffb020 22%,#ff5a1f 58%,rgba(190,25,0,0));filter:blur(1.5px);box-shadow:0 0 14px #ff6a2a;animation:vflame .45s ease-out forwards}
+@keyframes vfire{0%{opacity:1;transform:translate(-50%,-50%) scale(.3)}100%{opacity:0;transform:translate(-50%,-50%) scale(var(--s,1.6))}}
+.vfx.fireburst{width:56px;height:56px;border-radius:50%;background:radial-gradient(circle,#fff4b0 0,#ffb020 28%,#ff4a1a 55%,rgba(255,60,0,0) 72%);box-shadow:0 0 18px #ff5a1f;animation:vfire .4s ease-out forwards}
 @keyframes vflash{0%{opacity:.25}100%{opacity:0}}
 .vflash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;animation:vflash .2s ease-out forwards}
 @keyframes vdim{0%{opacity:0}25%{opacity:1}100%{opacity:0}}

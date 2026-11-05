@@ -217,7 +217,12 @@ function atkFx(B,a,t,crit){
       wait=.28*k;e.style.transition=`left ${wait}s linear,top ${wait}s linear`;void e.offsetWidth;e.style.left=tx+"px";e.style.top=ty+"px";
     }
     setTimeout(()=>{
-      if(cls==="assassin"){vfxAdd(L,"slash",tx,ty,col,k,.3,{"--rot":"-35deg","--s":big});setTimeout(()=>vfxAdd(L,"slash",tx,ty,col,k,.3,{"--rot":"35deg","--s":big}),70*k);}
+      if(a.id==="babydragon"){ // 寶貝龍：火焰噴射（普通攻擊和技能的每一次命中都有；變身成巨龍後更粗更大）
+        const p2=a.flags&&a.flags.p2;
+        vfxAdd(L,"flame",ax,ay,"#ff6a2a",k,.45,{"--ang":Math.atan2(ty-ay,tx-ax)+"rad","--len":Math.hypot(tx-ax,ty-ay)+"px","--th":(p2?52:36)+"px"});
+        setTimeout(()=>vfxAdd(L,"fireburst",tx,ty,"#ff6a2a",k,.4,{"--s":(p2?2.3:1.6)*big}),190*k);
+      }
+      else if(cls==="assassin"){vfxAdd(L,"slash",tx,ty,col,k,.3,{"--rot":"-35deg","--s":big});setTimeout(()=>vfxAdd(L,"slash",tx,ty,col,k,.3,{"--rot":"35deg","--s":big}),70*k);}
       else if(cls==="tank"){vfxAdd(L,"ring",tx,ty,col,k,.38,{"--s":2.6*big});vfxAdd(L,"slash",tx,ty,col,k,.3,{"--rot":"-90deg","--s":.7*big});}
       else if(cls==="ranger"||cls==="mage"){vfxAdd(L,"ring",tx,ty,col,k,.34,{"--s":(cls==="mage"?3:1.8)*big});}
       else if(cls==="support"){vfxAdd(L,"ring",tx,ty,col,k,.4,{"--s":2.4*big});}

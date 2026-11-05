@@ -17,6 +17,16 @@ button.ok{background:#123522;border-color:var(--green)}
 body.btn3d button{box-shadow:0 3px 0 rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.14);transition:.15s,transform .05s,box-shadow .05s}
 body.btn3d button:active:not(:disabled){transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.08)}
 body.btn3d button:disabled{box-shadow:none}
+/* 半透明按鈕（⚙ 設定可開關，預設關；可和立體按鈕同時開）：底色帶透明度＋背景模糊，邊框與上緣有淡淡的白色高光 */
+body.btnglass button{background:rgba(28,33,41,.5);border-color:rgba(255,255,255,.18);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+body.btnglass:not(.btn3d) button{box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+body.btnglass button:hover:not(:disabled){background:rgba(45,54,66,.6);border-color:rgba(255,255,255,.3)}
+body.btnglass button.pri{background:rgba(74,21,24,.55);border-color:rgba(229,72,77,.7)}
+body.btnglass button.pri:hover:not(:disabled){background:rgba(98,25,29,.65)}
+body.btnglass button.gold{background:rgba(61,48,12,.55);border-color:rgba(245,196,81,.7)}
+body.btnglass button.ok{background:rgba(18,53,34,.55);border-color:rgba(63,208,122,.7)}
+body.btnglass .apanel .btns button.atk{background:rgba(58,20,22,.6);border-color:rgba(229,72,77,.7)}
+body.btnglass .apanel .btns button.atk:hover{background:rgba(86,26,30,.7)}
 #app{max-width:1200px;margin:0 auto;padding:0 16px 40px}
 header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(12,14,17,.92);backdrop-filter:blur(6px);z-index:20}
 .logo{font-weight:900;letter-spacing:2px;font-size:20px;color:var(--red);text-shadow:0 0 12px rgba(229,72,77,.5);cursor:pointer}
@@ -355,7 +365,8 @@ footer.credit a{color:var(--gold)}
 .bigicon{font-size:64px;text-align:center;min-width:90px}
 /* 裝備插圖：圖片本身已經帶光暈，所以有圖時不再疊 CSS 的發光濾鏡 */
 .gimg{display:block;margin:0 auto;object-fit:contain;max-width:100%;pointer-events:none}
-.gimg[src$="/emperorslip.webp"]{filter:drop-shadow(0 0 5px rgba(245,196,81,.55))} /* 皇帝拖鞋：圖片外圍泛一圈淡淡的黃光 */
+.gimg[src$="/emperorslip.webp"]{filter:drop-shadow(0 0 7px rgba(245,196,81,.75))} /* 皇帝拖鞋：圖片外圍泛一圈淡淡的黃光 */
+.gimg[src$="/energyslip.webp"]{filter:drop-shadow(0 0 6px rgba(110,170,255,.6))} /* 高能量拖鞋：圖片外圍泛一圈淡淡的藍光 */
 .gcard .gi .gimg{width:64px;height:64px}
 .gslot .gi .gimg{width:44px;height:44px}
 .sitem .gi .gimg{width:56px;height:56px}

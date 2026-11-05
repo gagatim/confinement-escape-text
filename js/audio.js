@@ -29,6 +29,8 @@ const SFX={
 function toggleMute(){SAVE.muted=!SAVE.muted;save();renderHeader();}
 function toggleBtn3d(){const on=document.body.classList.toggle("btn3d");try{localStorage.setItem("jbts_btn3d",on?"1":"0");}catch(e){}} // 立體按鈕：記在這台裝置（不進存檔），預設關
 try{if(localStorage.getItem("jbts_btn3d")==="1")document.body.classList.add("btn3d");}catch(e){}
+function toggleBtnGlass(){const on=document.body.classList.toggle("btnglass");try{localStorage.setItem("jbts_btnglass",on?"1":"0");}catch(e){}} // 半透明按鈕：記在這台裝置（不進存檔），預設關；可和立體按鈕同時開
+try{if(localStorage.getItem("jbts_btnglass")==="1")document.body.classList.add("btnglass");}catch(e){}
 function toggleCd(){SAVE.showCd=SAVE.showCd===false;save();render();} // 技能冷卻數字的顯示開關（預設開）
 // 右上角 ⚙ 的設定視窗：背景音樂、音效、技能冷卻數字三個開關，加上玩法導引；切換後視窗重開，狀態馬上更新
 function openSettings(){
@@ -38,6 +40,7 @@ function openSettings(){
     ${row("🔊","音效",!SAVE.muted,"toggleMute()")}
     ${row("✦","技能冷卻數字（戰鬥中角色左上角）",SAVE.showCd!==false,"toggleCd()")}
     ${row("🔘","立體按鈕（只記在這台裝置）",document.body.classList.contains("btn3d"),"toggleBtn3d()")}
+    ${row("🫧","半透明按鈕（只記在這台裝置）",document.body.classList.contains("btnglass"),"toggleBtnGlass()")}
     <div class="row" style="align-items:center;margin:8px 0"><span style="flex:1">❓ 玩法導引</span><button class="mini" onclick="closeModal();openGuide(0)">開啟</button></div>
     <div class="row" style="margin-top:12px"><button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
 }

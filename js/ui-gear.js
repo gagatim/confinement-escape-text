@@ -183,7 +183,7 @@ function openDex(k){
     <div class="sk"><b>📊 數值</b><br>基礎：${statStr(G.st)}<br>品質浮動（${lo}%～${hi}%）：${rng}<br>強化到 +${ENH_MAX}：${max}（以 100% 品質計）</div>
     <div class="sk"><b>✦ 隨機詞條</b>（${cnt}）<br><span class="small">${aff}</span></div>
     <div class="sk"><b>🧩 套裝</b>：${SETS[setKeyOf(k)].name}<br>2 件：${statStr(SETS[setKeyOf(k)][2])}　3 件：${statStr(SETS[setKeyOf(k)][3])}</div>
-    <div class="sk"><b>🎁 怎麼取得</b><br>${(ds=>ds.length?ds.map(([Z,d])=>`🥚 恐龍蛋專區${Z.n} ${DINO_WAVES} 關全部通過時有 ${Math.round(d[1]*100)}% 機率掉落（包含在每天 ${Z.daily} 次獎勵內）`).join("<br>"):G.off?"尚未開放取得":GET_HOW[G.q])(DINO_ZONES.filter(Z=>Z.open&&Z.drop).map(Z=>[Z,Z.drop.find(x=>x[0]===k)]).filter(x=>x[1]))}${boss?`<br><b class="rEX">掉落自：${MONSTERS[boss].name}</b>`:""}</div>
+    <div class="sk"><b>🎁 怎麼取得</b><br>${(ds=>ds.length?ds.map(([Z,d])=>`🥚 恐龍蛋專區${Z.n} ${dinoN(Z)} 關全部通過時有 ${Math.round(d[1]*100)}% 機率掉落（包含在每天 ${Z.daily} 次獎勵內）`).join("<br>"):G.off?"尚未開放取得":GET_HOW[G.q])(DINO_ZONES.filter(Z=>Z.open&&Z.drop).map(Z=>[Z,Z.drop.find(x=>x[0]===k)]).filter(x=>x[1]))}${boss?`<br><b class="rEX">掉落自：${MONSTERS[boss].name}</b>`:""}</div>
     <div class="row" style="margin-top:12px">${GEAR_PRICE[G.q]&&!G.off?`<button class="gold" onclick="closeModal();SHOP_TAB='gear';go('shop')">🛒 去商店</button>`:""}<button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
 }
 function fitSel(id){FIT_CHAR=id;FIT_PICK=0;SFX.click();render();}

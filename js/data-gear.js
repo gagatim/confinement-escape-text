@@ -10,7 +10,7 @@ const GEAR={
   beachslip:{name:"沙灘拖鞋",icon:"🩴",slot:"boots",q:"N",off:1,st:{hp:2}},
   sadslip:{name:"人化破拖鞋",icon:"🩴",slot:"boots",q:"R",off:1,st:{spd:1,hp:2}},
   oldslip:{name:"破拖鞋",icon:"🩴",slot:"boots",q:"R",off:1,st:{spd:2,hp:3}}, // 只從恐龍蛋專區第二區通關掉落（20%）
-  emperorslip:{name:"皇帝拖鞋",icon:"🩴",slot:"boots",q:"SR",off:1,st:{spd:3,atk:1,hp:4}}, // 尚未開放取得
+  emperorslip:{name:"皇帝拖鞋",icon:"🩴",slot:"boots",q:"SR",off:1,st:{spd:3,atk:1,hp:4}}, // 只從恐龍蛋專區第四區通關掉落（22%）
   energyslip:{name:"高能量拖鞋",icon:"🩴",slot:"boots",q:"SR",off:1,st:{spd:2,def:2,hp:4}}, // 只從恐龍蛋專區第三區通關掉落（23%）
   pipe:{name:"鐵管",icon:"🔧",slot:"weapon",q:"R",st:{atk:2}},
   axe:{name:"消防斧",icon:"🪓",slot:"weapon",q:"R",cls:["warrior","tank"],st:{atk:3,hp:3}},

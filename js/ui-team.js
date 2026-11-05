@@ -117,7 +117,7 @@ function showCard(id){
       ${o?(inT?`<button onclick="toggleTeam('${id}')">移出隊伍</button>`:`<button class="pri" onclick="toggleTeam('${id}')" ${SAVE.team.length>=teamMax()?"disabled":""}>加入隊伍${SAVE.team.length>=teamMax()?"（已滿）":""}</button>`):`<span class="dim">尚未獲得</span>`}
       ${o&&o.dup&&o.stars<5?`<button class="pri" onclick="starUp('${id}')">⭐ 升星（重複卡 ×${o.dup}）</button>`:""}
       ${o&&o.dup>1&&o.stars<4?`<button class="gold" onclick="starUp('${id}',true)">⭐ 全部升星</button>`:""}
-      ${o&&o.stars<5?`<button class="gold" onclick="openShards('${CARDS[id].r}')">🧩 碎片補星（${SHARD_STAR[CARDS[id].r]}）</button>`:""}
+      ${o&&o.stars<5?`<button class="gold" onclick="openShards('${CARDS[id].r}')">🧩 碎片補星（${starShard(id)}）</button>`:""}
       ${canBreak(id)?`<button class="gold" onclick="BR_RES=null;confirmBreak('${id}')">✨ 突破（${brOf(id)}→${brOf(id)+1}）</button>`:""}
       <button onclick="closeModal()" style="margin-left:auto">關閉</button></div>
     ${o&&o.stars>=5&&!canBreak(id)?`<div class="dim small" style="margin-top:6px">已突破到上限（${BR_MAX}）。</div>`:o&&!brOf(id)&&o.stars<5?`<div class="dim small" style="margin-top:6px">升到 5★ 後可以「突破」，讓角色變得更強。</div>`:""}
@@ -129,6 +129,9 @@ const SELL_PRICE={R:3,SR:10,SSR:30};
 // 碎片：只有遣散 SSR 角色（含重複卡）才會有；R、SR 不再產生碎片
 const SHARD_SELL={R:0,SR:0,SSR:5};
 const SHARD_NEW={R:25,SR:80,SSR:200},SHARD_STAR={R:8,SR:25,SSR:70};
+// 補 1★ 的碎片價格：阿燼、晴（不能合成、熔煉的劇情角色）比一般 SSR 便宜
+const SHARD_STAR_CHEAP={ashen:50,qing:50};
+const starShard=id=>SHARD_STAR_CHEAP[id]||SHARD_STAR[CARDS[id].r];
 const SHARD_NAME={R:"R 碎片",SR:"SR 碎片",SSR:"SSR 碎片"};
 function sellBlock(id){
   if(storyOn(id))return "劇情角色，無法遣散";

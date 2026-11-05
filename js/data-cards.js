@@ -301,7 +301,7 @@ const R_ORDER={SSR:0,SR:1,R:2};
 const CLASSES={
   tank:{name:"坦克",icon:"🛡",desc:"生命+15%、防禦+1"},
   warrior:{name:"戰士",icon:"⚔",desc:"攻擊+15%（至少+1）"},
-  assassin:{name:"刺客",icon:"🗡",desc:"速度+1、暴擊率+6%"},
+  assassin:{name:"刺客",icon:"🗡",desc:"速度+3、暴擊率+6%、閃避率+5%"},
   ranger:{name:"射手",icon:"🎯",desc:"暴擊率+12%"},
   support:{name:"輔助",icon:"✚",desc:"治療量+30%"},
   mage:{name:"術士",icon:"🔮",desc:"技能傷害+20%、施加的中毒每回合+1"}

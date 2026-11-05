@@ -129,6 +129,7 @@ function gearImg(base,cls=""){
 const ST_LBL={hp:"❤",atk:"⚔",def:"🛡",spd:"💨",crit:"暴擊",steal:"吸血",dodge:"閃避",dr:"減傷"};
 const ST_PCT={crit:1,steal:1,dodge:1,dr:1};
 const DR_CAP=30; // 裝備減傷%上限
+const DODGE_CAP=50; // 閃避率上限（%）：裝備詞條、套裝、職業與角色加成加總後最多 50%
 const ENH_MAX=10;
 const ENH_RATE=[100,95,90,80,70,60,50,40,32,25, 10,5,5,4,4,3,3,2,1,1]; // 依目前等級：+0→+1 為 100%；+10 以後是「超頻區」
 // 超頻區：+11～+20，只有 SSR 以上的裝備能進入；每級只加 3.5%（+10 以前每級 8%），失敗一定掉 1 級，花費 🪙1000 起跳
@@ -232,7 +233,7 @@ function cardStats(id,stars=1,scale=1,br=0){
   const s={maxHp:Math.round(c.hp*m),atk:Math.max(1,Math.round(c.atk*m)),def:c.def+(stars>=3||br?1:0),spd:c.spd};
   if(c.cls==="tank"){s.maxHp=Math.round(s.maxHp*1.15);s.def++;}
   if(c.cls==="warrior")s.atk+=Math.max(1,Math.round(s.atk*.15));
-  if(c.cls==="assassin")s.spd++;
+  if(c.cls==="assassin")s.spd+=3; // 刺客職業特色：速度 +3
   return s;
 }
 

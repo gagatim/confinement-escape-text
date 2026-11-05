@@ -94,7 +94,7 @@ function hit(B,a,t,mult,o={}){
       if(g&&rnd()<.4){blog(B,`${nm(g)} 撲過去替 ${nm(t)} 擋刀！`);t=g;}
     }
   }
-  const evadeChance=(t.id==="lucky"?.15:(DEF(t.id).evade||0))+((t.gx&&t.gx.dodge)||0)/100;
+  const evadeChance=Math.min(DODGE_CAP/100,(t.id==="lucky"?.15:(DEF(t.id).evade||0))+((t.gx&&t.gx.dodge)||0)/100+(clsOf(t)==="assassin"?.05:0)); // 刺客職業特色：閃避率 +5%；閃避率總和上限 DODGE_CAP
   if(!o.fixed&&!o.pierce&&((t.st.evade||0)>0||rnd()<evadeChance)){
     if(t.st.evade>0)t.st.evade--;
     blog(B,`${nm(a)} 的攻擊被 ${nm(t)} 閃過了。`);fx(B,t,"MISS","miss");SFX.miss();return 0;

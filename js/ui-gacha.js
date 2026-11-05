@@ -33,7 +33,7 @@ function shardPanel(){
     <button class="mini" onclick="openDismantle()">🔨 拆解 SSR</button>
     <div class="dim small" style="margin-top:6px;line-height:1.7">
       <b>怎麼取得</b>：只有拆解 SSR 角色（點「🔨 拆解 SSR」，或到角色頁遣散）會得到，每張重複卡／每星 +${SHARD_SELL.SSR}。R、SR 不會產生碎片，其他地方也不會掉。<br>
-      <b>怎麼用</b>：碎片分稀有度，R 碎片只能換 R 角色，SR、SSR 同理。沒有的角色：R 25／SR 80／SSR 200 換 1★。已擁有但未滿 5★ 的角色：R 8／SR 25／SSR 70 補 1★。<br>
+      <b>怎麼用</b>：碎片分稀有度，R 碎片只能換 R 角色，SR、SSR 同理。沒有的角色：R 25／SR 80／SSR 200 換 1★。已擁有但未滿 5★ 的角色：R 8／SR 25／SSR 70（阿燼、晴 50）補 1★。<br>
       <b>提醒</b>：價格故意訂得很高，抽卡仍是主要的取得方式。</div></div>`;
 }
 let SHARD_TAB="SSR";
@@ -42,9 +42,9 @@ function openShards(t){
   const ids=CARD_IDS.filter(id=>CARDS[id].r===r).concat(Object.keys(CARDS).filter(id=>CARDS[id].story&&CARDS[id].r===r&&SAVE.owned[id]));
   openModal(`<h3>🧩 碎片兌換</h3>
     <div class="filters">${["R","SR","SSR"].map(k=>`<button class="${k===r?"on":""}" onclick="openShards('${k}')">${k} ×${SAVE.shards[k]}</button>`).join("")}</div>
-    <p class="dim small">沒有的角色 🧩${SHARD_NEW[r]} 換 1★；已擁有但未滿 5★ 的角色 🧩${SHARD_STAR[r]} 補 1★。</p>
+    <p class="dim small">沒有的角色 🧩${SHARD_NEW[r]} 換 1★；已擁有但未滿 5★ 的角色 🧩${SHARD_STAR[r]} 補 1★（阿燼、晴 🧩${SHARD_STAR_CHEAP.ashen}）。</p>
     <div style="max-height:50vh;overflow:auto">${ids.map(id=>{const o=SAVE.owned[id],c=CARDS[id];
-      const cost=!o?SHARD_NEW[r]:SHARD_STAR[r],full=o&&o.stars>=5;
+      const cost=!o?SHARD_NEW[r]:starShard(id),full=o&&o.stars>=5;
       return `<div class="row" style="align-items:center;margin:4px 0"><div class="av" style="width:36px;height:36px">${avatar(id)}</div>
         <span class="r${r}">${c.name}</span> <span class="small dim">${o?o.stars+"★":"未獲得"}</span>
         <button class="mini gold" style="margin-left:auto" onclick="buyShard('${id}')" ${full||have<cost?"disabled":""}>${full?"已 5★":(o?"補 1★ ":"獲得 ")+"🧩"+cost}</button></div>`;}).join("")}</div>
@@ -53,7 +53,7 @@ function openShards(t){
 function buyShard(id){
   const r=CARDS[id].r,o=SAVE.owned[id];
   if(o&&o.stars>=5)return;
-  const cost=o?SHARD_STAR[r]:SHARD_NEW[r];
+  const cost=o?starShard(id):SHARD_NEW[r];
   if(SAVE.shards[r]<cost){toast("碎片不足");return;}
   SAVE.shards[r]-=cost;
   if(o)o.stars++;else SAVE.owned[id]={stars:1};

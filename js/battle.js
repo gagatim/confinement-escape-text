@@ -123,6 +123,7 @@ function hit(B,a,t,mult,o={}){
   if(DEF(t.id).drp)d*=1-DEF(t.id).drp;
   if(!o.pierce&&t.gx&&t.gx.dr)d*=1-Math.min(DR_CAP,t.gx.dr)/100;
   if(t.id==="veteran"&&t.hp<=t.maxHp*.35)d-=4;
+  if(t.id==="babydragon"&&!t.flags.p2)d*=1-Math.min(.2,.05*B.units.filter(x=>x.side===t.side&&x.alive&&x.id.startsWith("dinoegg")).length); // 寶貝龍「護蛋本能」：每有 1 顆活著的蛋，傷害 −5%（最多 −20%）；變身後失效
   d=Math.max(1,Math.round(d));
   if(t.id==="bomb"&&!o.counter&&rnd()<.25){
     const half=Math.floor(d/2);d-=half;
@@ -381,6 +382,12 @@ async function takeTurn(B,u){
   if((u.id==="reclaimer"||u.id==="nameless")&&(u.flags.oc||0)<10){u.flags.oc=(u.flags.oc||0)+1;u.perm.atk=(u.perm.atk||0)+Math.max(1,Math.round(u.atk*.03));}
   if(DEF(u.id).regen)heal(B,u,DEF(u.id).regen);
   if(DEF(u.id).regenp)heal(B,u,Math.round(u.maxHp*DEF(u.id).regenp));
+  if(u.id==="babydragon"&&!u.flags.p2&&u.hp<=u.maxHp*.5){ // 寶貝龍「巨龍覺醒」：生命降到一半以下，回合開始時變身成巨龍
+    u.flags.p2=1;u.name="巨龍";u.st={};u.buffs=u.buffs.filter(b=>b.v>0);
+    u.perm.atk=(u.perm.atk||0)+Math.round(u.atk*.4);u.perm.def=(u.perm.def||0)+4;u.perm.spd=(u.perm.spd||0)+4;u.cd=0;
+    heal(B,u,Math.round(u.maxHp*.15));
+    blog(B,`🐲 ${nm(u)} 的蛋殼碎裂，體型暴漲——變身成了巨龍！`,"bad");fx(B,u,"變身！","crit");SFX.ssr();
+  }
   if(u.id==="medic"){const h=mates(B,u).filter(m=>m.hp<m.maxHp).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0];if(h)heal(B,h,2);}
   if(u.id==="witch"&&rnd()<.3){const f=foes(B,u);if(f.length){const t=pick(f);poison(B,t,2,2);blog(B,`🧪 女巫的大釜冒泡，${nm(t)} 中毒了。`);}}
   render();
@@ -477,7 +484,7 @@ function unitCard(B,u){
   if(u.buffs.some(b=>b.v>0))st.push("▲");
   if(u.buffs.some(b=>b.v<0))st.push("▼");
   const d=DEF(u.id),cl=CARDS[u.id]?CLASSES[CARDS[u.id].cls]:null;
-  return `<div class="ucard s${u.side} ${CARDS[u.id]?"q-"+CARDS[u.id].r:""} ${d.boss2?"bossu":""} ${u.flags&&u.flags.p2?"p2":""} ${u.flags&&u.flags.frenzy?"frenzy":""} ${u.br?brTier(u.br):""} ${u.alive?"":"dead"} ${B.active===u&&!B.over?"active":""} ${tg?"targetable":""}" id="u${u.uid}" onclick="onUnitClick(${u.uid})" title="${d.skill.name}：${d.skill.desc}\n${pasOf(u,d).name}：${pasOf(u,d).desc}">
+  return `<div class="ucard s${u.side} ${CARDS[u.id]?"q-"+CARDS[u.id].r:""} ${d.boss2||d.transform?"bossu":""} ${u.flags&&u.flags.p2?"p2":""} ${u.flags&&u.flags.frenzy?"frenzy":""} ${u.br?brTier(u.br):""} ${u.alive?"":"dead"} ${B.active===u&&!B.over?"active":""} ${tg?"targetable":""}" id="u${u.uid}" onclick="onUnitClick(${u.uid})" title="${d.skill.name}：${d.skill.desc}\n${pasOf(u,d).name}：${pasOf(u,d).desc}">
     <div class="uav">${avatar(u.id,u.flags&&u.flags.p2)}</div>
     ${u.cd>0&&u.alive&&SAVE.showCd!==false?`<div class="cdbadge">✦${u.cd}</div>`:""}
     <div class="uname">${cl?`<span title="${cl.name}：${cl.desc}">${cl.icon}</span>`:""}${u.ally?"🤝":""}${(B.coop||B.t2)&&u.pl?`<span class="tag" style="margin-right:3px">${B.t2?(u.pl===B.mySeat?"我":"P"+(+u.pl+1)):u.pl===(B.guest?"B":"A")?"我":"隊友"}</span>`:""}${u.name}${u.br?`<span class="brkname">突破${u.br}</span>`:""}</div>

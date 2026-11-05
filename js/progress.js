@@ -100,6 +100,12 @@ function dinoRoll(list){let r=rnd();for(const [k,p] of list){if(r<p)return k;r-=
 MONSTERS.dinoegg={name:"恐龍蛋",emoji:"🥚",r:"R",hp:800,atk:3,def:3,spd:3, // 生命 800（原本 80 的 10 倍）；防禦 3（每點讓每次受到的傷害少 0.7；和生命、攻擊一樣每關乘 dinoScale，再加被動「厚實蛋殼」）
   skill:{name:"孵化震動",cd:3,t:"enemy",kind:"dmg",desc:"造成1.2倍攻擊傷害。",use(B,u,t){hit(B,u,t,1.2);}},
   passive:{name:"厚實蛋殼",desc:"防禦加成依區域與關卡而定（第一區 lv1 +3；第二區 lv2 +4）。"}}; // 戰鬥中實際顯示的名稱與數值見 dinoPassive()
+// 第五區最後一關的魔王「寶貝龍」（暫用 🐉 表情符號當圖；圖好了放 images/monsters/babydragon.webp，並把下面加上 pic:true）
+// 強度：參考八大魔王的第二支「虛空主宰」（生命 667、攻擊 63、防禦 8、速度 21），再硬一點
+MONSTERS.babydragon={name:"寶貝龍",emoji:"🐉",emoji2:"🐲",transform:true,r:"SSR",hp:900,atk:72,def:10,spd:24, // transform：有變身形態（戰鬥卡片會套魔王樣式）；emoji2：變身後的暫用圖
+  skill:{name:"龍息灼燒",cd:3,t:"none",kind:"dmg",desc:"對全體敵人各造成0.7倍攻擊傷害，並使其中毒（每回合約4點、持續3回合）。變身成巨龍後改為1倍傷害、毒每回合約9點，冷卻縮短1回合。",
+    use(B,u){const p=u.flags.p2;blog(B,p?"🔥 巨龍仰天長嘯，噴出滾燙的龍息！":"🔥 寶貝龍張開嘴，吐出一大口火焰！","bad");const d=Math.max(3,Math.round(stat(u,"atk")*(p?.09:.06)));foes(B,u).forEach(t=>{hit(B,u,t,p?1:.7,{noSpread:true});if(t.alive)poison(B,t,d,3);});}},
+  passive:{name:"護蛋本能／巨龍覺醒",desc:"護蛋本能：場上每有 1 顆活著的恐龍蛋，寶貝龍受到的傷害減少 5%（最多減少 20%）。｜巨龍覺醒：生命降到 50% 以下，牠的下一個回合開始時變身成巨龍：回復 15% 最大生命、攻擊 +40%、防禦 +4、速度 +4，清除負面狀態、技能冷卻歸零；變身後不再有護蛋本能。"}};
 // 40 張不同的蛋圖（images/monsters/dinoegg1～40.webp），每顆蛋隨機挑一張；素質都和 dinoegg 一樣
 for(let i=1;i<=DINO_PICS;i++)MONSTERS["dinoegg"+i]={...MONSTERS.dinoegg,pic:true};
 // 第 w 關恐龍蛋被動的顯示內容（戰鬥畫面的提示文字用）
@@ -107,7 +113,7 @@ const dinoPassive=(Z,w)=>{const p=Z.pas(w);return {name:"厚實蛋殼"+(p.lv?" l
 const dinoScale=w=>1+(w-1)*.35;
 // 基礎防禦也隨關卡成長：第 w 關基礎防禦 ＝ round(5 × dinoScale(w))；戰鬥時再加被動
 const dinoBaseDef=w=>Math.round(MONSTERS.dinoegg.def*dinoScale(w));
-const dinoWave=w=>Array.from({length:DINO_EGGS},()=>({id:"dinoegg"+ri(1,DINO_PICS),stars:1,scale:dinoScale(w),def:dinoBaseDef(w)-MONSTERS.dinoegg.def}));
+const dinoWave=(w,boss)=>[...(boss?[{id:boss,stars:1}]:[]),...Array.from({length:boss?DINO_EGGS-1:DINO_EGGS},()=>({id:"dinoegg"+ri(1,DINO_PICS),stars:1,scale:dinoScale(w),def:dinoBaseDef(w)-MONSTERS.dinoegg.def}))]; // boss：這一關要放的魔王（取代 1 顆蛋，排在最前面）
 // 區域：都是 10 關、每關 5 顆恐龍蛋；第三到第五區先佔位，還沒有怪物，之後要開放就補上設定並把 open 改成 true
 // tries＝每天最多挑戰幾次；gold＝通關金幣；daily＝每天最多領幾次獎勵；pas(w)＝第 w 關恐龍蛋被動「厚實蛋殼」的等級 lv 與防禦加成 v；drop＝通關擲一次鞋子的掉落表（[裝備, 機率]，最多掉一雙）
 const DINO_ZONES=[
@@ -115,7 +121,7 @@ const DINO_ZONES=[
   {n:"第二區",open:true,tries:20,gold:450,daily:20,drop:[["oldslip",.20]],pasTxt:"lv2 +4",pas:()=>({lv:2,v:4})},
   {n:"第三區",open:true,need:{z:2,n:5},tries:20,gold:450,daily:20,drop:[["energyslip",.23]],pasTxt:"lv3 +5",pas:()=>({lv:3,v:5})}, // need＝解鎖條件：第 z 區累計通關 n 次
   {n:"第四區",open:true,need:{z:3,n:3},tries:20,gold:450,daily:20,drop:[["emperorslip",.22]],pasTxt:"lv4 +6",pas:()=>({lv:4,v:6})},  // 第五區暫時不開放：被動、解鎖條件先設好，其他（次數、金幣、掉落）開放時再補
-  {n:"第五區",waves:5,from:6,tries:20,gold:300,daily:20,need:{z:4,n:3},soon:"預計 11/8 之後開放 SSR 鞋子",pasTxt:"lv5 +7",pas:()=>({lv:5,v:7})}];
+  {n:"第五區",waves:5,from:6,boss:"babydragon",tries:20,gold:300,daily:20,need:{z:4,n:3},soon:"預計 11/8 之後開放 SSR 鞋子",pasTxt:"lv5 +7",pas:()=>({lv:5,v:7})}];
 // 各區累計通關次數存在 SAVE.dinoWins（{區號:次數}）；解鎖條件沒達成時回傳目前進度，達成了回傳 null
 function dinoLock(z){const Z=DINO_ZONES[z-1];if(!Z.need)return null;const have=(SAVE.dinoWins||{})[Z.need.z]||0;return have>=Z.need.n?null:{have,need:Z.need.n,from:DINO_ZONES[Z.need.z-1].n};}
 // 各區的關數與起始關：waves＝這區打幾關（沒寫就是 DINO_WAVES）、from＝第 1 關用原本第幾關的強度（沒寫就是 1）；第五區只打 5 關，強度用原本的第 6～10 關
@@ -135,6 +141,7 @@ function viewDino(){
     <ul class="dim small" style="padding-left:18px;margin:0">
       <li>恐龍蛋血很厚、傷害很低，考驗隊伍的持久力。</li>
       <li>每顆約 ❤${s.maxHp} ⚔${s.atk} 🛡${dinoBaseDef(1+o)+z.pas(1).v}（第 1 關）→ ❤${e.maxHp} ⚔${e.atk} 🛡${dinoBaseDef(N+o)+z.pas(N).v}（第 ${N} 關）。防禦含被動「厚實蛋殼」（${z.pasTxt}）。</li>
+      ${z.boss?`<li>最後一關（第 ${N} 關）有魔王「${MONSTERS[z.boss].name}」：${MONSTERS[z.boss].emoji} ❤${MONSTERS[z.boss].hp} ⚔${MONSTERS[z.boss].atk} 🛡${MONSTERS[z.boss].def} ⚡${MONSTERS[z.boss].spd}，帶 ${DINO_EGGS-1} 顆恐龍蛋一起出現。技能「${MONSTERS[z.boss].skill.name}」：${MONSTERS[z.boss].skill.desc}被動「${MONSTERS[z.boss].passive.name}」：${MONSTERS[z.boss].passive.desc}</li>`:""}
       <li>全隊倒下就結束；戰敗沒有懲罰，也沒有獎勵。</li>
       <li>每天最多挑戰 <b>${z.tries}</b> 次（今天還剩 <b>${dinoTriesLeft(zi)}</b> 次；一開打就算一次，戰敗也算，用完就不能再挑戰）。</li>
       <li>獎勵：<b>${N} 關全部通過</b>可得 🪙${z.gold}，每天最多領 ${z.daily} 次（今天還剩 <b>${dinoLeft(zi)}</b> 次，用這台裝置的日期計算）。</li>
@@ -147,9 +154,9 @@ function startDino(zi){
   zi=zi||DINO_ZONE;const Z=DINO_ZONES[zi-1],K=dinoKey(zi);
   if(!Z.open||dinoLock(zi)||!SAVE.team.length||dinoTriesLeft(zi)<=0)return;
   {const t=coopToday(),c=SAVE[K],same=c&&c.d===t;SAVE[K]={d:t,n:same?c.n:0,a:(same?c.a||0:0)+1};save();} // 開打就記一次挑戰
-  const ids=SAVE.team.slice(),N=dinoN(Z),o=dinoOff(Z),waveTitle=w=>`恐龍蛋專區 ${Z.n} 第 ${w}／${N} 關`;
-  startBattle({title:waveTitle(1),home:"run",maxRound:DINO_MAXROUND,bgm:"dino",eggDef:w=>Z.pas(w).v,eggPas:w=>dinoPassive(Z,w),A:ids.map(teamUnit),B:dinoWave(1+o),
-    waves:Array.from({length:N-1},(_,i)=>dinoWave(i+2+o)),waveTitle, // 後面的關卡：前一關的蛋全倒，立刻補上下一批
+  const ids=SAVE.team.slice(),N=dinoN(Z),o=dinoOff(Z),waveFor=k=>dinoWave(k+o,k===N&&Z.boss?Z.boss:null),waveTitle=w=>`恐龍蛋專區 ${Z.n} 第 ${w}／${N} 關`;
+  startBattle({title:waveTitle(1),home:"run",maxRound:DINO_MAXROUND,bgm:"dino",eggDef:w=>Z.pas(w).v,eggPas:w=>dinoPassive(Z,w),A:ids.map(teamUnit),B:waveFor(1),
+    waves:Array.from({length:N-1},(_,i)=>waveFor(i+2)),waveTitle, // 後面的關卡：前一關的蛋全倒，立刻補上下一批
     intro:"一整片恐龍蛋在地上微微晃動……",
     resultNote:B=>B.over==="A"?`${N} 關全部通過！`:`撐到第 ${B.wave} 關倒下了。`,
     onEnd(win,B){

@@ -165,7 +165,7 @@ function avatar(id,p2){
   const d=DEF(id);
   if(d.img) return `<img class="avimg" src="images/bosses/${id}_${p2?2:1}.webp" alt="" draggable="false">`;
   if(d.pic) return `<img class="avimg" src="images/monsters/${id}.webp" alt="" draggable="false" onerror="this.outerHTML='<span class=emo>${d.emoji}</span>'">`;
-  if(d.emoji) return `<span class="emo">${d.emoji}</span>`;
+  if(d.emoji) return `<span class="emo">${p2&&d.emoji2?d.emoji2:d.emoji}</span>`;
   return `<img class="avimg" src="images/avatars/${id}.webp" alt="" draggable="false" onerror="this.outerHTML='<span class=emo>${d.name.charAt(0)}</span>'">`+skinFx(id);
 }
 /* ---- 造型（純外觀，不加任何數值）：試用造型限時開放，到期自動回收 ----

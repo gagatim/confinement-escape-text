@@ -28,8 +28,8 @@ const CARDS={
     passive:{name:"嗜殺",desc:"自己生命低於最大生命一半時，攻擊+4%（依基礎攻擊計算）；回到一半以上就恢復原狀。"}},
   // 占卜師（暫名）：新 SSR 術士，已開放取得（進招募池、合成、熔煉）。想先封住就加回 off:1（只在圖鑑展示，不算收藏數）
   diviner:{name:"占卜師",r:"SSR",hp:28,atk:6,def:1,spd:5,
-    skill:{name:"厄運宣告",cd:3,t:"enemy",kind:"dmg",desc:"對1名敵人造成1.2倍攻擊傷害，並標記2回合：該敵人受到的傷害+15%；同時使敵方全體攻擊-10%（2回合，每人至少-1）。",
-      use(B,u,t){hit(B,u,t,1.2);if(t.alive){t.st.curse=2;fx(B,t,"厄運","sk");poison(B,t,5,3);}
+    skill:{name:"厄運宣告",cd:3,t:"enemy",kind:"dmg",desc:"對1名敵人造成1.45倍攻擊傷害，並標記2回合：該敵人受到的傷害+15%；同時使敵方全體攻擊-10%（2回合，每人至少-1）。",
+      use(B,u,t){hit(B,u,t,1.45);if(t.alive){t.st.curse=2;fx(B,t,"厄運","sk");poison(B,t,5,3);}
         foes(B,u).forEach(x=>{if(x.alive)buff(B,x,"atk",-Math.max(1,Math.round(stat(x,"atk")*.1)),2);});blog(B,`${nm(u)} 翻開書頁：「你的運氣，到此為止。」`);}},
     passive:{name:"毒傷",desc:"自己攻擊時（普通攻擊與技能），使目標中毒：每回合受到5點傷害，持續3回合（技能施放時因術士加成為6點）。毒傷不受防禦與減傷影響，不會疊加（取最強），可被淨化解除。"}},
 

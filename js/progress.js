@@ -115,7 +115,7 @@ const DINO_ZONES=[
   {n:"第二區",open:true,tries:20,gold:450,daily:20,drop:[["oldslip",.20]],pasTxt:"lv2 +6",pas:()=>({lv:2,v:6})},
   {n:"第三區",open:true,need:{z:2,n:5},tries:20,gold:450,daily:20,drop:[["energyslip",.23]],pasTxt:"lv3 +9",pas:()=>({lv:3,v:9})}, // need＝解鎖條件：第 z 區累計通關 n 次
   {n:"第四區",open:true,need:{z:3,n:3},tries:20,gold:450,daily:20,drop:[["emperorslip",.22]],pasTxt:"lv4 +12",pas:()=>({lv:4,v:12})},  // 第五區暫時不開放：被動、解鎖條件先設好，其他（次數、金幣、掉落）開放時再補
-  {n:"第五區",need:{z:4,n:3},pasTxt:"lv5 +15",pas:()=>({lv:5,v:15})}];
+  {n:"第五區",need:{z:4,n:3},soon:"預計 11/8 之後開放 SSR 鞋子",pasTxt:"lv5 +15",pas:()=>({lv:5,v:15})}];
 // 各區累計通關次數存在 SAVE.dinoWins（{區號:次數}）；解鎖條件沒達成時回傳目前進度，達成了回傳 null
 function dinoLock(z){const Z=DINO_ZONES[z-1];if(!Z.need)return null;const have=(SAVE.dinoWins||{})[Z.need.z]||0;return have>=Z.need.n?null:{have,need:Z.need.n,from:DINO_ZONES[Z.need.z-1].n};}
 let DINO_ZONE=1;
@@ -124,9 +124,9 @@ function viewDino(){
   const tabs=`<div class="filters">${DINO_ZONES.map((o,i)=>`<button class="${i+1===DINO_ZONE?"on":""}" onclick="DINO_ZONE=${i+1};render()">${o.open&&!dinoLock(i+1)?"":"🔒 "}${o.n}</button>`).join("")}</div>`;
   const lk=dinoLock(zi);
   if(lk)return `<h2>逃殺遠征</h2>${runTabs()}${tabs}
-  <div class="panel"><h3 style="margin-top:0">🥚 ${z.n}</h3><p class="dim">🔒 尚未解鎖。需要先通關「${lk.from}」<b>${lk.need}</b> 次（10 關全部通過才算一次，戰敗不算），目前 <b>${lk.have}</b>／${lk.need}。</p></div>`;
+  <div class="panel"><h3 style="margin-top:0">🥚 ${z.n}</h3><p class="dim">🔒 尚未解鎖。需要先通關「${lk.from}」<b>${lk.need}</b> 次（10 關全部通過才算一次，戰敗不算），目前 <b>${lk.have}</b>／${lk.need}。</p>${z.soon?`<p>📅 ${z.soon}。</p>`:""}</div>`;
   if(!z.open)return `<h2>逃殺遠征</h2>${runTabs()}${tabs}
-  <div class="panel"><h3 style="margin-top:0">🥚 ${z.n}</h3><p class="dim">🔒 尚未開放。這一區目前還沒有怪物，敬請期待。</p></div>`;
+  <div class="panel"><h3 style="margin-top:0">🥚 ${z.n}</h3><p class="dim">🔒 尚未開放。這一區目前還沒有怪物，敬請期待。</p>${z.soon?`<p>📅 ${z.soon}。</p>`:""}</div>`;
   return `<h2>逃殺遠征</h2>${runTabs()}${tabs}
   <div class="panel"><h3 style="margin-top:0">🥚 ${z.n}</h3>
     <p>連續 <b>${DINO_WAVES}</b> 關，每關 <b>${DINO_EGGS}</b> 顆恐龍蛋。打完一關<b>馬上接著下一關</b>，中間不會回血，也不能換人。</p>

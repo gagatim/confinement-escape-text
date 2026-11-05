@@ -165,7 +165,7 @@ function avatar(id,p2){
   if(JUNK[id])return `<img class="avimg" src="images/avatars/${id}.webp" alt="" draggable="false" onerror="this.outerHTML='<span class=emo>${JUNK[id].emoji}</span>'">`;
   const d=DEF(id);
   if(d.img) return `<img class="avimg" src="images/bosses/${id}_${p2?2:1}.webp" alt="" draggable="false">`;
-  if(d.pic) return `<img class="avimg" src="images/monsters/${id}.webp" alt="" draggable="false" onerror="this.outerHTML='<span class=emo>${d.emoji}</span>'">`;
+  if(d.pic) return `<img class="avimg" src="images/monsters/${id}${p2&&d.pic2?"_2":""}.webp" alt="" draggable="false" onerror="this.outerHTML='<span class=emo>${d.emoji}</span>'">`;
   if(d.emoji) return `<span class="emo">${p2&&d.emoji2?d.emoji2:d.emoji}</span>`;
   return `<img class="avimg" src="images/avatars/${id}.webp" alt="" draggable="false" onerror="this.outerHTML='<span class=emo>${d.name.charAt(0)}</span>'">`+skinFx(id);
 }

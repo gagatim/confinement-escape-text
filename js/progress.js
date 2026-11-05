@@ -114,15 +114,15 @@ const DINO_ZONES=[
   {n:"第一區",open:true,tries:10,gold:500,daily:10,drop:DINO_DROP,pasTxt:"lv1 +3",pas:()=>({lv:1,v:3})},
   {n:"第二區",open:true,tries:20,gold:450,daily:20,drop:[["oldslip",.20]],pasTxt:"lv2 +6",pas:()=>({lv:2,v:6})},
   {n:"第三區",open:true,need:{z:2,n:5},tries:20,gold:450,daily:20,drop:null,pasTxt:"lv3 +9",pas:()=>({lv:3,v:9})}, // need＝解鎖條件：第 z 區累計通關 n 次
-  {n:"第四區",pasTxt:"lv4 +12",pas:()=>({lv:4,v:12})},  // 第四、五區暫時不開放：被動先設好，其他（次數、金幣、掉落、解鎖條件）開放時再補
-  {n:"第五區",pasTxt:"lv5 +15",pas:()=>({lv:5,v:15})}];
+  {n:"第四區",need:{z:3,n:3},pasTxt:"lv4 +12",pas:()=>({lv:4,v:12})},  // 第四、五區暫時不開放：被動、解鎖條件先設好，其他（次數、金幣、掉落）開放時再補
+  {n:"第五區",need:{z:4,n:3},pasTxt:"lv5 +15",pas:()=>({lv:5,v:15})}];
 // 各區累計通關次數存在 SAVE.dinoWins（{區號:次數}）；解鎖條件沒達成時回傳目前進度，達成了回傳 null
 function dinoLock(z){const Z=DINO_ZONES[z-1];if(!Z.need)return null;const have=(SAVE.dinoWins||{})[Z.need.z]||0;return have>=Z.need.n?null:{have,need:Z.need.n,from:DINO_ZONES[Z.need.z-1].n};}
 let DINO_ZONE=1;
 function viewDino(){
   const s=cardStats("dinoegg",1,dinoScale(1)),e=cardStats("dinoegg",1,dinoScale(DINO_WAVES)),z=DINO_ZONES[DINO_ZONE-1],zi=DINO_ZONE;
   const tabs=`<div class="filters">${DINO_ZONES.map((o,i)=>`<button class="${i+1===DINO_ZONE?"on":""}" onclick="DINO_ZONE=${i+1};render()">${o.open&&!dinoLock(i+1)?"":"🔒 "}${o.n}</button>`).join("")}</div>`;
-  const lk=z.open?dinoLock(zi):null;
+  const lk=dinoLock(zi);
   if(lk)return `<h2>逃殺遠征</h2>${runTabs()}${tabs}
   <div class="panel"><h3 style="margin-top:0">🥚 ${z.n}</h3><p class="dim">🔒 尚未解鎖。需要先通關「${lk.from}」<b>${lk.need}</b> 次（10 關全部通過才算一次，戰敗不算），目前 <b>${lk.have}</b>／${lk.need}。</p></div>`;
   if(!z.open)return `<h2>逃殺遠征</h2>${runTabs()}${tabs}

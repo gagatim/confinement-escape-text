@@ -94,8 +94,8 @@ const DINO_WAVES=10,DINO_EGGS=5,DINO_MAXROUND=1000,DINO_PICS=40; // 各區的獎
 const dinoKey=z=>z===1?"dino":"dino"+z;
 function dinoLeft(z){const Z=DINO_ZONES[z-1],c=SAVE[dinoKey(z)];return c&&c.d===coopToday()?Math.max(0,Z.daily-c.n):Z.daily;}
 function dinoTriesLeft(z){const Z=DINO_ZONES[z-1],c=SAVE[dinoKey(z)];return c&&c.d===coopToday()?Math.max(0,Z.tries-(c.a||0)):Z.tries;}
-// 通關（領得到獎勵的那一次）擲一次，最多掉一雙鞋子：髒拖鞋 10%、沙灘拖鞋 10%、人化破拖鞋 7%、沒掉 73%
-const DINO_DROP=[["slippers",.10],["beachslip",.10],["sadslip",.07]];
+// 通關（領得到獎勵的那一次）擲一次，最多掉一雙鞋子：髒拖鞋 15%、沙灘拖鞋 15%、人化破拖鞋 7%、沒掉 63%
+const DINO_DROP=[["slippers",.15],["beachslip",.15],["sadslip",.07]];
 function dinoRoll(list){let r=rnd();for(const [k,p] of list){if(r<p)return k;r-=p;}return null;}
 MONSTERS.dinoegg={name:"恐龍蛋",emoji:"🥚",r:"R",hp:800,atk:3,def:3,spd:3, // 生命 800（原本 80 的 10 倍）；防禦 3（每點讓每次受到的傷害少 0.7；和生命、攻擊一樣每關乘 dinoScale，再加被動「厚實蛋殼」）
   skill:{name:"孵化震動",cd:3,t:"enemy",kind:"dmg",desc:"造成1.2倍攻擊傷害。",use(B,u,t){hit(B,u,t,1.2);}},

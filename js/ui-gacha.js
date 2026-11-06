@@ -1,6 +1,35 @@
 "use strict";
 /* ===================== GACHA ===================== */
 const PULL_COST=10,TEN_COST=90,FIFTY_COST=450; // 十連、50 連都是 9 折
+/* ---- 指定一張 SSR 機率加倍 ----
+   SAVE.gachaBoost={id:指定的角色, d:上次「更換」的日期}；第一次選擇不算更換（d 為空），之後每天只能換一次。
+   抽到 SSR 時（含保底、十連保證），被指定的角色權重 2，池內其他 SSR 權重 1；指定的角色不在池內時視為沒指定。 */
+const BOOST_W=2;
+function gachaBoostId(){const b=SAVE.gachaBoost;return b&&b.id&&gachaPool("SSR").includes(b.id)?b.id:null;}
+function pickGacha(r){
+  const pool=gachaPool(r),bid=r==="SSR"?gachaBoostId():null;
+  if(!bid)return pick(pool);
+  const tot=pool.length-1+BOOST_W;let x=rnd()*tot;
+  for(const id of pool){x-=id===bid?BOOST_W:1;if(x<0)return id;}
+  return pool[pool.length-1];
+}
+function setGachaBoost(id){
+  if(!gachaPool("SSR").includes(id))return;
+  const cur=gachaBoostId(),today=dateStr();
+  if(cur===id)return;
+  if(cur&&SAVE.gachaBoost.d===today){toast("今天已經更換過了，明天再換");return;}
+  SAVE.gachaBoost={id,d:cur?today:""};
+  save();SFX.click();toast(`已指定 ${CARDS[id].name}：抽到 SSR 時機率加倍`);render();
+}
+function boostPanel(){
+  const pool=gachaPool("SSR"),bid=gachaBoostId(),N=pool.length,locked=bid&&SAVE.gachaBoost.d===dateStr();
+  const p=BOOST_W/(N-1+BOOST_W),q=1/(N-1+BOOST_W);
+  return `<h3>⭐ 指定 SSR 機率加倍</h3>
+  <div class="panel small">選一張 SSR，抽到 SSR 時（含保底與十連保證）牠的機率變成其他 SSR 的 2 倍。<b>每天可以更換一次</b>，免費。<br>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin:10px 0">${pool.map(id=>`<div title="${CARDS[id].name}" onclick="setGachaBoost('${id}')" style="cursor:pointer;text-align:center;width:64px;${id===bid?"":"opacity:.7"}"><div class="av" style="width:64px;height:64px;border-radius:10px;overflow:hidden;border:2px solid ${id===bid?"var(--gold)":"transparent"};${id===bid?"box-shadow:0 0 10px var(--gold)":""}">${avatar(id)}</div><div class="small" style="margin-top:2px;${id===bid?"color:var(--gold)":""}">${id===bid?"⭐已選取":CARDS[id].name}</div></div>`).join("")}</div>
+    ${bid?`目前指定：<b class="rSSR">${CARDS[bid].name}</b>（已選取）。抽到 SSR 時，${CARDS[bid].name} 約 <b>${(p*100).toFixed(1)}%</b>，其他每位約 ${(q*100).toFixed(1)}%（整體約 ${(3.1*p).toFixed(2)}% ／ ${(3.1*q).toFixed(2)}%）。${locked?`<br><span class="dim">今天已經更換過了，明天可以再換。</span>`:""}`:`<span class="dim">目前沒有指定，所有 SSR 機率相同（每位約 ${(100/N).toFixed(1)}%）。點上面的頭像來指定。</span>`}
+  </div>`;
+}
 function viewGacha(){
   const feat=gachaPool("SSR");
   return `<h2>招募所</h2>
@@ -16,6 +45,7 @@ function viewGacha(){
     </div>
   </div>
   <div class="panel small dim" style="margin-top:10px">🧩 遣散 SSR 角色可以得到碎片，到「隊伍」頁按「🧩 碎片兌換」可以指定換角色或補星。</div>
+  ${boostPanel()}
   <h3>機率</h3>
   <div class="panel small">
     <span class="rSSR">SSR 3.1%</span>（${gachaPool("SSR").map(i=>CARDS[i].name).join("、")}）<br>
@@ -115,7 +145,7 @@ function doPull(n){
   const rs=[];for(let i=0;i<n;i++)rs.push(rollRarity());
   if(n===10&&SAVE.firstTen){SAVE.firstTen=false;if(!rs.includes("SSR")){rs[9]="SSR";SAVE.pity=0;}}
   if(n>=10)for(let b=0;b<n;b+=10)if(!rs.slice(b,b+10).some(r=>r==="SR"||r==="SSR"))rs[b+9]="SR"; // 每 10 張一組，至少 1 張 SR 以上
-  const res=rs.map(r=>r==="N"?grantJunk(pick(JUNK_IDS)):grant(pick(gachaPool(r))));
+  const res=rs.map(r=>r==="N"?grantJunk(pick(JUNK_IDS)):grant(pickGacha(r)));
   save();renderHeader();
   showGacha(res);
 }

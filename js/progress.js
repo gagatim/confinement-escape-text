@@ -101,8 +101,8 @@ MONSTERS.dinoegg={name:"恐龍蛋",emoji:"🥚",r:"R",hp:800,atk:3,def:3,spd:3, 
   skill:{name:"孵化震動",cd:3,t:"enemy",kind:"dmg",desc:"造成1.2倍攻擊傷害。",use(B,u,t){hit(B,u,t,1.2);}},
   passive:{name:"厚實蛋殼",desc:"防禦加成依區域與關卡而定（第一區 lv1 +3；第二區 lv2 +4）。"}}; // 戰鬥中實際顯示的名稱與數值見 dinoPassive()
 // 第五區最後一關的魔王「寶貝龍」（爆氣前的圖：images/monsters/babydragon.webp；變身後的圖：babydragon_2.webp，pic2:true 時變身後會換圖）
-// 強度：參考八大魔王的第二支「虛空主宰」（生命 667、攻擊 63、防禦 8、速度 21），再硬一點
-MONSTERS.babydragon={name:"寶貝龍",emoji:"🐉",emoji2:"🐲",pic:true,pic2:true,transform:true,r:"SSR",hp:900,atk:72,def:10,spd:24, // transform：有變身形態（戰鬥卡片會套魔王樣式）；emoji2：變身後的暫用圖
+// 強度：原本參考八大魔王的第二支「虛空主宰」（生命 667、攻擊 63、防禦 8、速度 21）再硬一點；後來調整為生命 1200、攻擊 110、防禦 25（速度不變）
+MONSTERS.babydragon={name:"寶貝龍",emoji:"🐉",emoji2:"🐲",pic:true,pic2:true,transform:true,r:"SSR",hp:1200,atk:110,def:25,spd:24, // transform：有變身形態（戰鬥卡片會套魔王樣式）；emoji2：變身後的暫用圖
   skill:{name:"龍息灼燒",cd:3,t:"none",kind:"dmg",desc:"對全體敵人各造成0.7倍攻擊傷害，並使其中毒（每回合約4點、持續3回合）。變身成巨龍後改為1倍傷害、毒每回合約9點，冷卻縮短1回合。",
     use(B,u){const p=u.flags.p2;blog(B,p?"🔥 巨龍仰天長嘯，噴出滾燙的龍息！":"🔥 寶貝龍張開嘴，吐出一大口火焰！","bad");const d=Math.max(3,Math.round(stat(u,"atk")*(p?.09:.06)));foes(B,u).forEach(t=>{hit(B,u,t,p?1:.7,{noSpread:true});if(t.alive)poison(B,t,d,3);});}},
   passive:{name:"護蛋本能／巨龍覺醒",desc:"護蛋本能：場上每有 1 顆活著的恐龍蛋，寶貝龍受到的傷害減少 5%（最多減少 20%）。｜巨龍覺醒：生命降到 50% 以下，牠的下一個回合開始時變身成巨龍：回復 30% 最大生命、攻擊 +40%、防禦 +4、速度 +4，清除負面狀態、技能冷卻歸零；變身後不再有護蛋本能。"}};

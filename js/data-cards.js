@@ -41,6 +41,12 @@ const CARDS={
         mates(B,u).filter(m=>m!==u).forEach(m=>buff(B,m,"atk",Math.max(1,Math.round(stat(m,"atk")*.1)),2));blog(B,`${nm(u)} 吐出一口泛著綠光的毒沫。`);}},
     passive:{name:"毒傷",desc:"自己攻擊時（普通攻擊與技能），使目標中毒：每回合受到自己攻擊力15%的傷害（至少1點），持續2回合（技能施放時因術士加成多1點）。毒傷不受防禦與減傷影響，不會疊加（取最強），可被淨化解除。"}},
 
+  master:{name:"主人",r:"SSR",off:1,hp:34,atk:6,def:3,spd:1,
+    skill:{name:"乖，過來",cd:2,t:"ally",kind:"heal",desc:"治療1名友軍，治療量為自己攻擊的2.2倍，並清除對方的負面狀態；被治療的友軍受到的傷害-20%、攻擊+12%（2回合，至少+1）。",
+      use(B,u,t){blog(B,`${nm(u)} 招了招手：「乖，過來。」`);heal(B,t,Math.round(stat(u,"atk")*2.2));cleanse(t);
+        buff(B,t,"dr",20,2);buff(B,t,"atk",Math.max(1,Math.round(stat(t,"atk")*.12)),2);}},
+    passive:{name:"寵愛／神隱",desc:"「寵愛」：自己的回合開始時，全隊友軍各回復3%最大生命（自己生命低於40%時為5%）。「神隱」：不會普通攻擊；輪到自己時技能在冷卻中無法施放，就自動進入防禦（受到的傷害減半，並回復1點生命）。"}},
+
   merc:{name:"雇傭兵",r:"SR",hp:28,atk:6,def:2,spd:3,
     skill:{name:"霰彈掃射",cd:3,t:"none",kind:"dmg",desc:"對全體敵人各造成0.75倍攻擊傷害。",use(B,u){foes(B,u).forEach(t=>hit(B,u,t,.75));}},
     passive:{name:"武器精通",desc:"遠征中裝備武器時，武器加成×2。"}},
@@ -321,7 +327,7 @@ const CARD_CLS={
   gambler:"warrior",scavenger:"ranger",trucker:"tank",bartender:"support",herbalist:"support",runner:"assassin",chef:"support",
   survivor:"tank",diver:"assassin",miner:"warrior",mediocre:"warrior",courier:"support",gourmet:"tank",climber:"assassin",
   hacker:"mage",tycoon:"mage",lucky:"ranger",arsonist:"mage",sentinel:"tank",janitor:"support",detective:"ranger",
-  ashen:"warrior",qing:"support",fatty2:"tank",diviner:"mage",venomfrog:"mage"
+  ashen:"warrior",qing:"support",fatty2:"tank",diviner:"mage",venomfrog:"mage",master:"support"
 };
 Object.keys(CARDS).forEach(id=>CARDS[id].cls=CARD_CLS[id]||"warrior");
 const clsOf=u=>CARDS[u.id]?CARDS[u.id].cls:null;

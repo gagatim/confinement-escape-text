@@ -116,6 +116,7 @@ function hit(B,a,t,mult,o={}){
   if(t.st.curse)d*=1.15; // 占卜師「厄運宣告」的標記：另一個狀態，和偵探的標記相乘
   if(a.id==="editor"&&t.st.mark)d*=1.25; // 剪輯師「無情剪輯」
   if(t.st.guard&&!o.pierce)d*=.5;
+  if(t.buffs.some(b=>b.k==="dr"&&b.t>0))d*=.8; // 主人「乖，過來」：受到的傷害 −20%
   if(B.wall[t.side]){const w=B.units.find(x=>x.uid===B.wall[t.side]);if(w&&w.alive)d*=.5;}
   if(t.id==="fatty")d-=2;
   if(["ghost","warden","zero","guard","chief","host"].includes(t.id))d-=1;
@@ -293,6 +294,7 @@ function aiChoose(B,u){
     const low=mates(B,u).filter(m=>!m.ally&&m.hp<m.maxHp*.35)[0],pi=B.items.indexOf("pill");
     if(low&&pi>=0)return {type:"item",idx:pi,target:low};
   }
+  if(u.id==="master")return {type:"guard"}; // 主人被動「神隱」：不會普通攻擊，沒技能可放就防禦
   return {type:"attack",target:aiFoe(B,u)};
 }
 
@@ -384,6 +386,7 @@ async function takeTurn(B,u){
   if(u.id==="runner")heal(B,u,1);
   if(u.id==="mutant")heal(B,u,2);
   if(u.id==="zero")heal(B,u,4);
+  if(u.id==="master"){const r=u.hp<u.maxHp*.4?.05:.03;mates(B,u).forEach(m=>heal(B,m,Math.max(1,Math.round(m.maxHp*r))));} // 主人被動「寵愛」
   if((u.id==="reclaimer"||u.id==="nameless")&&(u.flags.oc||0)<10){u.flags.oc=(u.flags.oc||0)+1;u.perm.atk=(u.perm.atk||0)+Math.max(1,Math.round(u.atk*.03));}
   if(DEF(u.id).regen)heal(B,u,DEF(u.id).regen);
   if(DEF(u.id).regenp)heal(B,u,Math.round(u.maxHp*DEF(u.id).regenp));
@@ -405,7 +408,7 @@ async function takeTurn(B,u){
   }
   for(let n=0;n<2;n++){
     const ctl=B.t2?(u.pl==="0"?"human":"remote"):B.coop&&u.side==="A"&&u.pl==="B"?"remote":B.ctrl[u.side],human=ctl==="human"&&!u.ally&&!B.auto;
-    const act=human?await waitHuman(B,u):ctl==="remote"?await waitRemote(B,u):aiChoose(B,u);
+    const act=u.id==="master"&&!canUseSkill(B,u)?{type:"guard"}:human?await waitHuman(B,u):ctl==="remote"?await waitRemote(B,u):aiChoose(B,u);
     if(!act)return;
     doAction(B,u,act);
     render();
@@ -448,7 +451,7 @@ function act(kind){
   const w=B.wait;if(!w)return;
   SFX.click();
   const u=w.u,sk=DEF(u.id).skill;
-  if(kind==="attack"){w.mode="target";w.action={type:"attack"};w.tt="enemy";w.label="普通攻擊";}
+  if(kind==="attack"){if(u.id==="master")return;w.mode="target";w.action={type:"attack"};w.tt="enemy";w.label="普通攻擊";}
   else if(kind==="skill"){
     if(!canUseSkill(B,u))return;
     if(["enemy","ally","mate"].includes(sk.t)){w.mode="target";w.action={type:"skill"};w.tt=sk.t;w.label=sk.name;}

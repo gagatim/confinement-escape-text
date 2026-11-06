@@ -421,7 +421,7 @@ function endTurn(u){
   ["taunt","mark","curse","counter"].forEach(k=>{if(u.st[k]>0)u.st[k]--;});
 }
 function doAction(B,u,a){
-  if(a.type==="attack"){if(a.target){hit(B,u,a.target,1);if(u.id==="diviner"&&a.target.alive)poison(B,a.target,5,3);}} // 占卜師被動「毒傷」（技能的毒寫在技能裡）
+  if(a.type==="attack"){if(a.target){hit(B,u,a.target,1);if(u.id==="diviner"&&a.target.alive)poison(B,a.target,5,3);if(u.id==="venomfrog"&&a.target.alive)poison(B,a.target,Math.max(1,Math.round(stat(u,"atk")*.15)),2);}} // 占卜師、毒蛙被動「毒傷」（技能的毒寫在技能裡）
   else if(a.type==="skill"){
     const sk=DEF(u.id).skill;
     blog(B,`✦ ${nm(u)} 發動【${sk.name}】`);fx(B,u,sk.name,"sk");castFx(B,u);

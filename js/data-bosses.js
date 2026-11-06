@@ -134,7 +134,7 @@ function openBoss(id){
     <div class="row" style="margin-top:12px"><button class="pri" onclick="startBoss('${id}')" ${SAVE.team.length?"":"disabled"}>⚔ 挑戰</button><button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
 }
 // 魔王短片（videos/{魔王代號}.mp4）：圖鑑點開播放；戰鬥開場每天第一次挑戰該魔王時播放，沒有短片的魔王維持立繪
-const BOSS_VIDEO={doomhunter:1};
+const BOSS_VIDEO={doomhunter:1,voidlord:1};
 function bossVideoHtml(id,auto){
   return `<video src="videos/${id}.mp4" ${auto?"autoplay":""} controls playsinline ${SAVE.muted?"muted":""} poster="images/bosses/${id}_1.webp" style="width:100%;border-radius:10px;background:#000;margin-bottom:8px"></video>`;
 }

@@ -121,7 +121,7 @@ const DINO_ZONES=[
   {n:"第二區",open:true,tries:20,gold:450,daily:20,drop:[["oldslip",.20]],pasTxt:"lv2 +4",pas:()=>({lv:2,v:4})},
   {n:"第三區",open:true,need:{z:2,n:5},tries:20,gold:450,daily:20,drop:[["energyslip",.23]],pasTxt:"lv3 +5",pas:()=>({lv:3,v:5})}, // need＝解鎖條件：第 z 區累計通關 n 次
   {n:"第四區",open:true,need:{z:3,n:3},tries:20,gold:450,daily:20,drop:[["emperorslip",.22]],pasTxt:"lv4 +6",pas:()=>({lv:4,v:6})},  // 第五區暫時不開放：被動、解鎖條件先設好，其他（次數、金幣、掉落）開放時再補
-  {n:"第五區",waves:5,from:6,boss:"babydragon",bossEggHp:1500,eggHpMul:.5,tries:20,gold:300,daily:20,need:{z:4,n:3},soon:"預計 11/8 之後開放 SSR 鞋子",pasTxt:"lv5 +7",pas:()=>({lv:5,v:7})}];
+  {n:"第五區",open:true,waves:5,from:6,boss:"babydragon",bossEggHp:1500,eggHpMul:.5,tries:20,gold:500,daily:20,need:{z:4,n:3},soon:"預計 11/8 之後開放 SSR 鞋子",pasTxt:"lv5 +7",pas:()=>({lv:5,v:7})}];
 // 各區累計通關次數存在 SAVE.dinoWins（{區號:次數}）；解鎖條件沒達成時回傳目前進度，達成了回傳 null
 function dinoLock(z){const Z=DINO_ZONES[z-1];if(!Z.need)return null;const have=(SAVE.dinoWins||{})[Z.need.z]||0;return have>=Z.need.n?null:{have,need:Z.need.n,from:DINO_ZONES[Z.need.z-1].n};}
 // 各區的關數與起始關：waves＝這區打幾關（沒寫就是 DINO_WAVES）、from＝第 1 關用原本第幾關的強度（沒寫就是 1）；第五區只打 5 關，強度用原本的第 6～10 關
@@ -143,6 +143,7 @@ function viewDino(){
       <li>恐龍蛋血很厚、傷害很低，考驗隊伍的持久力。</li>
       <li>每顆約 ❤${s.maxHp} ⚔${s.atk} 🛡${dinoBaseDef(1+o)+z.pas(1).v}（第 1 關）→ ❤${e.maxHp} ⚔${e.atk} 🛡${dinoBaseDef(N+o)+z.pas(N).v}（第 ${N} 關）。防禦含被動「厚實蛋殼」（${z.pasTxt}）。</li>
       ${z.boss?`<li>最後一關（第 ${N} 關）有魔王「${MONSTERS[z.boss].name}」：${MONSTERS[z.boss].emoji} ❤${MONSTERS[z.boss].hp} ⚔${MONSTERS[z.boss].atk} 🛡${MONSTERS[z.boss].def} ⚡${MONSTERS[z.boss].spd}，帶 ${DINO_EGGS-1} 顆恐龍蛋一起出現。技能「${MONSTERS[z.boss].skill.name}」：${MONSTERS[z.boss].skill.desc}被動「${MONSTERS[z.boss].passive.name}」：${MONSTERS[z.boss].passive.desc}</li>`:""}
+      ${z.soon?`<li>📅 ${z.soon}。</li>`:""}
       <li>全隊倒下就結束；戰敗沒有懲罰，也沒有獎勵。</li>
       <li>每天最多挑戰 <b>${z.tries}</b> 次（今天還剩 <b>${dinoTriesLeft(zi)}</b> 次；一開打就算一次，戰敗也算，用完就不能再挑戰）。</li>
       <li>獎勵：<b>${N} 關全部通過</b>可得 🪙${z.gold}，每天最多領 ${z.daily} 次（今天還剩 <b>${dinoLeft(zi)}</b> 次，用這台裝置的日期計算）。</li>

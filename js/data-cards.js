@@ -34,7 +34,7 @@ const CARDS={
     passive:{name:"毒傷",desc:"自己攻擊時（普通攻擊與技能），使目標中毒：每回合受到5點傷害，持續3回合（技能施放時因術士加成為6點）。毒傷不受防禦與減傷影響，不會疊加（取最強），可被淨化解除。"}},
 
   // 毒蛙（暫名）：預計中的新 SSR 術士。off:1＝尚未開放取得（不進招募池、不進合成熔煉、不算收藏數），只在圖鑑展示；開放時拿掉 off 即可
-  venomfrog:{name:"毒蛙",r:"SSR",off:1,hp:28,atk:6,def:1,spd:4,
+  venomfrog:{name:"毒蛙",r:"SSR",off:1,hp:30,atk:6,def:1,spd:4,
     skill:{name:"毒沫",cd:3,t:"enemy",kind:"dmg",desc:"對1名敵人造成1.1倍攻擊傷害（受對方防禦影響；術士加成後約1.32倍），並使自己攻擊+30%、其他隊友攻擊+10%（2回合，每人至少+1）。",
       use(B,u,t){hit(B,u,t,1.1);if(t.alive)poison(B,t,Math.max(1,Math.round(stat(u,"atk")*.15)),2);
         buff(B,u,"atk",Math.max(1,Math.round(stat(u,"atk")*.3)),2);

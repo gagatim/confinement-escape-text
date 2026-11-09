@@ -5,7 +5,7 @@ function mkUnit(o){
   const d=DEF(o.id),s=cardStats(o.id,o.stars||1,o.scale||1,o.br||0);
   const u={uid:++UID,id:o.id,name:o.name||d.name,side:o.side,stars:o.stars||1,
     maxHp:o.maxHp||s.maxHp,atk:s.atk+(o.atk||0),def:s.def+(o.def||0),spd:s.spd+(o.spd||0),
-    cds:skillsOf(o.id).map(()=>0),buffs:[],st:{},perm:{},flags:{},alive:true,ally:!!o.ally,ref:o.ref||null,gx:o.gx||{},br:o.br||0,pl:o.pl||""};
+    cds:skillsOf(o.id).map(()=>0),sx:{dmg:0,heal:0,taken:0,kills:0},buffs:[],st:{},perm:{},flags:{},alive:true,ally:!!o.ally,ref:o.ref||null,gx:o.gx||{},br:o.br||0,pl:o.pl||""};
   Object.defineProperty(u,"cd",{get(){return this.cds[0]||0;},set(v){this.cds[0]=v;},enumerable:true,configurable:true}); // 舊程式讀寫的 u.cd＝第 1 個技能的冷卻（相容用）
   const mul=o.mult||1;
   if(mul!==1){u.maxHp=Math.round(u.maxHp*mul);u.atk=Math.round(u.atk*mul);u.def=Math.round(u.def*mul);u.spd=Math.round(u.spd*mul);}
@@ -38,6 +38,14 @@ function stat(u,k){
 function pasOf(u,d){return u.id.startsWith("dinoegg")&&CUR_B&&CUR_B.cfg&&CUR_B.cfg.eggPas?CUR_B.cfg.eggPas(CUR_B.wave):d.passive;}
 function hasBond(u,id){return !!CUR_B&&CUR_B.units.some(x=>x.side===u.side&&x.alive&&x.id===id);}
 function blog(B,html,cls=""){B.log.push({html,cls});if(B.log.length>120)B.log.shift();}
+// 戰鬥統計（只記錄、不影響戰鬥）：sx＝輸出、治療、承傷、擊倒。傷害只算「實際扣掉的血量」，超過剩餘血量的部分不算
+const sxOf=u=>u&&(u.sx||(u.sx={dmg:0,heal:0,taken:0,kills:0}));
+function sxHurt(a,t,n){
+  if(!t||!(n>0))return;
+  const e=Math.min(n,Math.max(0,t.hp));
+  sxOf(t).taken+=e;
+  if(a&&a.side!==t.side)sxOf(a).dmg+=e;
+}
 // 對自己施加的增益多算1，因為回合結束時就會先扣1次
 function buff(B,u,k,v,t){u.buffs.push({k,v,t:t+(B.active===u?1:0)});}
 function poison(B,t,d,turns){
@@ -45,7 +53,7 @@ function poison(B,t,d,turns){
   if(t.id==="chemist"||t.id==="drone"){fx(B,t,"免疫","miss");return;}
   if(B.casting&&clsOf(B.casting)==="mage"&&B.casting.side!==t.side)d+=1;
   const p=t.st.poison||{d:0,t:0};
-  if(d*turns>p.d*p.t)t.st.poison={d,t:turns}; // 不累加：已經中毒時，整份比「每回合傷害×剩餘回合」，只保留總傷害較高的那一份（一樣就保留原本的），不再把兩份拼成更強的毒
+  if(d*turns>p.d*p.t)t.st.poison={d,t:turns,by:((B.casting||B.active)||{}).uid||0}; // 不累加：已經中毒時，整份比「每回合傷害×剩餘回合」，只保留總傷害較高的那一份（一樣就保留原本的），不再把兩份拼成更強的毒
 }
 function stun(B,t,n){t.st.stun=Math.max(t.st.stun||0,n);blog(B,`${nm(t)} 被暈眩了！`);fx(B,t,"暈眩","sk");}
 function cleanse(u){delete u.st.poison;u.buffs=u.buffs.filter(b=>b.v>0);}
@@ -57,7 +65,7 @@ function heal(B,u,n){
     if(f!==1)n=Math.round(n*f);
   }
   const h=Math.min(n,u.maxHp-u.hp);
-  if(h>0){u.hp+=h;fx(B,u,"+"+h,"heal");SFX.heal();}
+  if(h>0){u.hp+=h;sxOf(B.active&&B.active.side===u.side?B.active:u).heal+=h;fx(B,u,"+"+h,"heal");SFX.heal();}
   return h;
 }
 function revive(B,u,pct){u.alive=true;u.hp=Math.max(1,Math.ceil(u.maxHp*pct));u.st={};u.buffs=[];fx(B,u,"復活","heal");}
@@ -131,8 +139,9 @@ function hit(B,a,t,mult,o={}){
   d=Math.max(1,Math.round(d));
   if(t.id==="bomb"&&!o.counter&&rnd()<.25){
     const half=Math.floor(d/2);d-=half;
-    if(half>0){blog(B,`${nm(t)} 的橡膠身軀把 ${half} 點傷害彈了回去！`);a.hp-=half;fx(B,a,"-"+half,"dmg");if(a.hp<=0)handleDeath(B,a,t);}
+    if(half>0){blog(B,`${nm(t)} 的橡膠身軀把 ${half} 點傷害彈了回去！`);sxHurt(t,a,half);a.hp-=half;fx(B,a,"-"+half,"dmg");if(a.hp<=0)handleDeath(B,a,t);}
   }
+  sxHurt(a,t,d);
   t.hp-=d;
   blog(B,`${nm(a)} → ${nm(t)}　<b style="color:${crit?"var(--gold)":"#ff8a8a"}">-${d}</b>${crit?" 暴擊！":""}`);
   fx(B,t,(crit?"💥":"")+"-"+d,crit?"crit":"dmg");atkFx(B,a,t,crit);
@@ -141,11 +150,12 @@ function hit(B,a,t,mult,o={}){
   const lk=leechK(t); // 目標若有「吸血減免」，吸血的回復量打折
   const lh=x=>lk<1?Math.round(x*lk):Math.max(1,Math.round(x)); // 有吸血減免時，不再保底回復 1 點
   if(a.id==="butcher"&&a.alive)heal(B,a,lh(d*.3));
+  if(a.id==="vampire"&&a.alive&&a!==t)heal(B,a,lh(d*.4)); // 吸血鬼被動「夜之血族」：吸取傷害的 40%（普通攻擊與技能都算）
   if(a.gx&&a.gx.steal&&a.alive&&a!==t)heal(B,a,lh(d*a.gx.steal/100));
   if((SPLASH_IDS.includes(a.id)||(a.flags&&a.flags.frenzy))&&!o.noSpread&&!o.counter&&d>0){ // 第13～15章魔王「擴散攻擊」：其餘敵人各受到該傷害的 20%
     const sp=Math.max(1,Math.round(d*.2)),others=foes(B,a).filter(x=>x!==t);
     if(others.length){blog(B,`💥 ${nm(a)} 的攻擊擴散開來，其餘敵人各受到 ${sp} 點傷害。`);
-      others.forEach(x=>{x.hp-=sp;fx(B,x,"擴散-"+sp,"dmg");if(x.hp<=0)handleDeath(B,x,a);});}
+      others.forEach(x=>{sxHurt(a,x,sp);x.hp-=sp;fx(B,x,"擴散-"+sp,"dmg");if(x.hp<=0)handleDeath(B,x,a);});}
   }
   if(t.id==="fatty2"&&t.hp>0)fattyExp(B,t); // 肥宅（SSR）「肥肉坦克 Lv.99」
   if(t.hp<=0)handleDeath(B,t,a);
@@ -167,6 +177,7 @@ function handleDeath(B,t,killer){
   if(DEF(t.id).revive&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*DEF(t.id).revive);blog(B,`⚖ ${nm(t)} 重新站了起來：「判決，還沒有結束。」`,"big");fx(B,t,"復活","heal");return;}
   if(t.id==="host"&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*.3);blog(B,`🎭 ${nm(t)} 拍了拍身上的灰：「我說過，莊家不會輸。」`,"big");fx(B,t,"復活","heal");return;}
   t.hp=0;t.alive=false;t.st={};t.buffs=[];
+  if(killer&&killer.side!==t.side)sxOf(killer).kills++;
   blog(B,`✝ ${nm(t)} 倒下了。`,"bad");SFX.death();
   B.units.forEach(x=>{
     if(!x.alive||x===t)return;
@@ -359,9 +370,11 @@ async function battleLoopInner(B){
     B.round++;
     blog(B,`── 第 ${B.round} 回合 ──`,"rnd");
     const order=B.units.filter(u=>u.alive).map(u=>[u,stat(u,"spd")+rnd()*.5]).sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
+    B.order=order.map(x=>x.uid);B.ordPos=-1; // 本回合行動順序（畫面的「行動順序」列用）
     for(const u of order){
       if(checkEnd(B))break;
       if(!u.alive)continue;
+      B.ordPos=order.indexOf(u);
       await takeTurn(B,u);
       if(B.aborted)return;
       render();
@@ -384,11 +397,10 @@ async function takeTurn(B,u){
   u.cds.forEach((c,i)=>{if(c>0)u.cds[i]--;});
   // 回合開始：中毒、回血類被動
   if(u.st.poison){
-    const p=u.st.poison;u.hp-=p.d;fx(B,u,"☠-"+p.d,"dmg");blog(B,`${nm(u)} 受到 ${p.d} 點毒傷。`);
+    const p=u.st.poison,pby=p.by?B.units.find(x=>x.uid===p.by):null;sxHurt(pby,u,p.d);u.hp-=p.d;fx(B,u,"☠-"+p.d,"dmg");blog(B,`${nm(u)} 受到 ${p.d} 點毒傷。`);
     if(--p.t<=0)delete u.st.poison;
-    if(u.hp<=0){handleDeath(B,u,null);if(!u.alive){render();return;}}
+    if(u.hp<=0){handleDeath(B,u,null);if(!u.alive){if(pby&&pby.side!==u.side)sxOf(pby).kills++;render();return;}}
   }
-  if(u.id==="vampire")heal(B,u,Math.max(1,Math.round(u.maxHp*.02)));
   if(u.id==="runner")heal(B,u,1);
   if(u.id==="mutant")heal(B,u,2);
   if(u.id==="zero")heal(B,u,4);
@@ -482,6 +494,31 @@ function onUnitClick(uid){
 }
 function resolveHuman(a){const B=CUR_B,w=B&&B.wait;if(!w)return;B.wait=null;w.res(a);}
 
+/* ---- 結算統計與行動順序（純顯示，不影響戰鬥）---- */
+// 結算統計：每個角色的輸出、治療、承傷、擊倒；各隊「輸出＋治療」最高的標 MVP。我方直接顯示，敵方收在「敵方統計」裡
+function statsTable(B,side,title){
+  const L=B.units.filter(u=>u.side===side&&u.sx);if(!L.length)return "";
+  const sc=u=>u.sx.dmg+u.sx.heal,top=L.reduce((a,b)=>sc(b)>sc(a)?b:a,L[0]),mvp=sc(top)>0?top:null;
+  return `<table class="sxt"><caption>${title}</caption><tr><th>角色</th><th>輸出</th><th>治療</th><th>承傷</th><th>擊倒</th></tr>${L.map(u=>`<tr class="${u.alive?"":"dead"}"><td>${nm(u)}${u===mvp?" <b class=\"mvp\">MVP</b>":""}</td><td>${u.sx.dmg}</td><td>${u.sx.heal}</td><td>${u.sx.taken}</td><td>${u.sx.kills}</td></tr>`).join("")}</table>`;
+}
+function statsHtml(B){
+  const me=B.mySide||"A",op=me==="A"?"B":"A",a=statsTable(B,me,B.labels[me]||"我方"),b=statsTable(B,op,B.labels[op]||"敵方");
+  if(!a&&!b)return "";
+  return `<div class="sxbox">${a}${b?`<details style="margin-top:6px"><summary class="dim small">敵方統計</summary>${b}</details>`:""}<div class="dim small" style="margin-top:4px">輸出、承傷只算實際扣掉的血量；MVP＝輸出＋治療最高。</div></div>`;
+}
+// 行動順序列：本回合依序的小頭像（灰＝已行動、亮框＝正在行動），後面接「下回合預估」（依目前速度由快到慢，同速以「＝」相連，實際先後隨機）
+function orderChip(u,cls){return `<span class="ochip s${u.side} ${cls||""}" title="${u.name}　速度 ${stat(u,"spd")}"><span class="av">${avatar(u.id)}</span></span>`;}
+function orderBarHtml(B){
+  if(B.over||!B.order||!B.order.length)return "";
+  const get=uid=>B.units.find(x=>x.uid===uid&&x.alive);
+  const now=B.order.map((uid,i)=>({u:get(uid),i})).filter(x=>x.u);
+  if(!now.length)return "";
+  const cur=B.ordPos==null?-1:B.ordPos;
+  const next=B.units.filter(u=>u.alive).map(u=>({u,s:stat(u,"spd")})).sort((a,b)=>b.s-a.s||a.u.uid-b.u.uid);
+  const nx=next.map((x,i)=>(i&&next[i-1].s===x.s?`<span class="oeq">＝</span>`:"")+orderChip(x.u,"est")).join("");
+  return `<div class="obar"><span class="olab">本回合</span>${now.map(x=>orderChip(x.u,x.i<cur?"done":x.i===cur?"now":"")).join("")}<span class="olab ng">下回合（預估）</span>${nx}</div>`;
+}
+
 /* ---- battle view ---- */
 function unitCard(B,u){
   const w=B.wait,tg=w&&w.mode==="target"&&validTargets(B,w.u,w.tt).includes(u);
@@ -511,7 +548,7 @@ function actionPanel(B){
     const hot=B.ctrl.A==="human"&&B.ctrl.B==="human",win=B.over===B.mySide;
     const draw=B.over==="D",head=draw?"平手":hot?`${B.labels[B.over]} 勝利！`:win?"勝利":"敗北";
     return `<div class="result ${win||hot||draw?"win":"lose"}"><h2>${head}</h2><div class="dim">${B.cfg.resultNote?B.cfg.resultNote(B):""}</div>
-      <button class="pri" data-kb="continue" style="margin-top:8px" onclick="finishBattle()">繼續</button>${KB_HINT}</div>`;
+      ${statsHtml(B)}<button class="pri" data-kb="continue" style="margin-top:8px" onclick="finishBattle()">繼續</button>${KB_HINT}</div>`;
   }
   const w=B.wait;
   if(!w)return `<div class="apanel dim">${B.active?nm(B.active)+" 行動中……":"……"}</div>`;
@@ -675,7 +712,7 @@ function viewBattle(){
     ${B.ctrl.A==="human"&&B.ctrl.B!=="human"?`<button data-kb="auto" onclick="act('auto')" class="${B.auto?"ok":""}">${B.auto?"自動中":"自動"}</button>`:""}
     ${B.guest?"":`<button data-kb="fast" onclick="CUR_B.fast=!CUR_B.fast;render()" class="${B.fast?"ok":""}">${B.fast?"⏩ 快速":"▶ 正常"}</button>`}
     </div>`;
-  return `<div class="btop"><div class="ttl">${B.title}　<span class="dim small">第 ${B.round} 回合</span></div></div>
+  return `<div class="btop"><div class="ttl">${B.title}　<span class="dim small">第 ${B.round} 回合</span></div></div>${orderBarHtml(B)}
     <div class="side B ${B.units.filter(u=>u.side===op).length>3?"big":""}">${B.units.filter(u=>u.side===op).map(u=>unitCard(B,u)).join("")}</div>
     <div class="vs">— ${B.labels[op]} ／ ${B.labels[me]} —</div>
     <div class="side A ${B.units.filter(u=>u.side===me).length>3?"big":""}">${B.units.filter(u=>u.side===me).map(u=>unitCard(B,u)).join("")}</div>

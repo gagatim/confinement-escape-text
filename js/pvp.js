@@ -517,9 +517,9 @@ function pushSnap(B){
   SNAP_T=setTimeout(()=>{
     SNAP_T=null;if(!NET||!NET.ref)return;
     NET.ref.child("snap").set({title:B.title,coop:B.coop?1:0,t2:B.t2?1:0,waitPl:B.rwait?B.rwait.pl||"":"",round:B.round,over:B.over||"",active:B.active?B.active.uid:0,wall:B.wall,
-      waitUid:B.rwait?B.rwait.uid:0,waitSeq:B.rwait?B.rwait.seq:0,log:B.log.slice(-40),
+      waitUid:B.rwait?B.rwait.uid:0,waitSeq:B.rwait?B.rwait.seq:0,ord:B.order||[],op:B.ordPos==null?-1:B.ordPos,log:B.log.slice(-40),
       units:B.units.map(u=>({uid:u.uid,id:u.id,name:u.name,side:u.side,stars:u.stars,maxHp:u.maxHp,hp:u.hp,atk:u.atk,def:u.def,spd:u.spd,
-        cd:u.cd,cds:u.cds,buffs:u.buffs,st:u.st,perm:u.perm,alive:u.alive,ally:u.ally,pl:u.pl||"",p2:u.flags.p2?1:0,fr:u.flags.frenzy?1:0}))
+        cd:u.cd,cds:u.cds,sx:u.sx,buffs:u.buffs,st:u.st,perm:u.perm,alive:u.alive,ally:u.ally,pl:u.pl||"",p2:u.flags.p2?1:0,fr:u.flags.frenzy?1:0}))
     }).catch(()=>{});
   },80);
 }
@@ -543,7 +543,7 @@ function applySnap(s){
     cfg:{onEnd:()=>leaveOnline()}});
   const diffs=[];
   if(prev)units.forEach(u=>{const o=prev.units.find(x=>x.uid===u.uid);if(o&&o.hp!==u.hp)diffs.push([u,u.hp-o.hp]);});
-  Object.assign(B,{title:s.title,round:s.round,units,log:s.log||[],wall:s.wall||{},over:s.over||null});
+  Object.assign(B,{title:s.title,round:s.round,units,log:s.log||[],wall:s.wall||{},over:s.over||null,order:s.ord||[],ordPos:s.op==null?-1:s.op});
   B.active=units.find(u=>u.uid===s.active)||null;
   if(s.waitUid&&s.waitSeq>(B.sentSeq||0)&&(!B.t2||String(s.waitPl)===B.mySeat)){
     const u=units.find(x=>x.uid===s.waitUid);

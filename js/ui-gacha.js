@@ -25,7 +25,7 @@ function boostPanel(){
   const pool=gachaPool("SSR"),bid=gachaBoostId(),N=pool.length,locked=bid&&SAVE.gachaBoost.d===dateStr();
   const p=BOOST_W/(N-1+BOOST_W),q=1/(N-1+BOOST_W);
   return `<h3>⭐ 指定 SSR 機率加倍</h3>
-  <div class="panel small">選一張 SSR，抽到 SSR 時（含保底與十連保證）牠的機率變成其他 SSR 的 2 倍。<b>每天可以更換一次</b>，免費。<br>
+  <div class="panel small">選一張 SSR，抽到 SSR 時（含保底與十連保證）此卡的機率變成其他 SSR 的 2 倍。<b>每天可以更換一次</b>，免費。<br>
     <div style="display:flex;flex-wrap:wrap;gap:10px;margin:10px 0">${pool.map(id=>`<div title="${CARDS[id].name}" onclick="setGachaBoost('${id}')" style="cursor:pointer;text-align:center;width:64px;${id===bid?"":"opacity:.7"}"><div class="av" style="width:64px;height:64px;border-radius:10px;overflow:hidden;border:2px solid ${id===bid?"var(--gold)":"transparent"};${id===bid?"box-shadow:0 0 10px var(--gold)":""}">${avatar(id)}</div><div class="small" style="margin-top:2px;${id===bid?"color:var(--gold)":""}">${id===bid?"⭐已選取":CARDS[id].name}</div></div>`).join("")}</div>
     ${bid?`目前指定：<b class="rSSR">${CARDS[bid].name}</b>（已選取）。抽到 SSR 時，${CARDS[bid].name} 約 <b>${(p*100).toFixed(1)}%</b>，其他每位約 ${(q*100).toFixed(1)}%（整體約 ${(3.1*p).toFixed(2)}% ／ ${(3.1*q).toFixed(2)}%）。${locked?`<br><span class="dim">今天已經更換過了，明天可以再換。</span>`:""}`:`<span class="dim">目前沒有指定，所有 SSR 機率相同（每位約 ${(100/N).toFixed(1)}%）。點上面的頭像來指定。</span>`}
   </div>`;

@@ -536,3 +536,5 @@ footer.credit a{color:var(--gold)}
 @keyframes fktGlow{0%,100%{filter:drop-shadow(0 0 2px var(--g))}50%{filter:drop-shadow(0 0 7px var(--g))}}
 @media (prefers-reduced-motion:reduce){.fkt{animation:none!important}}
 .nofkfx .fkt{animation:none!important;filter:none;background:none!important;-webkit-text-fill-color:var(--c);color:var(--c)}
+/* 「戰鬥特效」開關關閉時，順便停掉受傷抖動、衝撞與魔王爆氣紅光閃動（傷害飄字保留） */
+.nobfx .shake,.nobfx .ucard.lunge,.nobfx .ucard.casting,.nobfx .ucard.bossu.p2{animation:none!important}

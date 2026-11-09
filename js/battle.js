@@ -382,7 +382,8 @@ async function battleLoopInner(B){
       await sleep(B.fast?120:450);
     }
     if(B.round>(B.cfg.maxRound||60)){
-      if(B.t2){B.over="D";blog(B,"戰鬥拖太久，雙方都筋疲力盡……","bad");} // 團隊賽打滿回合數判平手
+      const pvp=!B.cfg.coop&&["human","remote"].includes(B.ctrl.A)&&["human","remote"].includes(B.ctrl.B); // 真人對真人（雙人對決、養成賽、網路對決）
+      if(B.t2||pvp){B.over="D";blog(B,"戰鬥拖太久，雙方都筋疲力盡……","bad");} // 團隊賽與真人對戰打滿回合數判平手，不讓後手白拿一勝
       else{B.over="B";blog(B,"戰鬥拖太久，毒氣淹沒了一切……","bad");}}
   }
   B.active=null;B.wait=null;

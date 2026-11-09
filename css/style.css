@@ -526,3 +526,12 @@ footer.credit a{color:var(--gold)}
   .teamslots,.teamslots.five{grid-template-columns:repeat(3,minmax(0,1fr))}
   .logo small{display:none}
 }
+
+/* 首殺榜稱號：永久發光特效（1 金・2 銀・3 銅），可被「降低動態」設定關閉 */
+.fkt{display:inline-block;font-weight:700;padding:0 6px;border-radius:8px;background-size:200% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;animation:fktShine 3s linear infinite,fktGlow 2.4s ease-in-out infinite}
+.fkt1{background-image:linear-gradient(90deg,#ffb300,#fff3b0,#ffb300,#fff3b0,#ffb300);--g:rgba(255,200,40,.85)}
+.fkt2{background-image:linear-gradient(90deg,#9fb4c7,#ffffff,#9fb4c7,#ffffff,#9fb4c7);--g:rgba(200,220,240,.8)}
+.fkt3{background-image:linear-gradient(90deg,#c97b3c,#ffd2a1,#c97b3c,#ffd2a1,#c97b3c);--g:rgba(220,140,70,.8)}
+@keyframes fktShine{to{background-position:-200% 0}}
+@keyframes fktGlow{0%,100%{filter:drop-shadow(0 0 2px var(--g))}50%{filter:drop-shadow(0 0 7px var(--g))}}
+@media (prefers-reduced-motion:reduce){.fkt{animation:none!important}}

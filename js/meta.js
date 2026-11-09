@@ -145,7 +145,7 @@ function fkRankOf(boss){
   return (SAVE.fkr&&SAVE.fkr[boss])||(boss===FK_BOSS&&SAVE.fk&&SAVE.fk.rank)||0;
 }
 const fkRank=()=>fkRankOf(FK_BOSS);
-const fkTitle=()=>FK_BOSSES.filter(b=>fkRankOf(b)).map(b=>`🏅${fkTitleOf(b,fkRankOf(b))}`).join(" ");
+const fkTitle=()=>FK_BOSSES.filter(b=>fkRankOf(b)).map(b=>`🏅<span class="fkt fkt${fkRankOf(b)}">${fkTitleOf(b,fkRankOf(b))}</span>`).join(" ");
 // 打贏第 5、6 位魔王後呼叫：回傳要顯示的訊息（空字串＝不用顯示）
 async function fkClaim(boss){
   const C=FK_CFG[boss],nm=MONSTERS[boss].name;
@@ -234,7 +234,7 @@ function setAcct(u){ACCT={uid:u.uid,name:u.displayName||u.email.split("@")[0]};t
 function fmtPlay(sec){const m=Math.floor(sec/60);return m>=60?`${Math.floor(m/60)} 小時 ${m%60} 分`:`${m} 分鐘`;}
 function saveSummary(s){return `🪙${s.gold}・抽 ${s.pulls} 次・角色 ${Object.keys(s.owned).length} 名・${s.prog.cleared>=ABYSS?"主線全破":`主線第 ${s.prog.cleared+1} 章`}${typeof s.playSec==="number"?`・遊戲時間 ${fmtPlay(s.playSec)}`:""}${s.updatedAt?`<br><span class="dim">最後存檔 ${new Date(s.updatedAt).toLocaleString()}</span>`:""}`;}
 function openAccount(){
-  if(ACCT)return openModal(`<h3>👤 ${ACCT.name}${fkTitle()?` <span class="small rEX">${fkTitle()}</span>`:""}</h3>
+  if(ACCT)return openModal(`<h3>👤 ${ACCT.name}${fkTitle()?` <span class="small">${fkTitle()}</span>`:""}</h3>
     <p class="small">已登入。存檔會自動上傳雲端，換手機或電腦登入同一個帳號就能接著玩。</p>
     <p class="small dim">${SYNC_MSG||"尚未同步"}</p>
     <div class="opts"><button class="pri" onclick="uploadSave(true)">☁ 立即上傳存檔</button>

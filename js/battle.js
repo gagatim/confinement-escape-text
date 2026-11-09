@@ -104,7 +104,7 @@ function hit(B,a,t,mult,o={}){
   if(o.fixed)d=o.fixed;
   else{
     d=stat(a,"atk")*mult*(.9+rnd()*.2);
-    if(!o.pierce)d-=stat(t,"def")*.7;
+    if(!o.pierce&&!o.ignoreDef)d-=stat(t,"def")*.7; // ignoreDef：只無視防禦（不像 pierce 連閃避、防禦姿態、減傷也一起無視）
     if(B.casting===a&&clsOf(a)==="mage")d*=1.2;
     let cc=(a.id==="sniper"?.2:a.id==="lucky"?.25:.08)+((a.gx&&a.gx.crit)||0)/100;
     if(clsOf(a)==="ranger")cc+=.12;else if(clsOf(a)==="assassin")cc+=.06;
@@ -126,6 +126,7 @@ function hit(B,a,t,mult,o={}){
   if(!o.pierce&&t.gx&&t.gx.dr)d*=1-Math.min(DR_CAP,t.gx.dr)/100;
   if(t.id==="veteran"&&t.hp<=t.maxHp*.35)d-=4;
   if(t.id==="babydragon"&&!t.flags.p2)d*=1-Math.min(.2,.05*B.units.filter(x=>x.side===t.side&&x.alive&&x.id.startsWith("dinoegg")).length); // 寶貝龍「護蛋本能」：每有 1 顆活著的蛋，傷害 −5%（最多 −20%）；變身後失效
+  if(t.id==="icemage")d*=.85; // 冰系魔導師被動「能量外套」：實際受到的傷害 −15%
   d=Math.max(1,Math.round(d));
   if(t.id==="bomb"&&!o.counter&&rnd()<.25){
     const half=Math.floor(d/2);d-=half;

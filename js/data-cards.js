@@ -41,6 +41,14 @@ const CARDS={
         mates(B,u).filter(m=>m!==u).forEach(m=>buff(B,m,"atk",Math.max(1,Math.round(stat(m,"atk")*.1)),2));blog(B,`${nm(u)} 吐出一口泛著綠光的毒沫。`);}},
     passive:{name:"毒傷",desc:"自己攻擊時（普通攻擊與技能），使目標中毒：每回合受到自己攻擊力15%的傷害（至少1點），持續2回合（技能施放時因術士加成多1點）。毒傷不受防禦與減傷影響，不會疊加（取最強），可被淨化解除。"}},
 
+  // 冰系魔導師（暫名）：預計中的新 SSR 術士，有兩個主動技能。off:1＝尚未開放取得，只在圖鑑展示；開放時拿掉 off 即可
+  icemage:{name:"冰系魔導師",r:"SSR",off:1,hp:30,atk:7,def:2,spd:2,
+    skills:[
+      {name:"元素漩渦",cd:6,t:"enemy",kind:"dmg",desc:"對1名敵人造成3倍攻擊傷害，有15%機率完全無視對方的防禦。",
+        use(B,u,t){const ig=rnd()<.15;if(ig)blog(B,`❄ ${nm(u)} 的寒氣穿透了一切防禦！`);hit(B,u,t,3,ig?{ignoreDef:true}:{});}},
+      {name:"暴風雪",cd:3,t:"none",kind:"dmg",desc:"對全體敵人各造成1.5倍攻擊傷害，每個被打中的敵人有15%機率暈眩1回合（對魔王只有10%）。",
+        use(B,u){blog(B,"🌨 暴風雪席捲了整個戰場。");foes(B,u).forEach(t=>{const d=hit(B,u,t,1.5);if(t.alive&&d>0&&rnd()<((isBossUnit(t)||t.id==="babydragon")?.10:.15))stun(B,t,1);});}}],
+    passive:{name:"能量外套",desc:"受到傷害時，實際受到的傷害減免15%。"}},
   master:{name:"主人",r:"SSR",off:1,hp:34,atk:6,def:3,spd:1,
     skill:{name:"乖，過來",cd:2,t:"ally",kind:"heal",desc:"治療1名友軍，治療量為自己攻擊的2.2倍，並清除對方的負面狀態；被治療的友軍受到的傷害-20%、攻擊+12%（2回合，至少+1）。",
       use(B,u,t){blog(B,`${nm(u)} 招了招手：「乖，過來。」`);heal(B,t,Math.round(stat(u,"atk")*2.2));cleanse(t);
@@ -329,7 +337,7 @@ const CARD_CLS={
   gambler:"warrior",scavenger:"ranger",trucker:"tank",bartender:"support",herbalist:"support",runner:"assassin",chef:"support",
   survivor:"tank",diver:"assassin",miner:"warrior",mediocre:"warrior",courier:"support",gourmet:"tank",climber:"assassin",
   hacker:"mage",tycoon:"mage",lucky:"ranger",arsonist:"mage",sentinel:"tank",janitor:"support",detective:"ranger",
-  ashen:"warrior",qing:"support",fatty2:"tank",diviner:"mage",venomfrog:"mage",master:"support"
+  ashen:"warrior",qing:"support",fatty2:"tank",diviner:"mage",venomfrog:"mage",icemage:"mage",master:"support"
 };
 Object.keys(CARDS).forEach(id=>CARDS[id].cls=CARD_CLS[id]||"warrior");
 const clsOf=u=>CARDS[u.id]?CARDS[u.id].cls:null;

@@ -438,10 +438,10 @@ function doSmelt(){
 }
 
 /* ===== 轉換：把同稀有度角色 A 的等級＋星數，整個轉給 B ===== */
-// 目標的等級、星數取兩者較高的（不會降低）；來源回到 Lv.1、1★。花 🪙5000。果實（含金色）一起轉、相加後超過上限的丟掉；突破、裝備、重複卡不會動
+// 目標的等級、星數取兩者較高的（不會降低）；來源回到 Lv.1、1★。花 🪙3000。果實（含金色）一起轉、相加後超過上限的丟掉；突破、裝備、重複卡不會動
 let CONV={src:"",dst:""};
-const CONV_COST=5000,CONV_COST_SSR=3000; // 轉換費用：SSR 比較便宜，鼓勵把養成轉給新角色
-const convCost=id=>id&&CARDS[id]&&CARDS[id].r==="SSR"?CONV_COST_SSR:CONV_COST;
+const CONV_COST=3000; // 轉換費用：所有稀有度一律相同
+const convCost=id=>CONV_COST;
 function convBlock(id){
   if(SAVE.run&&SAVE.run.party.some(m=>!m.ally&&m.id===id))return "遠征中";
   if(RUN&&RUN.active&&RUN.party.some(m=>!m.ally&&m.id===id))return "遠征中";
@@ -486,6 +486,7 @@ function viewConvert(){
         <div class="small" style="margin-top:4px">📤 ${CARDS[src].name}：Lv.${sl}・${so.stars}★ → <b>Lv.1・1★</b>（${convStat(src,so.stars,sl)} → ${convStat(src,1,1)}）</div>
         <div class="small">📥 ${CARDS[dst].name}：Lv.${lvOf(dst)}・${SAVE.owned[dst].stars}★ → <b style="color:var(--green)">Lv.${r.lv}・${r.stars}★</b>（${convStat(dst,SAVE.owned[dst].stars,lvOf(dst))} → <b style="color:var(--green)">${convStat(dst,r.stars,r.lv)}</b>）</div>
         <div class="small" style="margin-top:4px">費用：<b style="color:${SAVE.gold>=cost?"var(--gold)":"var(--red)"}">🪙${cost}</b>${SAVE.gold>=cost?"":"　金條不足"}</div>
+        ${(()=>{const l=convFruitLoss(src,dst);return l.length?`<div class="small" style="color:var(--red);margin-top:4px">⚠ 果實相加後超過上限，會消失：${l.join("、")}</div>`:"";})()}
         ${warn.length?`<div class="small" style="color:var(--gold);margin-top:4px">⚠ ${CARDS[src].name} 降到 Lv.1 後，身上的 ${warn.join("、")} 會因為等級不足而失效（裝備不會被拿掉，等級回來就恢復）。</div>`:""}
       </div>`:`<p class="dim small">選好目標後會顯示預覽。</p>`}`;
   }
@@ -493,7 +494,7 @@ function viewConvert(){
     <div class="sk small"><b>📖 轉換說明</b><ul style="padding-left:18px;margin:4px 0">
       <li>把 <b>來源</b> 角色的 <b>等級和星數</b>（連同經驗值）整個轉給 <b>同樣稀有度</b> 的目標，來源回到 <b>Lv.1・1★</b>。</li>
       <li><b>不會降低</b>：目標的等級、星數取兩者較高的，不會比原本差。</li>
-      <li>每次費用 <b>🪙${CONV_COST}</b>（來源是 SSR 時 <b>🪙${CONV_COST_SSR}</b>）。</li>
+      <li>每次費用 <b>🪙${CONV_COST}</b>。</li>
       <li><b>能力果實</b>（含金色）會一起轉給目標，兩邊相加、超過每種上限的部分會消失；來源的果實歸零。</li>
       <li>突破、裝備、重複卡都 <b>不會</b> 轉移，也不會消失。遠征中的角色、劇情角色（當來源時）不能轉換。</li></ul></div>
     ${body}
@@ -508,6 +509,16 @@ function convMoveFruit(s,d){
     for(const k of ["atk","def","spd"])n[k]=Math.min(max,(df[k]||0)+(sf[k]||0));
     if(s[key]||d[key]){d[key]=n;s[key]={atk:0,def:0,spd:0};}
   }
+}
+// 轉換後會因為超過上限而消失的果實，回傳像「普通攻擊果實 ×1、金色速度果實 ×2」的文字陣列（沒有就空陣列）
+function convFruitLoss(src,dst){
+  const s=SAVE.owned[src]||{},d=SAVE.owned[dst]||{},out=[];
+  for(const [key,max,pre] of [["fruit",FRUIT_MAX,"普通"],["gfruit",GFRUIT_MAX,"金色"]])
+    for(const [k,nm] of [["atk","攻擊"],["def","防禦"],["spd","速度"]]){
+      const lost=((d[key]||{})[k]||0)+((s[key]||{})[k]||0)-max;
+      if(lost>0)out.push(`${pre}${nm}果實 ×${lost}`);
+    }
+  return out;
 }
 function doConvert(){
   const s=SAVE.owned[CONV.src],d=SAVE.owned[CONV.dst];if(!s||!d)return;

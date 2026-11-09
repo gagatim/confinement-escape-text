@@ -92,6 +92,7 @@ const ACH=[
   {g:"戰鬥",id:"boss1",n:"魔王討伐",d:"打倒 1 位支線魔王",v:s=>Object.keys(s.bosses||{}).length,t:1,r:{stone:5}},
   {g:"戰鬥",id:"boss3",n:"不可能的任務",d:"打倒第 3 位支線魔王「命運裁決者」",v:s=>(s.bosses||{}).fatejudge?1:0,t:1,r:{stone:30}},
   {g:"戰鬥",id:"fk5",n:"深淵君王首殺",d:"成為前 3 名擊敗第 5 位支線魔王「深淵君王」的玩家（需登入帳號）",v:s=>(s.fk&&s.fk.rank)?1:0,t:1,r:{note:"🏅首殺稱號＋🌟金色攻擊果實"}},
+  {g:"戰鬥",id:"fk6",n:"永夜帝王首殺",d:"成為前 3 名擊敗第 6 位支線魔王「永夜帝王」的玩家（需登入帳號）",v:s=>(s.fkr&&s.fkr.nightemperor)?1:0,t:1,r:{note:"🏅首殺稱號＋🌟金色防禦果實"}},
   {g:"裝備",id:"gear10",n:"強化大師",d:"任一裝備強化到 +10",v:s=>maxOf((s.gear||[]).map(g=>g.lv)),t:10,r:{stone:5}},
   {g:"裝備",id:"gearUR",n:"傳說入手",d:"獲得 1 件 UR 傳說裝備",v:s=>(s.gear||[]).some(g=>GEAR[g.base].q==="UR")?1:0,t:1,r:{gold:50}},
   {g:"裝備",id:"gearEX",n:"魔王的遺物",d:"獲得 1 件 EX 魔王專屬裝備",v:s=>(s.gear||[]).some(g=>GEAR[g.base].q==="EX")?1:0,t:1,r:{stone:5}},
@@ -112,27 +113,39 @@ function checkAch(){
   }
   return got;
 }
-/* ===== 深淵君王首殺榜：前 3 名擊敗第 5 位魔王的帳號，拿稱號和金色攻擊果實 =====
-   名額放在 Firebase 的 firstKill/abyssking/{1,2,3}，用 transaction 搶，每格只能寫一次（規則見 database.rules.json）。
-   果實發進存檔（SAVE.gfruits）；稱號以資料庫的名單為準，連不上時才看存檔裡的 SAVE.fk。 */
-const FK_BOSS="abyssking",FK_SLOTS=3,FK_REWARD={1:2,2:1,3:1},FK_TITLE="深淵君王首殺者";
-const FK={slots:{},tried:false,ok:false,err:false}; // ok：榜單讀到過；err：最近一次讀取失敗（沒網路、測試版等），這時不能顯示成「虛位以待」
+/* ===== 首殺榜：第 5、6 位魔王（深淵君王、永夜帝王）各取前 3 名擊敗的帳號，拿稱號和金色果實 =====
+   名額放在 Firebase 的 firstKill/{魔王代號}/{1,2,3}，用 transaction 搶，每格只能寫一次（規則見 database.rules.json）。
+   果實發進存檔（SAVE.gfruits）；稱號以資料庫的名單為準，連不上時才看存檔裡的 SAVE.fkr[魔王]（深淵君王舊存檔是 SAVE.fk）。 */
+const FK_SLOTS=3,FK_REWARD={1:2,2:1,3:1};
+const FK_CFG={
+  abyssking:{title:"深淵君王首殺者",stat:"atk",statName:"攻擊"},
+  nightemperor:{title:"永夜帝王首殺者",stat:"def",statName:"防禦"}
+};
+const FK_BOSSES=Object.keys(FK_CFG),FK_BOSS="abyssking";
+const FK={slots:{},tried:false,ok:false,err:false}; // slots[魔王代號]＝{1:{uid,name,t},…}；ok：榜單讀到過；err：最近一次讀取失敗（沒網路、測試版等），這時不能顯示成「虛位以待」
 const fkEsc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 async function fkLoad(){
-  try{const s=await (await fbDb()).ref("firstKill/"+FK_BOSS).get();FK.slots=s.val()||{};FK.ok=true;FK.err=false;}catch(e){FK.err=true;glog("❌FK","讀取首殺榜失敗 "+(e&&e.code||e&&e.message||e));}
+  try{
+    const db=await fbDb(),res=await Promise.all(FK_BOSSES.map(b=>db.ref("firstKill/"+b).get()));
+    FK.slots={};FK_BOSSES.forEach((b,i)=>{FK.slots[b]=res[i].val()||{};});FK.ok=true;FK.err=false;
+  }catch(e){FK.err=true;glog("❌FK","讀取首殺榜失敗 "+(e&&e.code||e&&e.message||e));}
   if(VIEW==="boss"||VIEW==="ach")render();
 }
-function fkRank(){
-  if(ACCT)for(let n=1;n<=FK_SLOTS;n++){const s=FK.slots[n];if(s&&s.uid===ACCT.uid)return n;}
-  return (SAVE.fk&&SAVE.fk.rank)||0;
+// 自己在某隻魔王榜上的名次（0＝不在榜上）
+function fkRankOf(boss){
+  if(ACCT){const sl=FK.slots[boss]||{};for(let n=1;n<=FK_SLOTS;n++){const s=sl[n];if(s&&s.uid===ACCT.uid)return n;}}
+  return (SAVE.fkr&&SAVE.fkr[boss])||(boss===FK_BOSS&&SAVE.fk&&SAVE.fk.rank)||0;
 }
-const fkTitle=()=>fkRank()?`🏅${FK_TITLE}`:"";
-// 打贏深淵君王後呼叫：回傳要顯示的訊息（空字串＝不用顯示）
-async function fkClaim(){
-  if(SAVE.fk&&SAVE.fk.rank)return "";
-  if(!ACCT)return "🏅 深淵君王首殺榜：登入帳號後打贏，才能搶前 3 名的名額。";
+const fkRank=()=>fkRankOf(FK_BOSS);
+const fkTitle=()=>FK_BOSSES.filter(b=>fkRankOf(b)).map(b=>`🏅${FK_CFG[b].title}`).join(" ");
+// 打贏第 5、6 位魔王後呼叫：回傳要顯示的訊息（空字串＝不用顯示）
+async function fkClaim(boss){
+  const C=FK_CFG[boss],nm=MONSTERS[boss].name;
+  SAVE.fkr=SAVE.fkr||{};
+  if(SAVE.fkr[boss]||(boss===FK_BOSS&&SAVE.fk&&SAVE.fk.rank))return "";
+  if(!ACCT)return `🏅 ${nm}首殺榜：登入帳號後打贏，才能搶前 3 名的名額。`;
   try{
-    const ref=(await fbDb()).ref("firstKill/"+FK_BOSS),cur=(await ref.get()).val()||{};
+    const ref=(await fbDb()).ref("firstKill/"+boss),cur=(await ref.get()).val()||{};
     let rank=0,fresh=false;
     for(let n=1;n<=FK_SLOTS;n++)if(cur[n]&&cur[n].uid===ACCT.uid){rank=n;break;} // 已經在榜上（例如存檔重來過）：只補稱號，不重發果實
     for(let n=1;n<=FK_SLOTS&&!rank;n++){
@@ -140,22 +153,26 @@ async function fkClaim(){
       const r=await ref.child(n).transaction(v=>v===null?{uid:ACCT.uid,name:ACCT.name,t:firebase.database.ServerValue.TIMESTAMP}:undefined);
       if(r.committed){rank=n;fresh=true;}
     }
-    FK.slots=(await ref.get()).val()||{};FK.ok=true;FK.err=false;
-    if(!rank)return "🏅 深淵君王首殺榜的 3 個名額已經被搶走了。";
-    SAVE.fk={rank,at:Date.now()};
-    if(fresh)SAVE.gfruits.atk+=FK_REWARD[rank];
+    FK.slots[boss]=(await ref.get()).val()||{};FK.ok=true;FK.err=false;
+    if(!rank)return `🏅 ${nm}首殺榜的 3 個名額已經被搶走了。`;
+    SAVE.fkr[boss]=rank;
+    if(boss===FK_BOSS)SAVE.fk={rank,at:Date.now()};
+    if(fresh)SAVE.gfruits[C.stat]=(SAVE.gfruits[C.stat]||0)+FK_REWARD[rank];
     save();checkAch();SFX.ssr();
-    return `🏅 <b class="rEX">你是第 ${rank} 位擊敗深淵君王的玩家！</b>獲得稱號「${FK_TITLE}」${fresh?`與 🌟金色攻擊果實 ×${FK_REWARD[rank]}（到角色卡使用）`:""}`;
-  }catch(e){glog("❌FK","搶首殺名額失敗 "+(e&&e.code||e&&e.message||e));return "🏅 首殺榜連線失敗，下次打贏深淵君王再試。";}
+    return `🏅 <b class="rEX">你是第 ${rank} 位擊敗${nm}的玩家！</b>獲得稱號「${C.title}」${fresh?`與 🌟金色${C.statName}果實 ×${FK_REWARD[rank]}（到角色卡使用）`:""}`;
+  }catch(e){glog("❌FK","搶首殺名額失敗 "+(e&&e.code||e&&e.message||e));return `🏅 首殺榜連線失敗，下次打贏${nm}再試。`;}
 }
 function fkBoardHtml(){
-  const medal=["🥇","🥈","🥉"],me=fkRank();
-  const rows=!FK.ok?`<div class="small dim" style="margin:6px 0">${FK.err?"⚠ 榜單讀取失敗（可能沒有網路，或是測試版不開放），請稍後按「重新整理榜單」再試。":"榜單載入中……"}</div>`
-  :[1,2,3].map(n=>{const s=FK.slots[n];
-    return `<div class="small" style="margin:3px 0">${medal[n-1]} 第 ${n} 名・${s?`<b>${fkEsc(s.name)}</b> <span class="dim">${new Date(s.t).toLocaleDateString()}</span>`:`<span class="dim">虛位以待</span>`}　<span class="dim">🌟金色攻擊果實 ×${FK_REWARD[n]}</span></div>`;}).join("");
-  return `<div class="panel" style="margin-top:12px"><b>🏅 全服首殺榜・${MONSTERS[FK_BOSS].name}</b>
-    <p class="dim small" style="margin:4px 0">全服前 3 位擊敗${MONSTERS[FK_BOSS].name}的玩家，可以得到稱號「${FK_TITLE}」、成就和金色攻擊果實。要<b>登入帳號</b>才能搶名額，以名額被搶走的先後排名。</p>
+  const medal=["🥇","🥈","🥉"];
+  return FK_BOSSES.map(boss=>{
+    const C=FK_CFG[boss],me=fkRankOf(boss),name=MONSTERS[boss].name,i=BOSS_LIST.indexOf(boss);
+    const rows=!FK.ok?`<div class="small dim" style="margin:6px 0">${FK.err?"⚠ 榜單讀取失敗（可能沒有網路，或是測試版不開放），請稍後按「重新整理榜單」再試。":"榜單載入中……"}</div>`
+    :[1,2,3].map(n=>{const s=(FK.slots[boss]||{})[n];
+      return `<div class="small" style="margin:3px 0">${medal[n-1]} 第 ${n} 名・${s?`<b>${fkEsc(s.name)}</b> <span class="dim">${new Date(s.t).toLocaleDateString()}</span>`:`<span class="dim">虛位以待</span>`}　<span class="dim">🌟金色${C.statName}果實 ×${FK_REWARD[n]}</span></div>`;}).join("");
+    return `<div class="panel" style="margin-top:12px"><b>🏅 全服首殺榜・第 ${i+1} 位 ${name}</b>
+    <p class="dim small" style="margin:4px 0">全服前 3 位擊敗${name}的玩家，可以得到稱號「${C.title}」、成就和金色${C.statName}果實。要<b>登入帳號</b>才能搶名額，以名額被搶走的先後排名。</p>
     ${rows}${me?`<div class="small" style="color:var(--green);margin-top:4px">✓ 你是第 ${me} 名</div>`:!ACCT?`<div class="small" style="color:var(--gold);margin-top:4px">登入帳號後打贏才能搶名額</div>`:""}</div>`;
+  }).join("");
 }
 
 let ACH_TAB="";

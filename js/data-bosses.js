@@ -177,12 +177,12 @@ function beginBoss(id){
         if(first||rnd()<.02){const g=addGear(BOSS_DROP[id]);notes.push(`🎁 <b class="rEX">魔王專屬裝備：${gearName(g)}</b>（${statStr(gearStats(g))}${g.fx.length?" "+fxStr(g):""}）`);SFX.ssr();}
         if(i+1<BOSS_LIST.length&&first)notes.push(`🔓 下一位魔王出現了：<b>${MONSTERS[BOSS_LIST[i+1]].name}</b>`);
         if(i+1===BOSS_LIST.length&&first)notes.push("🎬 <b>8 位魔王全部討伐完成！</b>");
-        if(id===FK_BOSS)notes.push('<span id="fkNote"></span>');
+        if(FK_BOSSES.includes(id))notes.push('<span id="fkNote"></span>');
       }
       save();CUR_B=null;VIEW="boss";render();
       if(win)openModal(`<h3>⚔ 討伐成功：${M.name}</h3><div class="detail"><div class="av"><img src="images/bosses/${id}_2.webp" alt=""></div><div><p>${notes.join("<br>")}</p></div></div>
         <div class="row"><button class="pri" onclick="openBoss('${id}')">再挑戰一次</button><button onclick="closeModal()">關閉</button></div>`);
-      if(win&&id===FK_BOSS)fkClaim().then(m=>{const el=document.getElementById("fkNote");if(el&&m)el.innerHTML=m;else if(m)toast(m.replace(/<[^>]+>/g,""));});
+      if(win&&FK_BOSSES.includes(id))fkClaim(id).then(m=>{const el=document.getElementById("fkNote");if(el&&m)el.innerHTML=m;else if(m)toast(m.replace(/<[^>]+>/g,""));});
     }});
 }
 

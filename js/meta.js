@@ -179,7 +179,7 @@ function fkBoardHtml(){
     const C=FK_CFG[boss],me=fkRankOf(boss),name=MONSTERS[boss].name,i=BOSS_LIST.indexOf(boss);
     const rows=!FK.ok?`<div class="small dim" style="margin:6px 0">${FK.err?"⚠ 榜單讀取失敗（可能沒有網路，或是測試版不開放），請稍後按「重新整理榜單」再試。":"榜單載入中……"}</div>`
     :[1,2,3].map(n=>{const s=(FK.slots[boss]||{})[n];
-      return `<div class="small" style="margin:3px 0">${medal[n-1]} 第 ${n} 名・${s?`<b>${fkEsc(s.name)}</b> <span class="dim">${new Date(s.t).toLocaleDateString()}</span>`:`<span class="dim">虛位以待</span>`}　<span class="dim">🌟${fkFruitStr(boss,n)}</span></div>`;}).join("");
+      return `<div class="small" style="margin:3px 0">${medal[n-1]} 第 ${n} 名・${s?`<b>${fkEsc(Array.from(String(s.name)).slice(0,2).join(""))}</b> <span class="dim">${new Date(s.t).toLocaleDateString()}</span>`:`<span class="dim">虛位以待</span>`}　<span class="dim">🌟${fkFruitStr(boss,n)}</span></div>`;}).join("");
     return `<div class="panel" style="margin-top:12px"><b>🏅 全服首殺榜・第 ${i+1} 位 ${name}</b>
     <p class="dim small" style="margin:4px 0">全服前 3 位擊敗${name}的玩家，可以得到稱號（第 1 名「${fkTitleOf(boss,1)}」、第 2 名「${fkTitleOf(boss,2)}」、第 3 名「${fkTitleOf(boss,3)}」）、成就和金色果實。要<b>登入帳號</b>才能搶名額，以名額被搶走的先後排名。</p>
     ${rows}${me?`<div class="small" style="color:var(--green);margin-top:4px">✓ 你是第 ${me} 名</div>`:!ACCT?`<div class="small" style="color:var(--gold);margin-top:4px">登入帳號後打贏才能搶名額</div>`:""}</div>`;

@@ -127,7 +127,7 @@ function hit(B,a,t,mult,o={}){
   if(!o.pierce&&t.gx&&t.gx.dr)d*=1-Math.min(DR_CAP,t.gx.dr)/100;
   if(t.id==="veteran"&&t.hp<=t.maxHp*.35)d-=4;
   if(t.id==="babydragon"&&!t.flags.p2)d*=1-Math.min(.2,.05*B.units.filter(x=>x.side===t.side&&x.alive&&x.id.startsWith("dinoegg")).length); // 寶貝龍「護蛋本能」：每有 1 顆活著的蛋，傷害 −5%（最多 −20%）；變身後失效
-  if(t.id==="icemage")d*=.85; // 冰系魔導師被動「能量外套」：實際受到的傷害 −15%
+  if(t.id==="icemage")d*=.85; // 冰霜葉被動「能量外套」：實際受到的傷害 −15%
   d=Math.max(1,Math.round(d));
   if(t.id==="bomb"&&!o.counter&&rnd()<.25){
     const half=Math.floor(d/2);d-=half;

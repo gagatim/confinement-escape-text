@@ -41,8 +41,8 @@ const CARDS={
         mates(B,u).filter(m=>m!==u).forEach(m=>buff(B,m,"atk",Math.max(1,Math.round(stat(m,"atk")*.1)),2));blog(B,`${nm(u)} 吐出一口泛著綠光的毒沫。`);}},
     passive:{name:"毒傷",desc:"自己攻擊時（普通攻擊與技能），使目標中毒：每回合受到自己攻擊力15%的傷害（至少1點），持續2回合（技能施放時因術士加成多1點）。毒傷不受防禦與減傷影響，不會疊加（取最強），可被淨化解除。"}},
 
-  // 冰系魔導師（暫名）：預計中的新 SSR 術士，有兩個主動技能。off:1＝尚未開放取得，只在圖鑑展示；開放時拿掉 off 即可
-  icemage:{name:"冰系魔導師",r:"SSR",off:1,hp:30,atk:7,def:2,spd:2,
+  // 冰霜葉（暫名）：預計中的新 SSR 術士，有兩個主動技能。off:1＝尚未開放取得，只在圖鑑展示；開放時拿掉 off 即可
+  icemage:{name:"冰霜葉",r:"SSR",off:1,hp:30,atk:7,def:2,spd:2,
     skills:[
       {name:"元素漩渦",cd:6,t:"enemy",kind:"dmg",desc:"對1名敵人造成3倍攻擊傷害（術士加成後約3.6倍），有15%機率完全無視對方的防禦，其餘時候受對方防禦影響。",
         use(B,u,t){const ig=rnd()<.15;if(ig)blog(B,`❄ ${nm(u)} 的寒氣穿透了一切防禦！`);hit(B,u,t,3,ig?{ignoreDef:true}:{});}},

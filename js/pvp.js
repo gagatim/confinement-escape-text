@@ -166,7 +166,7 @@ function sanOwn(arr,max=3){
   const cl=(v,a,b)=>Math.min(b,Math.max(a,Number.isFinite(+v)?+v:a)),seen=new Set(),out=[];
   Object.values(arr||{}).slice(0,max).forEach(x=>{
     if(!x||!CARDS[x.id]||seen.has(x.id))return;seen.add(x.id);
-    const stars=Math.round(cl(x.stars,1,5)),br=Math.round(cl(x.br,0,BR_MAX)),scale=cl(x.scale,1,lvMul(LV_MAX)),g=x.gx||{};
+    const stars=Math.round(cl(x.stars,1,5)),br=Math.round(cl(x.br,0,BR_MAX)),scale=cl(x.scale,1,lvMul(SAVE_LV_MAX)),g=x.gx||{};
     const base=cardStats(x.id,stars,scale,br);
     out.push({id:x.id,stars,scale,br,maxHp:Math.round(cl(x.maxHp,base.maxHp,base.maxHp+2000)),
       atk:Math.round(cl(x.atk,0,300)),def:Math.round(cl(x.def,0,200)),spd:Math.round(cl(x.spd,0,60)),

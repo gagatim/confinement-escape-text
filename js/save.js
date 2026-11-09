@@ -3,7 +3,7 @@
 const SAVE_KEY="jbts_textgame_v1";
 // 遊戲版本（存檔格式有新增內容、舊頁面可能誤判時加 1）。存檔會記錄是哪個版本寫的；
 // 舊頁面讀到比自己新的存檔時，不做作弊檢查、不清空、也不寫回，只提示玩家重新整理頁面
-const APP_V=8;
+const APP_V=9; // 9：存檔檢查的等級上限放寬到 150（之後開放更高等級的準備）；之前沒加過版本號就開放了占卜師、聖煌之靴、冰霜葉，所以順便加 1
 let STALE=false;
 const isNewerSave=s=>!!s&&(s.appv||0)>APP_V;
 function staleNotice(){
@@ -71,6 +71,8 @@ function storeBonusOf(id){
   const i=SAVE.team.indexOf(id);if(i<0||i>=storeMax())return {};
   const sid=SAVE.stored[i];return (sid&&STORE_BONUS[sid])||{};
 }
+// 存檔檢查用的等級上限：故意比遊戲目前的等級上限（LV_MAX）寬很多。之後開放更高等級時，還沒重新整理的舊頁面才不會把新存檔誤判成「等級異常」而清掉；經驗值上限也放寬 2 倍，原因相同
+const SAVE_LV_MAX=150;
 // 檢查存檔裡有沒有遊戲規則不可能出現的數值，有的話回傳原因
 function validSave(s){
   if(!isInt(s.gold,0,5000000))return "金條數量異常";
@@ -79,11 +81,11 @@ function validSave(s){
     if(!CARDS[id])return "出現不存在的角色";
     if(!isInt(o.stars,1,5))return `${CARDS[id].name} 星數異常`;
     if(o.dup!=null&&!isInt(o.dup,0,99999))return `${CARDS[id].name} 重複卡數量異常`;
-    if(o.lv!=null&&!isInt(o.lv,1,LV_MAX))return `${CARDS[id].name} 等級異常`;
+    if(o.lv!=null&&!isInt(o.lv,1,SAVE_LV_MAX))return `${CARDS[id].name} 等級異常`;
     if(o.br!=null&&!isInt(o.br,0,BR_MAX))return `${CARDS[id].name} 突破次數異常`;
     if(o.fruit!=null&&!["atk","def","spd"].every(k=>isInt((o.fruit||{})[k]||0,0,FRUIT_MAX)))return `${CARDS[id].name} 能力果實異常`;
     if(o.gfruit!=null&&!["atk","def","spd"].every(k=>isInt((o.gfruit||{})[k]||0,0,GFRUIT_MAX)))return `${CARDS[id].name} 金色果實異常`;
-    if(o.exp!=null&&!isInt(o.exp,0,lvNeed(o.lv||1)))return `${CARDS[id].name} 經驗值異常`;
+    if(o.exp!=null&&!isInt(o.exp,0,lvNeed(o.lv||1)*2))return `${CARDS[id].name} 經驗值異常`;
   }
   if(!Array.isArray(s.team)||s.team.length>(fiveOk(s.prog)?TEAM_BIG:TEAM_BASE)||s.team.some(id=>!s.owned[id]))return "隊伍資料異常";
   if(s.stored!=null){

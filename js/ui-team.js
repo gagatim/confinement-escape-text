@@ -92,7 +92,7 @@ function openBossShow(id,ph){
 }
 function skillHtml(d){
   const sks=d.skills||[d.skill];
-  return sks.map(k=>`<div class="sk"><b>✦ ${k.name}</b> <span class="dim small">冷卻 ${k.cd}</span><br>${k.desc}</div>`).join("")+`
+  return sks.map(k=>`<div class="sk"><b>✦ ${k.name}</b> <span class="dim small">冷卻 ${k.cd}（每 ${k.cd} 個自己的回合可放 1 次）</span><br>${k.desc}</div>`).join("")+`
   <div class="sk"><b>◈ ${d.passive.name}</b> <span class="dim small">被動</span><br>${d.passive.desc}</div>`;
 }
 function showCard(id){

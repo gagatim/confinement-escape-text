@@ -19,23 +19,23 @@ const CARDS={
     skill:{name:"暗影突襲",cd:3,t:"enemy",kind:"dmg",desc:"對1名敵人造成1.6倍攻擊傷害，無視對方防禦與防禦架勢；施放後自己獲得1次閃避，可以躲掉下一次受到的攻擊（無視防禦、固定傷害的攻擊閃不掉）。",use(B,u,t){hit(B,u,t,1.6,{pierce:true});u.st.evade=(u.st.evade||0)+1;}},
     passive:{name:"暗影共鳴",desc:"場上任何其他角色（敵我皆算）倒下時，自己恢復5%最大生命（至少1），並攻擊永久+3%（至少+1，本場）。"}},
   vampire:{name:"吸血鬼",r:"SSR",hp:30,atk:6,def:1,spd:4,
-    skill:{name:"血宴",cd:3,t:"none",kind:"dmg",desc:"對全體敵人各造成1.0倍攻擊傷害，並把造成的總傷害的50%轉成自己的生命。",
+    skill:{name:"血宴",cd:3,t:"none",kind:"dmg",desc:"對全體敵人各造成1.0倍攻擊傷害（受對方防禦影響），並把造成的總傷害的50%轉成自己的生命。",
       use(B,u){let s=0;foes(B,u).forEach(t=>s+=hit(B,u,t,1.0)*leechK(t));if(s)heal(B,u,Math.ceil(s/2));}},
     passive:{name:"夜之血族",desc:"每個自己的回合開始時，恢復2%最大生命（至少1）。"}},
   berserker:{name:"狂戰士",r:"SSR",hp:37,atk:7,def:0,spd:4,
-    skill:{name:"狂暴旋風",cd:3,t:"none",kind:"dmg",desc:"對全體敵人各造成1.38倍攻擊傷害；施放後自己失去0.5%最大生命（至少1），生命最低會留在1，不會因此倒下。",
+    skill:{name:"狂暴旋風",cd:3,t:"none",kind:"dmg",desc:"對全體敵人各造成1.38倍攻擊傷害（受對方防禦影響）；施放後自己失去0.5%最大生命（至少1點），但生命最低會留在1，不會因此倒下。",
       use(B,u){foes(B,u).forEach(t=>hit(B,u,t,1.38));u.hp=Math.max(1,u.hp-Math.max(1,Math.round(u.maxHp*.005)));}},
-    passive:{name:"嗜殺",desc:"自己生命低於最大生命一半時，攻擊+4%（依基礎攻擊計算）；回到一半以上就恢復原狀。"}},
+    passive:{name:"嗜殺",desc:"自己生命低於最大生命一半時，攻擊提高4%（依自身基礎攻擊計算）；回到一半以上就恢復原狀。"}},
   // 占卜師（暫名）：新 SSR 術士，已開放取得（進招募池、合成、熔煉）。想先封住就加回 off:1（只在圖鑑展示，不算收藏數）
   diviner:{name:"占卜師",r:"SSR",hp:28,atk:6,def:1,spd:5,
-    skill:{name:"厄運宣告",cd:3,t:"enemy",kind:"dmg",desc:"對1名敵人造成1.45倍攻擊傷害，並標記2回合：該敵人受到的傷害+15%；同時使敵方全體攻擊-10%（2回合，每人至少-1）。",
+    skill:{name:"厄運宣告",cd:3,t:"enemy",kind:"dmg",desc:"對1名敵人造成1.45倍攻擊傷害（受對方防禦影響；術士加成後約1.74倍），並標記2回合：該敵人受到的傷害+15%；同時使全體敵人攻擊-10%（2回合，每人至少-1）。",
       use(B,u,t){hit(B,u,t,1.45);if(t.alive){t.st.curse=2;fx(B,t,"厄運","sk");poison(B,t,5,3);}
         foes(B,u).forEach(x=>{if(x.alive)buff(B,x,"atk",-Math.max(1,Math.round(stat(x,"atk")*.1)),2);});blog(B,`${nm(u)} 翻開書頁：「你的運氣，到此為止。」`);}},
     passive:{name:"毒傷",desc:"自己攻擊時（普通攻擊與技能），使目標中毒：每回合受到5點傷害，持續3回合（技能施放時因術士加成為6點）。毒傷不受防禦與減傷影響，不會疊加（取最強），可被淨化解除。"}},
 
   // 毒蛙（暫名）：預計中的新 SSR 術士。off:1＝尚未開放取得（不進招募池、不進合成熔煉、不算收藏數），只在圖鑑展示；開放時拿掉 off 即可
   venomfrog:{name:"毒蛙",r:"SSR",off:1,hp:28,atk:6,def:1,spd:4,
-    skill:{name:"毒沫",cd:3,t:"enemy",kind:"dmg",desc:"對1名敵人造成1.1倍攻擊傷害，並使自己攻擊+30%、全隊其他人攻擊+10%（2回合，每人至少+1）。",
+    skill:{name:"毒沫",cd:3,t:"enemy",kind:"dmg",desc:"對1名敵人造成1.1倍攻擊傷害（受對方防禦影響；術士加成後約1.32倍），並使自己攻擊+30%、其他隊友攻擊+10%（2回合，每人至少+1）。",
       use(B,u,t){hit(B,u,t,1.1);if(t.alive)poison(B,t,Math.max(1,Math.round(stat(u,"atk")*.15)),2);
         buff(B,u,"atk",Math.max(1,Math.round(stat(u,"atk")*.3)),2);
         mates(B,u).filter(m=>m!==u).forEach(m=>buff(B,m,"atk",Math.max(1,Math.round(stat(m,"atk")*.1)),2));blog(B,`${nm(u)} 吐出一口泛著綠光的毒沫。`);}},
@@ -44,16 +44,16 @@ const CARDS={
   // 冰系魔導師（暫名）：預計中的新 SSR 術士，有兩個主動技能。off:1＝尚未開放取得，只在圖鑑展示；開放時拿掉 off 即可
   icemage:{name:"冰系魔導師",r:"SSR",off:1,hp:30,atk:7,def:2,spd:2,
     skills:[
-      {name:"元素漩渦",cd:6,t:"enemy",kind:"dmg",desc:"對1名敵人造成3倍攻擊傷害，有15%機率完全無視對方的防禦。",
+      {name:"元素漩渦",cd:6,t:"enemy",kind:"dmg",desc:"對1名敵人造成3倍攻擊傷害（術士加成後約3.6倍），有15%機率完全無視對方的防禦，其餘時候受對方防禦影響。",
         use(B,u,t){const ig=rnd()<.15;if(ig)blog(B,`❄ ${nm(u)} 的寒氣穿透了一切防禦！`);hit(B,u,t,3,ig?{ignoreDef:true}:{});}},
-      {name:"暴風雪",cd:3,t:"none",kind:"dmg",desc:"對全體敵人各造成1.5倍攻擊傷害，每個被打中的敵人有15%機率暈眩1回合（對魔王只有10%）。",
+      {name:"暴風雪",cd:3,t:"none",kind:"dmg",desc:"對全體敵人各造成1.5倍攻擊傷害（受對方防禦影響；術士加成後約1.8倍），每個被打中的敵人有15%機率暈眩1回合（對魔王只有10%）。",
         use(B,u){blog(B,"🌨 暴風雪席捲了整個戰場。");foes(B,u).forEach(t=>{const d=hit(B,u,t,1.5);if(t.alive&&d>0&&rnd()<((isBossUnit(t)||t.id==="babydragon")?.10:.15))stun(B,t,1);});}}],
     passive:{name:"能量外套",desc:"受到傷害時，實際受到的傷害減免15%。"}},
   master:{name:"主人",r:"SSR",off:1,hp:34,atk:6,def:3,spd:1,
-    skill:{name:"乖，過來",cd:2,t:"ally",kind:"heal",desc:"治療1名友軍，治療量為自己攻擊的2.2倍，並清除對方的負面狀態；被治療的友軍受到的傷害-20%、攻擊+12%（2回合，至少+1）。",
+    skill:{name:"乖，過來",cd:2,t:"ally",kind:"heal",desc:"治療1名隊友，治療量為自己攻擊的2.2倍，並清除其負面狀態；被治療的隊友受到的傷害-20%、攻擊+12%（2回合，至少+1）。",
       use(B,u,t){blog(B,`${nm(u)} 招了招手：「乖，過來。」`);heal(B,t,Math.round(stat(u,"atk")*2.2));cleanse(t);
         buff(B,t,"dr",20,2);buff(B,t,"atk",Math.max(1,Math.round(stat(t,"atk")*.12)),2);}},
-    passive:{name:"寵愛／神隱",desc:"「寵愛」：自己的回合開始時，全隊友軍各回復3%最大生命（自己生命低於40%時為5%）。「神隱」：不會普通攻擊；輪到自己時技能在冷卻中無法施放，就自動進入防禦（受到的傷害減半，並回復1點生命）。"}},
+    passive:{name:"寵愛／神隱",desc:"「寵愛」：自己的回合開始時，全體隊友各回復3%最大生命（自己生命低於40%時為5%）。「神隱」：不會普通攻擊；輪到自己時技能在冷卻中無法施放，就自動進入防禦（受到的傷害減半，並回復1點生命）。"}},
 
   merc:{name:"雇傭兵",r:"SR",hp:28,atk:6,def:2,spd:3,
     skill:{name:"霰彈掃射",cd:3,t:"none",kind:"dmg",desc:"對全體敵人各造成0.75倍攻擊傷害。",use(B,u){foes(B,u).forEach(t=>hit(B,u,t,.75));}},

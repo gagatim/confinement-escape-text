@@ -44,6 +44,7 @@
 - 商店：Bossa Nova — by Joth，取自 OpenGameArt（https://opengameart.org/content/bossa-nova ），授權 CC0。
 - 競技場（含競技場戰鬥）：Epic Boss Battle [Seamlessly Looping] — by Juhani Junkala（上傳者 SubspaceAudio），取自 OpenGameArt（https://opengameart.org/content/boss-battle-music ），授權 CC0。
 - 雙人對決（含同機與網路對戰）：JRPG Epic Rock Battle Theme #1 — by HydroGene，取自 OpenGameArt（https://opengameart.org/content/jrpg-epic-rock-battle-theme-1 ），授權 CC0。
+- 恐龍蛋專區（含恐龍蛋戰鬥）：Cynic Battle Loop — by Ferk（循環版），原曲 Battle Theme A 由 cynicmusic（Alex Smith）創作，取自 OpenGameArt（https://opengameart.org/content/cynic-battle-loop ），授權 CC0。
 - 無盡深淵：Dark Cavern Ambient — by Paul Wortmann，取自 OpenGameArt（https://opengameart.org/content/dark-cavern-ambient ），授權 CC0。
 - 戰鬥／逃出成功：DEgITx - Machine Paradigm（https://www.youtube.com/watch?v=2uGf8-vfFLI ，作者頻道 @DEgITx），透過 YouTube 嵌入播放器播放，版權屬於原作者。存檔存在瀏覽器 localStorage。
 

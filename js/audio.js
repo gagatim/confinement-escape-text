@@ -33,8 +33,12 @@ function toggleBtnGlass(){const on=document.body.classList.toggle("btnglass");tr
 try{if(localStorage.getItem("jbts_btnglass")==="1")document.body.classList.add("btnglass");}catch(e){}
 function toggleBfx(){const off=document.body.classList.toggle("nobfx");try{localStorage.setItem("jbts_nobfx",off?"1":"");}catch(e){}} // 戰鬥特效（攻擊、技能、畫面震動）：記在這台裝置，預設開；純視覺，不影響戰鬥結果
 try{if(localStorage.getItem("jbts_nobfx"))document.body.classList.add("nobfx");}catch(e){}
+function toggleOrd(){const off=document.body.classList.toggle("noord");try{localStorage.setItem("jbts_noord",off?"1":"");}catch(e){}try{render();}catch(e){}} // 戰鬥畫面上方的「行動順序」列：記在這台裝置，預設開；純顯示
+try{if(localStorage.getItem("jbts_noord"))document.body.classList.add("noord");}catch(e){}
+function toggleSx(){const off=document.body.classList.toggle("nosx");try{localStorage.setItem("jbts_nosx",off?"1":"");}catch(e){}try{render();}catch(e){}} // 戰鬥結束時的「結算統計與 MVP」：記在這台裝置，預設開；純顯示
+try{if(localStorage.getItem("jbts_nosx"))document.body.classList.add("nosx");}catch(e){}
 function toggleCd(){SAVE.showCd=SAVE.showCd===false;save();render();} // 技能冷卻數字的顯示開關（預設開）
-// 右上角 ⚙ 的設定視窗：背景音樂、音效、技能冷卻數字三個開關，加上玩法導引；切換後視窗重開，狀態馬上更新
+// 右上角 ⚙ 的設定視窗：背景音樂、音效、技能冷卻數字、戰鬥特效、行動順序列、結算統計等開關，加上玩法導引；切換後視窗重開，狀態馬上更新
 function openSettings(){
   const row=(ic,name,on,fn)=>`<div class="row" style="align-items:center;margin:8px 0"><span style="flex:1">${ic} ${name}</span><button class="mini ${on?"ok":""}" style="min-width:64px" onclick="${fn};openSettings()">${on?"開":"關"}</button></div>`;
   openModal(`<h3>⚙ 設定</h3>
@@ -42,6 +46,8 @@ function openSettings(){
     ${row("🔊","音效",!SAVE.muted,"toggleMute()")}
     ${row("✦","技能冷卻數字（戰鬥中角色左上角）",SAVE.showCd!==false,"toggleCd()")}
     ${row("💥","戰鬥特效（攻擊、技能、畫面震動；只記在這台裝置）",!document.body.classList.contains("nobfx"),"toggleBfx()")}
+    ${row("🔢","行動順序列（戰鬥畫面上方；只記在這台裝置）",!document.body.classList.contains("noord"),"toggleOrd()")}
+    ${row("📊","結算統計與 MVP（戰鬥結束時；只記在這台裝置）",!document.body.classList.contains("nosx"),"toggleSx()")}
     ${row("🔘","立體按鈕（只記在這台裝置）",document.body.classList.contains("btn3d"),"toggleBtn3d()")}
     ${row("🫧","半透明按鈕（只記在這台裝置）",document.body.classList.contains("btnglass"),"toggleBtnGlass()")}
     <div class="row" style="align-items:center;margin:8px 0"><span style="flex:1">❓ 玩法導引</span><button class="mini" onclick="closeModal();openGuide(0)">開啟</button></div>

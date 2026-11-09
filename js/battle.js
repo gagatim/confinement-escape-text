@@ -503,6 +503,7 @@ function statsTable(B,side,title){
   return `<table class="sxt"><caption>${title}</caption><tr><th>角色</th><th>輸出</th><th>治療</th><th>承傷</th><th>擊倒</th></tr>${L.map(u=>`<tr class="${u.alive?"":"dead"}"><td>${nm(u)}${u===mvp?" <b class=\"mvp\">MVP</b>":""}</td><td>${u.sx.dmg}</td><td>${u.sx.heal}</td><td>${u.sx.taken}</td><td>${u.sx.kills}</td></tr>`).join("")}</table>`;
 }
 function statsHtml(B){
+  if(document.body.classList.contains("nosx"))return ""; // 設定裡可以關掉
   const me=B.mySide||"A",op=me==="A"?"B":"A",a=statsTable(B,me,B.labels[me]||"我方"),b=statsTable(B,op,B.labels[op]||"敵方");
   if(!a&&!b)return "";
   return `<div class="sxbox">${a}${b?`<details style="margin-top:6px"><summary class="dim small">敵方統計</summary>${b}</details>`:""}<div class="dim small" style="margin-top:4px">輸出、承傷只算實際扣掉的血量；MVP＝輸出＋治療最高。</div></div>`;
@@ -510,7 +511,7 @@ function statsHtml(B){
 // 行動順序列：本回合依序的小頭像（灰＝已行動、亮框＝正在行動），後面接「下回合預估」（依目前速度由快到慢，同速以「＝」相連，實際先後隨機）
 function orderChip(u,cls){return `<span class="ochip s${u.side} ${cls||""}" title="${u.name}　速度 ${stat(u,"spd")}"><span class="av">${avatar(u.id)}</span></span>`;}
 function orderBarHtml(B){
-  if(B.over||!B.order||!B.order.length)return "";
+  if(B.over||!B.order||!B.order.length||document.body.classList.contains("noord"))return ""; // 設定裡可以關掉
   const get=uid=>B.units.find(x=>x.uid===uid&&x.alive);
   const now=B.order.map((uid,i)=>({u:get(uid),i})).filter(x=>x.u);
   if(!now.length)return "";

@@ -183,7 +183,7 @@ function handleDeath(B,t,killer){
 // 魔王出手時的螢幕震動：只有支線八大魔王（有立繪 img:true 的）會震；暴擊或重擊（單次傷害 ≥ 目標最大生命 25%）震得更大
 function isBossUnit(u){const m=MONSTERS[u.id];return !!m&&m.img===true&&m.r==="SSR";}
 function screenShake(big){
-  if(VIEW!=="battle")return;
+  if(VIEW!=="battle"||document.body.classList.contains("nobfx"))return;
   const el=document.getElementById("view");if(!el)return;
   el.classList.remove("bshake","big");void el.offsetWidth;
   el.classList.add("bshake");if(big)el.classList.add("big");
@@ -191,7 +191,7 @@ function screenShake(big){
 }
 /* ---- 攻擊特效（純視覺，不影響戰鬥結果）----
    出手：攻擊者往目標前衝再退回；命中：依攻擊者職業有不同效果（戰士／預設＝斬擊、坦克＝衝擊環、刺客＝交叉雙斬、
-   遊俠＝箭矢飛行、法師＝魔法球飛行、輔助＝光環）；暴擊＝金色放大＋畫面閃白；技能：施放者發光＋畫面四周變暗。
+   遊俠＝箭矢飛行、法師＝魔法球飛行、輔助＝光環）；暴擊＝金色放大；技能：施放者發光＋畫面四周變暗。
    快速模式（B.fast）所有動畫時間縮短為 45%。 */
 const VFX_COL={warrior:"#ff7a3d",tank:"#8fb4ff",assassin:"#c08bff",ranger:"#7be07a",mage:"#7ad7ff",support:"#ffe27a"};
 function vfxAdd(L,cls,x,y,col,k,base,css){
@@ -201,7 +201,7 @@ function vfxAdd(L,cls,x,y,col,k,base,css){
   L.appendChild(e);setTimeout(()=>e.remove(),(base||.4)*k*1000+80);return e;
 }
 function atkFx(B,a,t,crit){
-  if(VIEW!=="battle"||a===t)return;
+  if(VIEW!=="battle"||a===t||document.body.classList.contains("nobfx"))return;
   requestAnimationFrame(()=>{
     const ea=document.getElementById("u"+a.uid),et=document.getElementById("u"+t.uid),L=$("#fx");
     if(!ea||!et||!L)return;
@@ -230,14 +230,13 @@ function atkFx(B,a,t,crit){
       else vfxAdd(L,"slash",tx,ty,col,k,.3,{"--rot":"-35deg","--s":big}); // 戰士、怪物
       if(crit){
         vfxAdd(L,"ring",tx,ty,"#fff",k,.4,{"--s":3.4});
-        const f=document.createElement("div");f.className="vflash";f.style.animationDuration=.2*k+"s";L.appendChild(f);setTimeout(()=>f.remove(),260*k);
       }
     },wait*1000);
   });
 }
 // 技能出招：施放者發光，畫面四周變暗
 function castFx(B,u){
-  if(VIEW!=="battle")return;
+  if(VIEW!=="battle"||document.body.classList.contains("nobfx"))return;
   requestAnimationFrame(()=>{
     const e=document.getElementById("u"+u.uid),L=$("#fx");if(!e||!L)return;
     const k=B.fast?.45:1;

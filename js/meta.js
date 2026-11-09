@@ -145,6 +145,9 @@ function fkRankOf(boss){
   return (SAVE.fkr&&SAVE.fkr[boss])||(boss===FK_BOSS&&SAVE.fk&&SAVE.fk.rank)||0;
 }
 const fkRank=()=>fkRankOf(FK_BOSS);
+// 稱號特效開關（只管稱號，跟角色卡的特效動畫開關各自獨立；存在這台裝置的瀏覽器）
+try{if(localStorage.getItem("jbts_nofkfx"))document.body.classList.add("nofkfx");}catch(e){}
+function toggleFkFx(){const off=document.body.classList.toggle("nofkfx");try{localStorage.setItem("jbts_nofkfx",off?"1":"");}catch(e){}SFX.click();openAccount();}
 const fkTitle=()=>FK_BOSSES.filter(b=>fkRankOf(b)).map(b=>`🏅<span class="fkt fkt${fkRankOf(b)}">${fkTitleOf(b,fkRankOf(b))}</span>`).join(" ");
 // 打贏第 5、6 位魔王後呼叫：回傳要顯示的訊息（空字串＝不用顯示）
 async function fkClaim(boss){
@@ -235,7 +238,7 @@ function fmtPlay(sec){const m=Math.floor(sec/60);return m>=60?`${Math.floor(m/60
 function saveSummary(s){return `🪙${s.gold}・抽 ${s.pulls} 次・角色 ${Object.keys(s.owned).length} 名・${s.prog.cleared>=ABYSS?"主線全破":`主線第 ${s.prog.cleared+1} 章`}${typeof s.playSec==="number"?`・遊戲時間 ${fmtPlay(s.playSec)}`:""}${s.updatedAt?`<br><span class="dim">最後存檔 ${new Date(s.updatedAt).toLocaleString()}</span>`:""}`;}
 function openAccount(){
   if(ACCT)return openModal(`<h3>👤 ${ACCT.name}${fkTitle()?` <span class="small">${fkTitle()}</span>`:""}</h3>
-    <p class="small">已登入。存檔會自動上傳雲端，換手機或電腦登入同一個帳號就能接著玩。</p>
+    ${fkTitle()?`<div style="margin:4px 0"><button class="mini" onclick="toggleFkFx()">${document.body.classList.contains("nofkfx")?"開啟":"關閉"}稱號特效</button></div>`:""}<p class="small">已登入。存檔會自動上傳雲端，換手機或電腦登入同一個帳號就能接著玩。</p>
     <p class="small dim">${SYNC_MSG||"尚未同步"}</p>
     <div class="opts"><button class="pri" onclick="uploadSave(true)">☁ 立即上傳存檔</button>
       <button onclick="pullCloud(true)">⬇ 從雲端下載存檔</button>

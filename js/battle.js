@@ -44,7 +44,7 @@ function poison(B,t,d,turns){
   if(t.id==="chemist"||t.id==="drone"){fx(B,t,"免疫","miss");return;}
   if(B.casting&&clsOf(B.casting)==="mage"&&B.casting.side!==t.side)d+=1;
   const p=t.st.poison||{d:0,t:0};
-  t.st.poison={d:Math.max(p.d,d),t:Math.max(p.t,turns)};
+  if(d*turns>p.d*p.t)t.st.poison={d,t:turns}; // 不累加：已經中毒時，整份比「每回合傷害×剩餘回合」，只保留總傷害較高的那一份（一樣就保留原本的），不再把兩份拼成更強的毒
 }
 function stun(B,t,n){t.st.stun=Math.max(t.st.stun||0,n);blog(B,`${nm(t)} 被暈眩了！`);fx(B,t,"暈眩","sk");}
 function cleanse(u){delete u.st.poison;u.buffs=u.buffs.filter(b=>b.v>0);}

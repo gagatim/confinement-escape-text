@@ -33,7 +33,7 @@ const GEAR={
   aegis:{name:"神盾",icon:"🔰",slot:"weapon",q:"SSR",cls:["tank","support"],st:{atk:4,def:4,hp:14}},
   exo:{name:"外骨骼裝甲",icon:"🤖",slot:"armor",q:"SSR",st:{hp:18,def:3,atk:2}},
   watch:{name:"主辦人的懷錶",icon:"⏱️",slot:"acc",q:"SSR",st:{spd:2,atk:3,hp:6}},
-  holyboots:{name:"聖煌之靴",icon:"👢",slot:"boots",q:"SSR",off:1,st:{spd:3,hp:8,def:1,atk:2}}, // 新增先封住（off:1），取得方式還沒定；不進一般掉落／商店
+  holyboots:{name:"聖煌之靴",icon:"👢",slot:"boots",q:"SSR",off:1,st:{spd:3,hp:8,def:1,atk:2}}, // 只從恐龍蛋專區第五區打倒寶貝龍通關掉落（23%）；不進一般掉落／商店
   gavel:{name:"審判之槌",icon:"🔨",slot:"weapon",q:"UR",st:{atk:9,hp:10,spd:1}},
   abyssmail:{name:"深淵之甲",icon:"🧿",slot:"armor",q:"UR",st:{hp:24,def:4,atk:2}},
   scales:{name:"天秤徽章",icon:"⚖️",slot:"acc",q:"UR",st:{atk:4,spd:2,hp:8}},

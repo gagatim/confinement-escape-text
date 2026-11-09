@@ -50,9 +50,9 @@ const CARDS={
         use(B,u){blog(B,"🌨 暴風雪席捲了整個戰場。");foes(B,u).forEach(t=>{const d=hit(B,u,t,1.6);if(t.alive&&d>0&&rnd()<((isBossUnit(t)||t.id==="babydragon")?.10:.15))stun(B,t,1);});}}],
     passive:{name:"能量外套",desc:"受到傷害時，實際受到的傷害減免15%。"}},
   master:{name:"主人",r:"SSR",off:1,hp:34,atk:6,def:3,spd:1,
-    skill:{name:"乖，過來",cd:2,t:"ally",kind:"heal",desc:"治療1名隊友，治療量為自己攻擊的2.2倍，並清除其負面狀態；被治療的隊友受到的傷害-20%、攻擊+12%（2回合，至少+1）。",
+    skill:{name:"乖，過來",cd:2,t:"ally",kind:"heal",desc:"治療1名隊友，治療量為自己攻擊的2.2倍，並清除其負面狀態；被治療的隊友攻擊+12%（2回合，至少+1）。",
       use(B,u,t){blog(B,`${nm(u)} 招了招手：「乖，過來。」`);heal(B,t,Math.round(stat(u,"atk")*2.2));cleanse(t);
-        buff(B,t,"dr",20,2);buff(B,t,"atk",Math.max(1,Math.round(stat(t,"atk")*.12)),2);}},
+        buff(B,t,"atk",Math.max(1,Math.round(stat(t,"atk")*.12)),2);}},
     passive:{name:"寵愛／神隱",desc:"「寵愛」：自己的回合開始時，全體隊友各回復3%最大生命（自己生命低於40%時為5%）。「神隱」：不會普通攻擊；輪到自己時技能在冷卻中無法施放，就自動進入防禦（受到的傷害減半，並回復1點生命）。"}},
 
   merc:{name:"雇傭兵",r:"SR",hp:28,atk:6,def:2,spd:3,

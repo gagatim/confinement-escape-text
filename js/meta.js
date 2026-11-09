@@ -93,6 +93,7 @@ const ACH=[
   {g:"戰鬥",id:"boss3",n:"不可能的任務",d:"打倒第 3 位支線魔王「命運裁決者」",v:s=>(s.bosses||{}).fatejudge?1:0,t:1,r:{stone:30}},
   {g:"戰鬥",id:"fk5",n:"深淵君王首殺",d:"成為前 3 名擊敗第 5 位支線魔王「深淵君王」的玩家（需登入帳號）",v:s=>(s.fk&&s.fk.rank)?1:0,t:1,r:{note:"🏅首殺稱號＋🌟金色攻擊果實"}},
   {g:"戰鬥",id:"fk6",n:"永夜帝王首殺",d:"成為前 3 名擊敗第 6 位支線魔王「永夜帝王」的玩家（需登入帳號）",v:s=>(s.fkr&&s.fkr.nightemperor)?1:0,t:1,r:{note:"🏅首殺稱號＋🌟金色防禦果實"}},
+  {g:"戰鬥",id:"fk7",n:"天命霸主首殺",d:"成為前 3 名擊敗第 7 位支線魔王「天命霸主」的玩家（需登入帳號）",v:s=>(s.fkr&&s.fkr.overlord)?1:0,t:1,r:{note:"🏅首殺稱號＋🌟金色速度果實＋金色攻擊果實"}},
   {g:"裝備",id:"gear10",n:"強化大師",d:"任一裝備強化到 +10",v:s=>maxOf((s.gear||[]).map(g=>g.lv)),t:10,r:{stone:5}},
   {g:"裝備",id:"gearUR",n:"傳說入手",d:"獲得 1 件 UR 傳說裝備",v:s=>(s.gear||[]).some(g=>GEAR[g.base].q==="UR")?1:0,t:1,r:{gold:50}},
   {g:"裝備",id:"gearEX",n:"魔王的遺物",d:"獲得 1 件 EX 魔王專屬裝備",v:s=>(s.gear||[]).some(g=>GEAR[g.base].q==="EX")?1:0,t:1,r:{stone:5}},
@@ -119,10 +120,15 @@ function checkAch(){
 const FK_SLOTS=3,FK_REWARD={1:2,2:1,3:1};
 const FK_CFG={
   abyssking:{stat:"atk",statName:"攻擊"},
-  nightemperor:{stat:"def",statName:"防禦"}
+  nightemperor:{stat:"def",statName:"防禦"},
+  overlord:{stat:"spd",statName:"速度",extra:{atk:1}} // extra：每個名次額外多給的金色果實（天命霸主每名多 1 顆金色攻擊果實）
 };
 const FK_BOSSES=Object.keys(FK_CFG),FK_BOSS="abyssking";
 const FK_SUFFIX={1:"首殺者",2:"亞軍",3:"追擊者"}; // 稱號＝魔王名＋依名次的後綴
+const FK_STAT={atk:"攻擊",def:"防禦",spd:"速度"};
+// 某魔王某名次的金色果實獎勵：{atk:n,…}
+function fkFruits(boss,rank){const C=FK_CFG[boss],o={};o[C.stat]=FK_REWARD[rank];for(const k in (C.extra||{}))o[k]=(o[k]||0)+C.extra[k];return o;}
+const fkFruitStr=(boss,rank)=>Object.entries(fkFruits(boss,rank)).map(([k,v])=>`金色${FK_STAT[k]}果實 ×${v}`).join("＋");
 const fkTitleOf=(boss,rank)=>MONSTERS[boss].name+FK_SUFFIX[rank];
 const FK={slots:{},tried:false,ok:false,err:false}; // slots[魔王代號]＝{1:{uid,name,t},…}；ok：榜單讀到過；err：最近一次讀取失敗（沒網路、測試版等），這時不能顯示成「虛位以待」
 const fkEsc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -159,9 +165,9 @@ async function fkClaim(boss){
     if(!rank)return `🏅 ${nm}首殺榜的 3 個名額已經被搶走了。`;
     SAVE.fkr[boss]=rank;
     if(boss===FK_BOSS)SAVE.fk={rank,at:Date.now()};
-    if(fresh)SAVE.gfruits[C.stat]=(SAVE.gfruits[C.stat]||0)+FK_REWARD[rank];
+    if(fresh)for(const [k,v] of Object.entries(fkFruits(boss,rank)))SAVE.gfruits[k]=(SAVE.gfruits[k]||0)+v;
     save();checkAch();SFX.ssr();
-    return `🏅 <b class="rEX">你是第 ${rank} 位擊敗${nm}的玩家！</b>獲得稱號「${fkTitleOf(boss,rank)}」${fresh?`與 🌟金色${C.statName}果實 ×${FK_REWARD[rank]}（到角色卡使用）`:""}`;
+    return `🏅 <b class="rEX">你是第 ${rank} 位擊敗${nm}的玩家！</b>獲得稱號「${fkTitleOf(boss,rank)}」${fresh?`與 🌟${fkFruitStr(boss,rank)}（到角色卡使用）`:""}`;
   }catch(e){glog("❌FK","搶首殺名額失敗 "+(e&&e.code||e&&e.message||e));return `🏅 首殺榜連線失敗，下次打贏${nm}再試。`;}
 }
 function fkBoardHtml(){
@@ -170,9 +176,9 @@ function fkBoardHtml(){
     const C=FK_CFG[boss],me=fkRankOf(boss),name=MONSTERS[boss].name,i=BOSS_LIST.indexOf(boss);
     const rows=!FK.ok?`<div class="small dim" style="margin:6px 0">${FK.err?"⚠ 榜單讀取失敗（可能沒有網路，或是測試版不開放），請稍後按「重新整理榜單」再試。":"榜單載入中……"}</div>`
     :[1,2,3].map(n=>{const s=(FK.slots[boss]||{})[n];
-      return `<div class="small" style="margin:3px 0">${medal[n-1]} 第 ${n} 名・${s?`<b>${fkEsc(s.name)}</b> <span class="dim">${new Date(s.t).toLocaleDateString()}</span>`:`<span class="dim">虛位以待</span>`}　<span class="dim">🌟金色${C.statName}果實 ×${FK_REWARD[n]}</span></div>`;}).join("");
+      return `<div class="small" style="margin:3px 0">${medal[n-1]} 第 ${n} 名・${s?`<b>${fkEsc(s.name)}</b> <span class="dim">${new Date(s.t).toLocaleDateString()}</span>`:`<span class="dim">虛位以待</span>`}　<span class="dim">🌟${fkFruitStr(boss,n)}</span></div>`;}).join("");
     return `<div class="panel" style="margin-top:12px"><b>🏅 全服首殺榜・第 ${i+1} 位 ${name}</b>
-    <p class="dim small" style="margin:4px 0">全服前 3 位擊敗${name}的玩家，可以得到稱號（第 1 名「${fkTitleOf(boss,1)}」、第 2 名「${fkTitleOf(boss,2)}」、第 3 名「${fkTitleOf(boss,3)}」）、成就和金色${C.statName}果實。要<b>登入帳號</b>才能搶名額，以名額被搶走的先後排名。</p>
+    <p class="dim small" style="margin:4px 0">全服前 3 位擊敗${name}的玩家，可以得到稱號（第 1 名「${fkTitleOf(boss,1)}」、第 2 名「${fkTitleOf(boss,2)}」、第 3 名「${fkTitleOf(boss,3)}」）、成就和金色果實。要<b>登入帳號</b>才能搶名額，以名額被搶走的先後排名。</p>
     ${rows}${me?`<div class="small" style="color:var(--green);margin-top:4px">✓ 你是第 ${me} 名</div>`:!ACCT?`<div class="small" style="color:var(--gold);margin-top:4px">登入帳號後打贏才能搶名額</div>`:""}</div>`;
   }).join("");
 }

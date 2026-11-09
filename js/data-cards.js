@@ -44,10 +44,10 @@ const CARDS={
   // 冰霜葉（暫名）：預計中的新 SSR 術士，有兩個主動技能。off:1＝尚未開放取得，只在圖鑑展示；開放時拿掉 off 即可
   icemage:{name:"冰霜葉",r:"SSR",off:1,hp:30,atk:7,def:2,spd:2,
     skills:[
-      {name:"元素漩渦",cd:6,t:"enemy",kind:"dmg",desc:"對1名敵人造成3倍攻擊傷害（術士加成後約3.6倍），有15%機率完全無視對方的防禦，其餘時候受對方防禦影響。",
+      {name:"元素漩渦",cd:5,t:"enemy",kind:"dmg",desc:"對1名敵人造成3倍攻擊傷害（術士加成後約3.6倍），有15%機率完全無視對方的防禦，其餘時候受對方防禦影響。",
         use(B,u,t){const ig=rnd()<.15;if(ig)blog(B,`❄ ${nm(u)} 的寒氣穿透了一切防禦！`);hit(B,u,t,3,ig?{ignoreDef:true}:{});}},
-      {name:"暴風雪",cd:3,t:"none",kind:"dmg",desc:"對全體敵人各造成1.5倍攻擊傷害（受對方防禦影響；術士加成後約1.8倍），每個被打中的敵人有15%機率暈眩1回合（對魔王只有10%）。",
-        use(B,u){blog(B,"🌨 暴風雪席捲了整個戰場。");foes(B,u).forEach(t=>{const d=hit(B,u,t,1.5);if(t.alive&&d>0&&rnd()<((isBossUnit(t)||t.id==="babydragon")?.10:.15))stun(B,t,1);});}}],
+      {name:"暴風雪",cd:4,t:"none",kind:"dmg",desc:"對全體敵人各造成1.6倍攻擊傷害（受對方防禦影響；術士加成後約1.92倍），每個被打中的敵人有15%機率暈眩1回合（對魔王只有10%）。",
+        use(B,u){blog(B,"🌨 暴風雪席捲了整個戰場。");foes(B,u).forEach(t=>{const d=hit(B,u,t,1.6);if(t.alive&&d>0&&rnd()<((isBossUnit(t)||t.id==="babydragon")?.10:.15))stun(B,t,1);});}}],
     passive:{name:"能量外套",desc:"受到傷害時，實際受到的傷害減免15%。"}},
   master:{name:"主人",r:"SSR",off:1,hp:34,atk:6,def:3,spd:1,
     skill:{name:"乖，過來",cd:2,t:"ally",kind:"heal",desc:"治療1名隊友，治療量為自己攻擊的2.2倍，並清除其負面狀態；被治療的隊友受到的傷害-20%、攻擊+12%（2回合，至少+1）。",

@@ -91,7 +91,8 @@ function openBossShow(id,ph){
     <div class="row" style="margin-top:12px"><button class="pri" onclick="closeModal();go('boss')">前往魔王討伐</button><button onclick="closeModal()" style="margin-left:auto">關閉</button></div>`);
 }
 function skillHtml(d){
-  return `<div class="sk"><b>✦ ${d.skill.name}</b> <span class="dim small">冷卻 ${d.skill.cd}</span><br>${d.skill.desc}</div>
+  const sks=d.skills||[d.skill];
+  return sks.map(k=>`<div class="sk"><b>✦ ${k.name}</b> <span class="dim small">冷卻 ${k.cd}</span><br>${k.desc}</div>`).join("")+`
   <div class="sk"><b>◈ ${d.passive.name}</b> <span class="dim small">被動</span><br>${d.passive.desc}</div>`;
 }
 function showCard(id){

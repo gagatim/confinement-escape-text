@@ -5,7 +5,8 @@ function mkUnit(o){
   const d=DEF(o.id),s=cardStats(o.id,o.stars||1,o.scale||1,o.br||0);
   const u={uid:++UID,id:o.id,name:o.name||d.name,side:o.side,stars:o.stars||1,
     maxHp:o.maxHp||s.maxHp,atk:s.atk+(o.atk||0),def:s.def+(o.def||0),spd:s.spd+(o.spd||0),
-    cd:0,buffs:[],st:{},perm:{},flags:{},alive:true,ally:!!o.ally,ref:o.ref||null,gx:o.gx||{},br:o.br||0,pl:o.pl||""};
+    cds:skillsOf(o.id).map(()=>0),buffs:[],st:{},perm:{},flags:{},alive:true,ally:!!o.ally,ref:o.ref||null,gx:o.gx||{},br:o.br||0,pl:o.pl||""};
+  Object.defineProperty(u,"cd",{get(){return this.cds[0]||0;},set(v){this.cds[0]=v;},enumerable:true,configurable:true}); // 舊程式讀寫的 u.cd＝第 1 個技能的冷卻（相容用）
   const mul=o.mult||1;
   if(mul!==1){u.maxHp=Math.round(u.maxHp*mul);u.atk=Math.round(u.atk*mul);u.def=Math.round(u.def*mul);u.spd=Math.round(u.spd*mul);}
   // 章節強度：越後面的主線章節，敵人生命、攻擊、防禦越高（速度不變）
@@ -159,7 +160,7 @@ function handleDeath(B,t,killer){
   if(t.id==="exorcist"&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*.3);t.perm.def=(t.perm.def||0)+15;blog(B,`${nm(t)} 的臨終祝禱生效，從死亡中歸來！（本場防禦+15）`,"big");fx(B,t,"復活","heal");return;}
   if(DEF(t.id).boss2&&!t.flags.p2){
     const b2=DEF(t.id).boss2;t.flags.p2=1;t.hp=Math.ceil(t.maxHp*b2.hp);t.st={};t.buffs=t.buffs.filter(b=>b.v>0);
-    t.perm.atk=(t.perm.atk||0)+Math.round(t.atk*b2.atk);t.perm.spd=(t.perm.spd||0)+b2.spd;t.cd=0;
+    t.perm.atk=(t.perm.atk||0)+Math.round(t.atk*b2.atk);t.perm.spd=(t.perm.spd||0)+b2.spd;t.cds.fill(0);
     blog(B,`💢 ${nm(t)} 的氣場爆發了！——第二階段！`,"bad");blog(B,`「${DEF(t.id).quote}」`,"big");fx(B,t,"爆氣！","crit");SFX.ssr();return;}
   if(DEF(t.id).revive&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*DEF(t.id).revive);blog(B,`⚖ ${nm(t)} 重新站了起來：「判決，還沒有結束。」`,"big");fx(B,t,"復活","heal");return;}
   if(t.id==="host"&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*.3);blog(B,`🎭 ${nm(t)} 拍了拍身上的灰：「我說過，莊家不會輸。」`,"big");fx(B,t,"復活","heal");return;}
@@ -257,9 +258,11 @@ function fx(B,u,text,cls){
   });
 }
 
-function canUseSkill(B,u){
-  const sk=DEF(u.id).skill;
-  if(u.cd>0)return false;
+const cdsOf=u=>u.cds||[u.cd||0]; // 房客端的單位來自快照，沒有 cds 時退回只有第 1 個技能的 cd
+function canUseSkill(B,u,i=0){
+  const sk=skillsOf(u.id)[i];
+  if(!sk)return false;
+  if((cdsOf(u)[i]||0)>0)return false;
   if(u.id==="mediocre"&&u.hp<=3)return false;
   if(u.id==="geneFreak"&&u.hp<=5)return false;
   if(sk.t==="mate"&&mates(B,u).filter(x=>x!==u).length===0)return false;
@@ -278,8 +281,10 @@ function aiFoe(B,u){
   return pick(f);
 }
 function aiChoose(B,u){
-  const sk=DEF(u.id).skill;
-  if(canUseSkill(B,u)){
+  const sks=skillsOf(u.id),order=sks.map((s,i)=>i).sort((a,b)=>sks[b].cd-sks[a].cd||a-b); // 多個技能都能用時，優先放冷卻較長的
+  for(const si of order){
+    const sk=sks[si];
+    if(!canUseSkill(B,u,si))continue;
     const ms=mates(B,u),hurt=ms.filter(m=>m.hp<m.maxHp*.65);
     let ok=true,target=null;
     if(sk.kind==="heal"&&!hurt.length&&!(u.id==="exorcist"&&deadMates(B,u).length))ok=false;
@@ -287,7 +292,7 @@ function aiChoose(B,u){
     if(sk.t==="ally")target=(hurt.length?hurt:ms).slice().sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0];
     if(sk.t==="mate")target=pick(validTargets(B,u,"mate"));
     if((u.id==="fatty"||u.id==="fatty2")&&u.st.taunt>0)ok=false;
-    if(ok)return {type:"skill",target};
+    if(ok)return {type:"skill",i:si,target};
   }
   if(B.items&&u.side==="A"&&!u.ally){
     const low=mates(B,u).filter(m=>!m.ally&&m.hp<m.maxHp*.35)[0],pi=B.items.indexOf("pill");
@@ -374,7 +379,7 @@ async function takeTurn(B,u){
   B.active=u;u.flags.extraUsed=0;u.flags.extraPending=0;
   delete u.st.guard;
   if(B.wall[u.side]===u.uid)delete B.wall[u.side];
-  if(u.cd>0)u.cd--;
+  u.cds.forEach((c,i)=>{if(c>0)u.cds[i]--;});
   // 回合開始：中毒、回血類被動
   if(u.st.poison){
     const p=u.st.poison;u.hp-=p.d;fx(B,u,"☠-"+p.d,"dmg");blog(B,`${nm(u)} 受到 ${p.d} 點毒傷。`);
@@ -391,7 +396,7 @@ async function takeTurn(B,u){
   if(DEF(u.id).regenp)heal(B,u,Math.round(u.maxHp*DEF(u.id).regenp));
   if(u.id==="babydragon"&&!u.flags.p2&&u.hp<=u.maxHp*.5){ // 寶貝龍「巨龍覺醒」：生命降到一半以下，回合開始時變身成巨龍
     u.flags.p2=1;u.name="巨龍";u.st={};u.buffs=u.buffs.filter(b=>b.v>0);
-    u.perm.atk=(u.perm.atk||0)+Math.round(u.atk*.4);u.perm.def=(u.perm.def||0)+4;u.perm.spd=(u.perm.spd||0)+4;u.cd=0;
+    u.perm.atk=(u.perm.atk||0)+Math.round(u.atk*.4);u.perm.def=(u.perm.def||0)+4;u.perm.spd=(u.perm.spd||0)+4;u.cds.fill(0);
     heal(B,u,Math.round(u.maxHp*.3));
     blog(B,`🐲 ${nm(u)} 的蛋殼碎裂，體型暴漲——變身成了巨龍！`,"bad");fx(B,u,"變身！","crit");SFX.ssr();
   }
@@ -425,9 +430,9 @@ function endTurn(u){
 function doAction(B,u,a){
   if(a.type==="attack"){if(a.target){hit(B,u,a.target,1);if(u.id==="diviner"&&a.target.alive)poison(B,a.target,5,3);if(u.id==="venomfrog"&&a.target.alive)poison(B,a.target,Math.max(1,Math.round(stat(u,"atk")*.15)),2);}} // 占卜師、毒蛙被動「毒傷」（技能的毒寫在技能裡）
   else if(a.type==="skill"){
-    const sk=DEF(u.id).skill;
+    const si=a.i||0,sk=skillsOf(u.id)[si];
     blog(B,`✦ ${nm(u)} 發動【${sk.name}】`);fx(B,u,sk.name,"sk");castFx(B,u);
-    B.casting=u;sk.use(B,u,a.target);B.casting=null;u.cd=sk.cd-(u.flags.p2?1:0);
+    B.casting=u;sk.use(B,u,a.target);B.casting=null;u.cds[si]=sk.cd-(u.flags.p2?1:0);
   }
   else if(a.type==="guard"){u.st.guard=1;blog(B,`${nm(u)} 擺出防禦架勢（受到傷害減半）。`);heal(B,u,1);}
   else if(a.type==="item")useBattleItem(B,u,a.idx,a.target);
@@ -444,17 +449,17 @@ function useBattleItem(B,u,idx,t){
 
 /* ---- human input ---- */
 function waitHuman(B,u){return new Promise(res=>{KB_SEL="";KB_ROW="act";B.wait={u,res,mode:"menu"};render();});}
-function act(kind){
+function act(kind,si=0){
   const B=CUR_B;if(!B)return;
   if(kind==="auto"){B.auto=!B.auto;SFX.click();if(B.auto&&B.wait)return resolveHuman(aiChoose(B,B.wait.u));render();return;}
   const w=B.wait;if(!w)return;
   SFX.click();
-  const u=w.u,sk=DEF(u.id).skill;
+  const u=w.u,sk=skillsOf(u.id)[si]||skillsOf(u.id)[0];
   if(kind==="attack"){if(u.id==="master")return;w.mode="target";w.action={type:"attack"};w.tt="enemy";w.label="普通攻擊";}
   else if(kind==="skill"){
-    if(!canUseSkill(B,u))return;
-    if(["enemy","ally","mate"].includes(sk.t)){w.mode="target";w.action={type:"skill"};w.tt=sk.t;w.label=sk.name;}
-    else return resolveHuman({type:"skill"});
+    if(!canUseSkill(B,u,si))return;
+    if(["enemy","ally","mate"].includes(sk.t)){w.mode="target";w.action={type:"skill",i:si};w.tt=sk.t;w.label=sk.name;}
+    else return resolveHuman({type:"skill",i:si});
   }
   else if(kind==="guard")return resolveHuman({type:"guard"});
   else if(kind==="items"){w.mode="items";}
@@ -491,9 +496,9 @@ function unitCard(B,u){
   if(u.buffs.some(b=>b.v>0))st.push("▲");
   if(u.buffs.some(b=>b.v<0))st.push("▼");
   const d=DEF(u.id),cl=CARDS[u.id]?CLASSES[CARDS[u.id].cls]:null;
-  return `<div class="ucard s${u.side} ${CARDS[u.id]?"q-"+CARDS[u.id].r:""} ${d.boss2||d.transform?"bossu":""} ${u.flags&&u.flags.p2?"p2":""} ${u.flags&&u.flags.frenzy?"frenzy":""} ${u.br?brTier(u.br):""} ${u.alive?"":"dead"} ${B.active===u&&!B.over?"active":""} ${tg?"targetable":""}" id="u${u.uid}" onclick="onUnitClick(${u.uid})" title="${d.skill.name}：${d.skill.desc}\n${pasOf(u,d).name}：${pasOf(u,d).desc}">
+  return `<div class="ucard s${u.side} ${CARDS[u.id]?"q-"+CARDS[u.id].r:""} ${d.boss2||d.transform?"bossu":""} ${u.flags&&u.flags.p2?"p2":""} ${u.flags&&u.flags.frenzy?"frenzy":""} ${u.br?brTier(u.br):""} ${u.alive?"":"dead"} ${B.active===u&&!B.over?"active":""} ${tg?"targetable":""}" id="u${u.uid}" onclick="onUnitClick(${u.uid})" title="${skillsOf(u.id).map(k=>k.name+"："+k.desc).join("\n")}\n${pasOf(u,d).name}：${pasOf(u,d).desc}">
     <div class="uav">${avatar(u.id,u.flags&&u.flags.p2)}</div>
-    ${u.cd>0&&u.alive&&SAVE.showCd!==false?`<div class="cdbadge">✦${u.cd}</div>`:""}
+    ${cdsOf(u).some(c=>c>0)&&u.alive&&SAVE.showCd!==false?`<div class="cdbadge">✦${cdsOf(u).length>1?cdsOf(u).join("/"):cdsOf(u)[0]}</div>`:""}
     <div class="uname">${cl?`<span title="${cl.name}：${cl.desc}">${cl.icon}</span>`:""}${u.ally?"🤝":""}${(B.coop||B.t2)&&u.pl?`<span class="tag" style="margin-right:3px">${B.t2?(u.pl===B.mySeat?"我":"P"+(+u.pl+1)):u.pl===(B.guest?"B":"A")?"我":"隊友"}</span>`:""}${u.name}${u.br?`<span class="brkname">突破${u.br}</span>`:""}</div>
     <div class="hpbar ${pct>50?"hi":""}"><i style="width:${pct}%"></i><span>${Math.max(0,u.hp)}/${u.maxHp}</span></div>
     <div class="ustat">⚔${stat(u,"atk")} 🛡${stat(u,"def")} 💨${stat(u,"spd")}</div>
@@ -508,7 +513,7 @@ function actionPanel(B){
   }
   const w=B.wait;
   if(!w)return `<div class="apanel dim">${B.active?nm(B.active)+" 行動中……":"……"}</div>`;
-  const u=w.u,sk=DEF(u.id).skill,who=B.ctrl.A==="human"&&B.ctrl.B==="human"?`<span class="tag">${B.labels[u.side]}</span> `:"";
+  const u=w.u,sks=skillsOf(u.id),who=B.ctrl.A==="human"&&B.ctrl.B==="human"?`<span class="tag">${B.labels[u.side]}</span> `:"";
   if(w.mode==="target")return `<div class="apanel"><div class="who">${who}${nm(u)}：選擇【${w.label}】的目標（點選發光的角色）</div><div class="btns"><button data-kb="back" onclick="cancelTarget()">✕ 取消</button></div>${KB_HINT}</div>`;
   if(w.mode==="items")return `<div class="apanel"><div class="who">選擇道具</div><div class="btns">
     ${groupItems(B.items).map(g=>ITEMS[g.id].battle?`<button data-kb="item${g.i}" onclick="pickItem(${g.i})" title="${ITEMS[g.id].desc}">${ITEMS[g.id].icon}${ITEMS[g.id].name}${g.n>1?`×${g.n}`:""}</button>`:"").join("")||"<span class='dim'>沒有可在戰鬥中使用的道具</span>"}
@@ -516,10 +521,10 @@ function actionPanel(B){
   const usable=B.items?B.items.filter(id=>ITEMS[id].battle).length:0;
   return `<div class="apanel"><div class="who">${who}${nm(u)} 的回合</div><div class="btns">
     <button class="atk" data-kb="attack" onclick="act('attack')">⚔ 攻擊</button>
-    <button data-kb="skill" onclick="act('skill')" ${canUseSkill(B,u)?"":"disabled"} class="${canUseSkill(B,u)?"pri":""}">✦ ${sk.name}${u.cd>0?`（${u.cd}）`:""}</button>
+    ${sks.map((sk,si)=>{const ok=canUseSkill(B,u,si),c=cdsOf(u)[si]||0;return `<button data-kb="${si?"skill"+(si+1):"skill"}" onclick="act('skill',${si})" ${ok?"":"disabled"} class="${ok?"pri":""}">✦ ${sk.name}${c>0?`（${c}）`:""}</button>`;}).join("")}
     <button data-kb="guard" onclick="act('guard')">🛡 防禦</button>
     ${B.items?`<button data-kb="items" onclick="act('items')" ${usable?"":"disabled"}>🎒 道具 ${usable}</button>`:""}
-  </div>${KB_HINT}${B.guest?`<div class="skdesc">（${(B.t2?T2_TIMEOUT:REMOTE_TIMEOUT)/1000} 秒內沒有行動會自動出手）</div>`:""}<div class="skdesc">✦ ${sk.desc}　◈ ${pasOf(u,DEF(u.id)).name}：${pasOf(u,DEF(u.id)).desc}</div></div>`;
+  </div>${KB_HINT}${B.guest?`<div class="skdesc">（${(B.t2?T2_TIMEOUT:REMOTE_TIMEOUT)/1000} 秒內沒有行動會自動出手）</div>`:""}<div class="skdesc">${sks.map(sk=>`✦ ${sk.name}：${sk.desc}`).join("<br>")}${sks.length>1?"<br>":"　"}◈ ${pasOf(u,DEF(u.id)).name}：${pasOf(u,DEF(u.id)).desc}</div></div>`;
 }
 
 /* ---- 鍵盤操作（戰鬥中） ----
@@ -527,14 +532,15 @@ function actionPanel(B){
    想換目標：按 ↑（W）把游標移到目標列，←→ 換一隻，Enter 就打這一隻，↓（S）回到行動列；也可以按 Tab 直接換目標。
    進到選道具／選目標畫面時，←→ 換目標、Enter 確認、Esc 返回。 */
 let KB_SEL="",KB_ROW="act",KB_TE=0,KB_TA=0; // KB_ROW：游標在「行動列」(act) 還是「目標列」(tgt)；KB_TE／KB_TA：最近選的敵人／我方目標
-const KB_ACT=["attack","skill","guard","items"];
+const kbSkillIdx=a=>a==="skill"?0:/^skill\d+$/.test(a)?+a.slice(5)-1:-1; // data-kb 的 skill／skill2／skill3… → 技能序號（不是技能回傳 -1）
+const kbIsAct=k=>k==="attack"||k==="guard"||k==="items"||kbSkillIdx(k)>=0;
 const kbKey=e=>(e.dataset&&e.dataset.kb)||e.id;
 function kbMenu(){const B=CUR_B;return !!(B&&VIEW==="battle"&&B.wait&&B.wait.mode==="menu");}
-function kbActions(){return Array.from(document.querySelectorAll("#view .apanel [data-kb]:not([disabled])")).filter(e=>KB_ACT.includes(kbKey(e)));}
+function kbActions(){return Array.from(document.querySelectorAll("#view .apanel [data-kb]:not([disabled])")).filter(e=>kbIsAct(kbKey(e)));}
 function kbTargetType(a){ // 這個行動需要選哪一種目標：enemy／ally／mate，不用選就回傳 null
   const B=CUR_B,u=B&&B.wait&&B.wait.u;if(!u)return null;
   if(a==="attack")return "enemy";
-  if(a==="skill"){const t=DEF(u.id).skill.t;return ["enemy","ally","mate"].includes(t)?t:null;}
+  if(kbSkillIdx(a)>=0){const t=(skillsOf(u.id)[kbSkillIdx(a)]||{}).t;return ["enemy","ally","mate"].includes(t)?t:null;}
   return null;
 }
 function kbTargets(tt){ // 可選的目標，依畫面由左到右排好（回傳 uid 陣列）
@@ -628,9 +634,10 @@ function kbMove(dx,dy){
 }
 // 在選單按 Enter：攻擊／要選目標的技能，直接對預先選好的目標出手；其他行動照常執行
 function kbExec(a){
-  if(a==="attack"||a==="skill"){
+  const si=kbSkillIdx(a);
+  if(a==="attack"||si>=0){
     const t=kbCurTarget(a);
-    act(a);
+    if(si>=0)act("skill",si);else act(a);
     const w=CUR_B&&CUR_B.wait;
     if(w&&w.mode==="target"&&t.id){kbRemember(t.tt,t.id);onUnitClick(t.id);}
   }else act(a);

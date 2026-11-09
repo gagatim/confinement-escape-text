@@ -129,7 +129,7 @@ const CARDS={
     skill:{name:"以命換命",cd:1,t:"enemy",kind:"dmg",desc:"自己失去3生命，對1名敵人造成2.2倍攻擊傷害。生命需大於3。",use(B,u,t){u.hp-=3;hit(B,u,t,2.2);}},
     passive:{name:"庸才逆襲",desc:"每有1名隊友倒下，攻擊永久+2（本場）。"}},
   courier:{name:"郵差",r:"R",hp:24,atk:5,def:1,spd:5,
-    skill:{name:"專人配送",cd:2,t:"mate",kind:"buff",desc:"對另1名隊友：技能冷卻歸零，攻擊+2（2回合）。",use(B,u,t){t.cd=0;buff(B,t,"atk",2,2);fx(B,t,"冷卻重置","sk");}},
+    skill:{name:"專人配送",cd:2,t:"mate",kind:"buff",desc:"對另1名隊友：技能冷卻歸零，攻擊+2（2回合）。",use(B,u,t){t.cds.fill(0);buff(B,t,"atk",2,2);fx(B,t,"冷卻重置","sk");}},
     passive:{name:"超載快遞",desc:"遠征中戰鬥勝利後，30%機率額外獲得1件道具。"},run:"courier"},
   gourmet:{name:"老饕",r:"R",hp:28,atk:5,def:1,spd:3,run:"gourmet",
     skill:{name:"吃播",cd:3,t:"self",kind:"heal",desc:"自己恢復6生命，攻擊永久+2（本場）。",use(B,u){heal(B,u,6);u.perm.atk=(u.perm.atk||0)+2;}},
@@ -287,6 +287,8 @@ const MONSTERS={
     passive:{name:"過載運轉",desc:"受到的傷害-2；每回合開始攻擊永久+3%（最多疊10次）；生命低於一半時攻擊額外+12%。擴散攻擊：單體攻擊造成傷害時，其餘敵人各受到該傷害的20%（固定傷害，不吃防禦）。"}}
 };
 const DEF=id=>CARDS[id]||MONSTERS[id];
+// 主動技能清單：新格式寫 skills:[…]（可多個，各自冷卻）；舊格式只有 skill 的角色自動當成只有一個技能。技能序號 i 從 0 開始，戰鬥單位的冷卻存在 u.cds[i]
+const skillsOf=id=>{const d=DEF(id);return d?(d.skills||(d.skill?[d.skill]:[])):[];};
 // 有插圖的主線小怪與魔王（images/monsters/{代號}.webp）；沒有圖的小怪、或圖片載入失敗時，退回用表情符號
 ["ghost","guard","drone","mutant","doppel","echo","deepone","mirror","cameraman","fanatic","rookie","guardian","warden","zero","chief","host","kraken","judge","loopkeeper","origin","producer","audience","castingdir","pastchamp","scrapbot","reclaimer","eraser","editor","shadowling","nameless"].forEach(k=>{if(MONSTERS[k])MONSTERS[k].pic=true;});
 const POOL={SSR:[],SR:[],R:[]};

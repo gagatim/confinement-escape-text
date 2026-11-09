@@ -505,9 +505,10 @@ function decodeAction(B,u,m){
   const t=m.t?B.units.find(x=>x.uid===m.t):null;
   if(m.type==="guard")return {type:"guard"};
   if(m.type==="attack"&&validTargets(B,u,"enemy").includes(t))return {type:"attack",target:t};
-  if(m.type==="skill"&&canUseSkill(B,u)){
-    const sk=DEF(u.id).skill;
-    if(!["enemy","ally","mate"].includes(sk.t)||validTargets(B,u,sk.t).includes(t))return {type:"skill",target:t};
+  const si=m.i|0;
+  if(m.type==="skill"&&canUseSkill(B,u,si)){
+    const sk=skillsOf(u.id)[si];
+    if(!["enemy","ally","mate"].includes(sk.t)||validTargets(B,u,sk.t).includes(t))return {type:"skill",i:si,target:t};
   }
   return aiChoose(B,u);
 }
@@ -518,7 +519,7 @@ function pushSnap(B){
     NET.ref.child("snap").set({title:B.title,coop:B.coop?1:0,t2:B.t2?1:0,waitPl:B.rwait?B.rwait.pl||"":"",round:B.round,over:B.over||"",active:B.active?B.active.uid:0,wall:B.wall,
       waitUid:B.rwait?B.rwait.uid:0,waitSeq:B.rwait?B.rwait.seq:0,log:B.log.slice(-40),
       units:B.units.map(u=>({uid:u.uid,id:u.id,name:u.name,side:u.side,stars:u.stars,maxHp:u.maxHp,hp:u.hp,atk:u.atk,def:u.def,spd:u.spd,
-        cd:u.cd,buffs:u.buffs,st:u.st,perm:u.perm,alive:u.alive,ally:u.ally,pl:u.pl||"",p2:u.flags.p2?1:0,fr:u.flags.frenzy?1:0}))
+        cd:u.cd,cds:u.cds,buffs:u.buffs,st:u.st,perm:u.perm,alive:u.alive,ally:u.ally,pl:u.pl||"",p2:u.flags.p2?1:0,fr:u.flags.frenzy?1:0}))
     }).catch(()=>{});
   },80);
 }
@@ -558,7 +559,7 @@ function applySnap(s){
 }
 function sendAct(B,seq,a){
   B.sentSeq=seq;
-  if(NET&&NET.ref){const o={seq,type:a.type,t:a.target?a.target.uid:0};if(B.t2)o.s=NET.seat;NET.ref.child("act").set(o).catch(netFail);}
+  if(NET&&NET.ref){const o={seq,type:a.type,i:a.i||0,t:a.target?a.target.uid:0};if(B.t2)o.s=NET.seat;NET.ref.child("act").set(o).catch(netFail);}
   render();
 }
 function hostLeft(){

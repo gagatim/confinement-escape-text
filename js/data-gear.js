@@ -127,8 +127,8 @@ function gearImg(base,cls=""){
   const G=GEAR[base];if(!GEAR_IMG.has(base))return G.icon;
   return `<img class="gimg ${cls}" src="images/equipment/${base}.webp" alt="${G.name}" draggable="false" loading="lazy" onerror="this.outerHTML='${G.icon}'">`;
 }
-const ST_LBL={hp:"❤",atk:"⚔",def:"🛡",spd:"💨",crit:"暴擊",steal:"吸血",dodge:"閃避",dr:"減傷"};
-const ST_PCT={crit:1,steal:1,dodge:1,dr:1};
+const ST_LBL={hp:"❤",atk:"⚔",def:"🛡",spd:"💨",crit:"暴擊",steal:"吸血",dodge:"閃避",dr:"減傷",acc:"命中"};
+const ST_PCT={crit:1,steal:1,dodge:1,dr:1,acc:1};
 const DR_CAP=30; // 裝備減傷%上限
 const DODGE_CAP=50; // 閃避率上限（%）：裝備詞條、套裝、職業與角色加成加總後最多 50%
 const ENH_MAX=10;

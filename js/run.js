@@ -13,7 +13,7 @@ function mkMember(id,stars,extra={}){
 }
 function memberToUnit(m){
   const g=m.gear||{};
-  return {id:m.id,stars:m.stars,scale:m.scale,br:m.br||0,name:m.name,hp:m.hp,maxHp:m.maxHp,atk:memberAtk(m),def:(m.bonus.def||0)+(g.def||0),spd:(m.bonus.spd||0)+(g.spd||0),ally:m.ally,ref:m,gx:{crit:g.crit||0,steal:g.steal||0,dodge:g.dodge||0,dr:g.dr||0}};
+  return {id:m.id,stars:m.stars,scale:m.scale,br:m.br||0,name:m.name,hp:m.hp,maxHp:m.maxHp,atk:memberAtk(m),def:(m.bonus.def||0)+(g.def||0),spd:(m.bonus.spd||0)+(g.spd||0),ally:m.ally,ref:m,gx:{crit:g.crit||0,steal:g.steal||0,dodge:g.dodge||0,dr:g.dr||0,acc:g.acc||0}};
 }
 function gasIdx(){return Math.floor((RUN.time-1)*.9)-1;}
 function addGold(n){n=Math.round(n*(hasRun("rich")?1.3:1)*dMul());RUN.gold+=n;return n;}
@@ -464,7 +464,7 @@ const hasStory=id=>!!RUN&&RUN.party.some(m=>!m.ally&&m.id===id); // 劇情版或
 function storyMate(id){
   const t=RUN.party.filter(m=>!m.ally&&!m.story),n=Math.max(1,t.length);
   const avg=f=>t.reduce((a,x)=>a+f(x),0)/n;
-  const gear={};["hp","atk","def","spd","crit","steal","dodge","dr"].forEach(k=>gear[k]=Math.round(avg(x=>(x.gear&&x.gear[k])||0)));
+  const gear={};["hp","atk","def","spd","crit","steal","dodge","dr","acc"].forEach(k=>gear[k]=Math.round(avg(x=>(x.gear&&x.gear[k])||0)));
   const m=mkMember(id,clamp(Math.round(avg(x=>x.stars)),1,5),{scale:avg(x=>x.scale||1),br:Math.round(avg(x=>x.br||0)),gear});
   m.story=true;m.trust=100;return m;
 }

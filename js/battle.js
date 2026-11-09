@@ -96,7 +96,8 @@ function hit(B,a,t,mult,o={}){
     }
   }
   const evadeChance=Math.min(DODGE_CAP/100,(t.id==="lucky"?.15:(DEF(t.id).evade||0))+((t.gx&&t.gx.dodge)||0)/100+(clsOf(t)==="assassin"?.05:0)); // 刺客職業特色：閃避率 +5%；閃避率總和上限 DODGE_CAP
-  if(!o.fixed&&!o.pierce&&((t.st.evade||0)>0||rnd()<evadeChance)){
+  const evadeEff=Math.max(0,evadeChance-((a.gx&&a.gx.acc)||0)/100); // 攻擊者的「命中」：先套上限、再從目標的閃避率扣掉（最低 0）；目前還沒有任何來源（尚未開放取得）
+  if(!o.fixed&&!o.pierce&&((t.st.evade||0)>0||rnd()<evadeEff)){
     if(t.st.evade>0)t.st.evade--;
     blog(B,`${nm(a)} 的攻擊被 ${nm(t)} 閃過了。`);fx(B,t,"MISS","miss");SFX.miss();return 0;
   }

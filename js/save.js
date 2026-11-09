@@ -60,7 +60,7 @@ const extraFoes=()=>Math.max(0,SAVE.team.length-TEAM_BASE); // 隊伍比 3 人�
    團隊賽 2v2 不套用存入加成。沒設定的角色加成是 0。 */
 const STORE_OPEN=false;
 const STORE_BONUS={
-  // 角色代號:{hp:生命, atk:攻擊, def:防禦, spd:速度, crit:暴擊%, steal:吸血%, dodge:閃避%, dr:減傷%}，只填要給的項目
+  // 角色代號:{hp:生命, atk:攻擊, def:防禦, spd:速度, crit:暴擊%, steal:吸血%, dodge:閃避%, dr:減傷%, acc:命中%}，只填要給的項目
   // 範例：ashen:{atk:2,hp:5},
 };
 const storeMax=()=>teamMax();

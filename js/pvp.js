@@ -170,7 +170,7 @@ function sanOwn(arr,max=3){
     const base=cardStats(x.id,stars,scale,br);
     out.push({id:x.id,stars,scale,br,maxHp:Math.round(cl(x.maxHp,base.maxHp,base.maxHp+2000)),
       atk:Math.round(cl(x.atk,0,300)),def:Math.round(cl(x.def,0,200)),spd:Math.round(cl(x.spd,0,60)),
-      gx:{crit:cl(g.crit,0,100),steal:cl(g.steal,0,100),dodge:cl(g.dodge,0,100),dr:cl(g.dr,0,DR_CAP)}});
+      gx:{crit:cl(g.crit,0,100),steal:cl(g.steal,0,100),dodge:cl(g.dodge,0,100),dr:cl(g.dr,0,DR_CAP),acc:cl(g.acc,0,100)}});
   });
   return out;
 }

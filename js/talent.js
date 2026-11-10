@@ -1,7 +1,8 @@
 "use strict";
 /* ===================== 天賦樹（測試中：只有 TALENT_ACCTS 裡的帳號看得到、用得到） ===================== */
 // 開放對象：登入帳號名稱（不分大小寫）在名單裡才算開放。要全面開放時，把 talentOpen 改成回傳 true 即可
-const TALENT_ACCTS=["boo12345"];
+// 目前封存：名單清空，所有人（含測試帳號 boo12345）都看不到、也沒有加成。要重啟時把帳號名稱放回來，例如 ["boo12345"]
+const TALENT_ACCTS=[];
 function talentOpen(){try{return !!ACCT&&TALENT_ACCTS.includes(String(ACCT.name).toLowerCase());}catch(e){return false;}}
 
 // 天賦點數＝等級每 10 級 1 點（上限 10）＋突破每 2 次 1 點（上限 5）；每個職業有 3 條分支，每條 5 個節點，要照順序點

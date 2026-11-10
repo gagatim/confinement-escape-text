@@ -104,6 +104,16 @@ function validSave(s){
     const fx=g.fx||[];if(fx.length>GEAR_FX_SANE||new Set(fx.map(f=>f.k)).size!==fx.length)return `${G.name} 詞條異常`;
     for(const f of fx){const A=AFFIX[f.k];if(!A||!isInt(f.v,1,Math.ceil(affixSpan(f.k,G.q,G.slot)[1]*1.5)+2))return `${G.name} 詞條數值異常`;}
   }
+  if(s.bcards!=null){ // 王卡庫存與已插入的卡：格式、數量檢查（插入的張數不能超過庫存）
+    if(typeof s.bcards!=="object"||Array.isArray(s.bcards))return "王卡資料異常";
+    const used={};
+    for(const k in s.bcards)if(!BCARD[k]||!isInt(s.bcards[k],0,99999))return "王卡資料異常";
+    for(const g of s.gear||[])if(g.cards!=null){
+      if(!Array.isArray(g.cards)||g.cards.length>3||g.cards.some(k=>!BCARD[k])||new Set(g.cards).size!==g.cards.length)return `${GEAR[g.base].name} 卡槽資料異常`;
+      g.cards.forEach(k=>used[k]=(used[k]||0)+1);
+    }
+    for(const k in used)if(used[k]>(s.bcards[k]||0))return "王卡資料異常";
+  }else if((s.gear||[]).some(g=>g.cards&&g.cards.length))return "王卡資料異常";
   for(const k in s.charms)if(!isInt(s.charms[k],0,99999))return "強化道具數量異常";
   if(s.fruits)for(const k in s.fruits)if(!isInt(s.fruits[k],0,99999))return "能力果實數量異常";
   if(s.gfruits)for(const k in s.gfruits)if(!isInt(s.gfruits[k],0,99999))return "金色果實數量異常";

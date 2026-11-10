@@ -175,6 +175,7 @@ function beginBoss(id){
         if(first){SAVE.gold+=r.first;SAVE.charms.stone+=r.stone;notes.push(`🏅 首次討伐：🪙+${r.first}、💎突破石 ×${r.stone}`);}
         notes.push(expLine(r.exp,gainExp(ids,r.exp,dead)));
         if(first||rnd()<.02){const g=addGear(BOSS_DROP[id]);notes.push(`🎁 <b class="rEX">魔王專屬裝備：${gearName(g)}</b>（${statStr(gearStats(g))}${g.fx.length?" "+fxStr(g):""}）`);SFX.ssr();}
+        {const cn=bcRollDrop(id);if(cn){notes.push(cn);SFX.ssr();}} // 王卡：十萬分之一（只有開放的帳號會掉）
         if(i+1<BOSS_LIST.length&&first)notes.push(`🔓 下一位魔王出現了：<b>${MONSTERS[BOSS_LIST[i+1]].name}</b>`);
         if(i+1===BOSS_LIST.length&&first)notes.push("🎬 <b>8 位魔王全部討伐完成！</b>");
         if(FK_BOSSES.includes(id))notes.push('<span id="fkNote"></span>');

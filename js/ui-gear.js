@@ -22,6 +22,7 @@ function setCountsOf(id,eq){const c={};wornOf(id,eq).forEach(g=>{const q=setKeyO
 function bonusOf(id,eq,noStore,noTal){
   const s={hp:0,atk:0,def:0,spd:0,crit:0,steal:0,dodge:0,dr:0,acc:0};
   if(!noTal){const t=talentBonusOf(id);for(const k in t)s[k]=(s[k]||0)+t[k];} // 天賦（測試中；真人對戰不套用）
+  if(!noTal){const t=cardBonusOf(id,eq);for(const k in t)s[k]=(s[k]||0)+t[k];} // 王卡（測試中；真人對戰不套用）
   if(!noStore){const t=storeBonusOf(id);for(const k in t)s[k]=(s[k]||0)+t[k];} // 存入角色加成（團隊賽不套用）
   wornOf(id,eq).forEach(g=>{const t=gearStats(g);for(const k in t)s[k]+=t[k];});
   Object.entries(setCountsOf(id,eq)).forEach(([q,n])=>[2,3].forEach(k=>{if(n>=k)for(const st in SETS[q][k])s[st]+=SETS[q][k][st];}));
@@ -244,6 +245,7 @@ function viewBag(){
   強化：+1～+4 失敗沒有損失；+5～+10 失敗會掉 1 級（裝備不會碎）。🧿保護符可以防止掉級。</p>
   <div class="row small"><span>💎 突破石 ×${SAVE.charms.stone}</span><span>🧿 保護符 ×${SAVE.charms.protect}</span><span>🍀 幸運符 ×${SAVE.charms.luck}</span><button class="mini gold" style="margin-left:auto" onclick="go('shop')">🛒 去商店</button><button class="mini gold" onclick="openGearSwap()">🔄 換裝</button>
     <button class="mini" onclick="sellAllGear('R')">💰 一鍵售出 R 裝</button><button class="mini" onclick="sellAllGear('SR')">💰 一鍵售出 SR 裝</button></div>
+  ${cardInvHtml()}
   <div class="filters"><button class="${GEAR_TAB?"":"on"}" onclick="GEAR_TAB='';render()">全部（${SAVE.gear.length}）</button>${Object.keys(SLOTS).map(k=>`<button class="${GEAR_TAB===k?"on":""}" onclick="GEAR_TAB='${k}';render()">${SLOTS[k]}</button>`).join("")}</div>
   ${sortBar()}
   <div class="ggrid">${list.map(g=>gearCard(g,`openGear(${g.uid})`)).join("")||`<span class="dim">還沒有裝備。去「商店」買一件，或在遠征、競技場打倒敵人掉落。</span>`}</div>`;
@@ -260,6 +262,7 @@ function openGear(uid){
     <div class="small dim">可裝備：${gearCls(g.base)}・穿戴等級 Lv.${GEAR_REQ[G.q]}</div>
     <div class="small dim">套裝：${SETS[setKeyOf(g.base)].name}（2件 ${statStr(SETS[setKeyOf(g.base)][2])}／3件 ${statStr(SETS[setKeyOf(g.base)][3])}）</div>
     ${w?`<div class="small" style="color:var(--green)">👤 ${CARDS[w].name} 正在使用</div>`:""}</div></div>
+    ${cardSlotsHtml(g)}
     <div class="row" style="margin-top:12px">
       <button class="pri" onclick="openEnhance(${uid})" ${g.lv>=enhCap(g)?"disabled":""}>🔨 強化${g.lv>=enhCap(g)?"（已滿）":""}</button>
       ${canXfer(g)?`<button onclick="openXfer(${uid})">🔁 強化轉移</button>`:""}

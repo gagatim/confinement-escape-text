@@ -6,6 +6,7 @@
   查詢帳號   看帳號存不存在、註冊／最後登入時間、存檔摘要（用來確認玩家身分）
   重設密碼   幫玩家設一組新密碼（預設隨機產生臨時密碼），玩家登入後再用遊戲裡的「🔑 修改密碼」改掉
   列出帳號   列出所有註冊過的帳號
+  複製帳號   把來源帳號的雲端存檔複製到一個新建立的帳號（測試用；來源不動，不複製備份與歷史）
 
 注意：玩家的「原密碼」查不到——Firebase 只存加密後的結果，連你也還原不出來，所以只能重設。
 
@@ -14,6 +15,7 @@
   python gm/gm.py find 帳號
   python gm/gm.py reset 帳號 [新密碼]   不填新密碼就自動產生
   python gm/gm.py list
+  python gm/gm.py copy 來源帳號 新帳號 [新密碼]   不填新密碼就自動產生
 
 第一次使用要放一個「服務帳戶金鑰」(.json) 到 gm 資料夾，步驟見 gm/說明.txt。這個檔案等於專案的最高權限，千萬不要上傳或傳給別人。
 """
@@ -174,6 +176,43 @@ def cmd_reset(name, new_pw=None, yes=False):
     print("   請把這組密碼告訴玩家，並提醒他登入後到 👤 →「🔑 修改密碼」改成自己的。")
 
 
+def cmd_copy(src, dst, new_pw=None, yes=False):
+    """把來源帳號的雲端存檔複製到一個新建立的帳號（來源完全不動；不複製 backup／history）"""
+    su = get_user(src)
+    email = email_of(dst)
+    fb = init()
+    try:
+        fb["auth"].get_user_by_email(email)
+        raise GMError("帳號「%s」已經存在，不能覆蓋。請換一個新帳號名稱。" % dst)
+    except fb["auth"].UserNotFoundError:
+        pass
+    node = fb["db"].reference("users/" + su.uid).get()
+    if not node or "save" not in node:
+        raise GMError("來源帳號「%s」沒有雲端存檔，無法複製。" % src)
+    if new_pw is None:
+        new_pw = gen_password()
+        auto = True
+    else:
+        auto = False
+        if len(new_pw) < 6:
+            raise GMError("密碼至少要 6 個字")
+    if not yes:
+        print("即將把「%s」的雲端存檔複製到新帳號「%s」（來源帳號不會被修改）。" % (src, dst))
+        for line in summarize_save(su.uid) or []:
+            print("  " + line)
+        ans = input("確定的話，請輸入新帳號名稱：").strip()
+        if ans.lower() != dst.lower():
+            print("輸入不一致，已取消。")
+            return
+    nu = fb["auth"].create_user(email=email, password=new_pw, display_name=dst)
+    fb["db"].reference("users/" + nu.uid).set({"name": dst, "save": node["save"], "t": int(datetime.datetime.now().timestamp() * 1000)})
+    log_action("複製帳號 %s →" % src, dst)
+    print("\n✅ 已建立新帳號「%s」並複製存檔。" % dst)
+    print("   %s密碼：%s" % ("臨時" if auto else "", new_pw))
+    print("   uid：%s" % nu.uid)
+    print("   （來源帳號「%s」沒有任何變動）" % src)
+
+
 def cmd_list():
     fb = init()
     rows = []
@@ -197,6 +236,7 @@ def menu():
         print("1) 查詢帳號（確認玩家身分）")
         print("2) 重設密碼")
         print("3) 列出所有帳號")
+        print("4) 複製帳號（把存檔複製到新帳號，測試用）")
         print("0) 離開")
         c = input("請選擇：").strip()
         try:
@@ -208,10 +248,15 @@ def menu():
                 cmd_reset(n, pw)
             elif c == "3":
                 cmd_list()
+            elif c == "4":
+                s = ask_name("來源帳號（要被複製的）：")
+                d = ask_name("新帳號名稱：")
+                pw = input("要指定新帳號密碼嗎？（直接按 Enter＝自動產生）：").strip() or None
+                cmd_copy(s, d, pw)
             elif c == "0":
                 return
             else:
-                print("請輸入 0～3")
+                print("請輸入 0～4")
         except GMError as e:
             print("❌", e)
         except Exception as e:
@@ -229,6 +274,8 @@ def main(argv):
             cmd_reset(argv[2], argv[3] if len(argv) >= 4 else None)
         elif c == "list":
             cmd_list()
+        elif c == "copy" and len(argv) >= 4:
+            cmd_copy(argv[2], argv[3], argv[4] if len(argv) >= 5 else None)
         else:
             print(__doc__)
     except GMError as e:

@@ -160,7 +160,7 @@ async function joinRoom(code){
 }
 // ---- 養成賽：雙方帶自己的隊伍（等級、星數、突破、裝備都算進去），不給任何獎勵 ----
 const isOwnMode=m=>m==="own"||m==="coop";
-function myOwnSpec(){return (NET&&NET.mode==="coop"?DUEL.coopPick:NET&&NET.mode==="t2"?(DUEL.t2Pick||[]):SAVE.team.slice(0,3)).map(id=>{const u=teamUnit(id,!!(NET&&NET.mode==="t2"));u.gx=u.gx||{};return u;});}
+function myOwnSpec(){return (NET&&NET.mode==="coop"?DUEL.coopPick:NET&&NET.mode==="t2"?(DUEL.t2Pick||[]):SAVE.team.slice(0,3)).map(id=>{const u=teamUnit(id,!!(NET&&NET.mode==="t2"),true);u.gx=u.gx||{};return u;});}
 // 房主不信任挑戰者送來的數字：只收合理範圍內的值
 function sanOwn(arr,max=3){
   const cl=(v,a,b)=>Math.min(b,Math.max(a,Number.isFinite(+v)?+v:a)),seen=new Set(),out=[];
@@ -280,7 +280,7 @@ function t2Toggle(id){
 // 房間內換裝：準備前才能改（準備時才會把裝備數值送出去）
 function t2Gear(id){
   if(!DUEL||DUEL.ownReady||DUEL.started||!SAVE.owned[id])return;
-  const o=SAVE.owned[id],e=equipBonus(id,true);
+  const o=SAVE.owned[id],e=equipBonus(id,true,true);
   openModal(`<h3>${CARDS[id].name} 的裝備 ${clsTag(id)}</h3>
     <div class="small">加成：${statStr(e)||"無"}</div>
     <div class="gslots">${Object.keys(SLOTS).map(sl=>{const g=gearById(o.eq&&o.eq[sl]);

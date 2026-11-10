@@ -19,8 +19,9 @@ function dropGear(q){return gearName(addGear(rollGear(q)))+`（${q}）`;}
 // eq 是「欄位→裝備 uid」的對照；預覽時可以傳入假設的組合
 function wornOf(id,eq){return Object.values(eq||{}).map(gearById).filter(g=>g&&lvOk(id,g.base));}
 function setCountsOf(id,eq){const c={};wornOf(id,eq).forEach(g=>{const q=setKeyOf(g.base);c[q]=(c[q]||0)+1;});return c;}
-function bonusOf(id,eq,noStore){
+function bonusOf(id,eq,noStore,noTal){
   const s={hp:0,atk:0,def:0,spd:0,crit:0,steal:0,dodge:0,dr:0,acc:0};
+  if(!noTal){const t=talentBonusOf(id);for(const k in t)s[k]=(s[k]||0)+t[k];} // 天賦（測試中；真人對戰不套用）
   if(!noStore){const t=storeBonusOf(id);for(const k in t)s[k]=(s[k]||0)+t[k];} // 存入角色加成（團隊賽不套用）
   wornOf(id,eq).forEach(g=>{const t=gearStats(g);for(const k in t)s[k]+=t[k];});
   Object.entries(setCountsOf(id,eq)).forEach(([q,n])=>[2,3].forEach(k=>{if(n>=k)for(const st in SETS[q][k])s[st]+=SETS[q][k][st];}));
@@ -29,7 +30,7 @@ function bonusOf(id,eq,noStore){
 }
 function wornGear(id){const o=SAVE.owned[id];return o?wornOf(id,o.eq):[];}
 function setCounts(id){const o=SAVE.owned[id];return o?setCountsOf(id,o.eq):{};}
-function equipBonus(id,noStore){const o=SAVE.owned[id];return bonusOf(id,o&&o.eq,noStore);}
+function equipBonus(id,noStore,noTal){const o=SAVE.owned[id];return bonusOf(id,o&&o.eq,noStore,noTal);}
 function setHtml(id){
   const c=setCounts(id),qs=Object.keys(c).filter(q=>c[q]>=1);
   if(!qs.length)return "";

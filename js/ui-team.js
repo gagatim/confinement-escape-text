@@ -114,6 +114,7 @@ function showCard(id){
     ${c.off?`<div class="sk small"><b>🔒 尚未開放</b><br>這位角色還在準備中，目前無法取得，只先在圖鑑展示。</div>`:""}
     ${c.story&&!c.evolveFrom?`<div class="sk small"><b>📖 劇情角色</b><br>《名冊》故事線的同伴。通關第 ${c.gachaCh} 章後可以在招募所抽到。<b>無法合成、熔煉、遣散</b>，不能當「轉換」的來源（可以當轉換的目標）。</div>`:""}
     ${o&&fruitVisible(id)?fruitHtml(id):""}
+    ${o?talentHtml(id):""}
     <div class="row" style="margin-top:12px">
       ${o?(inT?`<button onclick="toggleTeam('${id}')">移出隊伍</button>`:`<button class="pri" onclick="toggleTeam('${id}')" ${SAVE.team.length>=teamMax()?"disabled":""}>加入隊伍${SAVE.team.length>=teamMax()?"（已滿）":""}</button>`):`<span class="dim">尚未獲得</span>`}
       ${o&&o.dup&&o.stars<5?`<button class="pri" onclick="starUp('${id}')">⭐ 升星（重複卡 ×${o.dup}）</button>`:""}

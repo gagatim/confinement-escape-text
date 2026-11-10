@@ -85,6 +85,7 @@ function validSave(s){
     if(o.br!=null&&!isInt(o.br,0,BR_MAX))return `${CARDS[id].name} 突破次數異常`;
     if(o.fruit!=null&&!["atk","def","spd"].every(k=>isInt((o.fruit||{})[k]||0,0,FRUIT_MAX)))return `${CARDS[id].name} 能力果實異常`;
     if(o.gfruit!=null&&!["atk","def","spd"].every(k=>isInt((o.gfruit||{})[k]||0,0,GFRUIT_MAX)))return `${CARDS[id].name} 金色果實異常`;
+    if(o.tal!=null&&(typeof o.tal!=="object"||Array.isArray(o.tal)||Object.keys(o.tal).length>20||Object.values(o.tal).some(v=>v!==1)))return `${CARDS[id].name} 天賦資料異常`;
     if(o.exp!=null&&!isInt(o.exp,0,lvNeed(o.lv||1)*2))return `${CARDS[id].name} 經驗值異常`;
   }
   if(!Array.isArray(s.team)||s.team.length>(fiveOk(s.prog)?TEAM_BIG:TEAM_BASE)||s.team.some(id=>!s.owned[id]))return "隊伍資料異常";

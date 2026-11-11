@@ -298,7 +298,7 @@ function openGearSwap(q){
   GSW.pick=GSW.pick.filter(u=>gearById(u));
   const list=SAVE.gear.filter(g=>GEAR[g.base].q===t).sort(gearSort);
   openModal(`<h3>🔄 換裝</h3>
-    <div class="row" style="margin-bottom:8px">${Object.keys(GSWAP_COST).map(k=>`<button class="mini ${k===t?"pri":""}" onclick="openGearSwap('${k}')">${k} ×${GSWAP_COST[k]}</button>`).join("")}</div>
+    <div class="row" style="margin-bottom:8px">${Object.keys(GSWAP_COST).map(k=>`<button class="mini ${k===t?"pri":""}" onclick="openGearSwap('${k}')">${k} ×${GSWAP_COST[k]}</button>`).join("")}${bootFuseOpen()?`<button class="mini gold" onclick="openBootFuse()">👢 聖煌之靴 ×${BOOT_FUSE_NEED}</button>`:""}</div>
     <p class="dim small">投入 ${need} 件 ${t} 裝備，換 1 件隨機 ${t} 裝備（完全隨機、不能指定，也可能換到同款）。投入的裝備會消失，強化等級不保留，新裝備從 +0 開始。穿在角色身上的要先卸下。</p>
     <div class="ggrid">${list.map(g=>{const w=gearOwner(g.uid),on=GSW.pick.includes(g.uid);
       return `<div class="${on?"fitgear sel":""}">${gearCard(g,w?`toast('穿在角色身上，先卸下才能換')`:`gswapPick(${g.uid})`)}</div>`;}).join("")||`<span class="dim">沒有 ${t} 裝備</span>`}</div>
@@ -321,6 +321,41 @@ function doGearSwap(){
   save();SFX.click();render();
   openModal(`<h3>🔄 換裝完成</h3><div class="ggrid">${gearCard(g,`openGear(${g.uid})`)}</div>
     <div class="row" style="margin-top:12px"><button class="pri" onclick="openGearSwap()">繼續換裝</button><button onclick="closeModal()">關閉</button></div>`);
+}
+// 聖煌之靴合成（測試中：只有 BOOT_FUSE_ACCTS 裡的帳號看得到）：投入 3 雙聖煌之靴，換 1 雙新的聖煌之靴（詞條重新抽，抽法與掉落完全相同）
+const BOOT_FUSE_BASE="holyboots",BOOT_FUSE_NEED=3,BOOT_FUSE_ACCTS=["boo12345"];
+function bootFuseOpen(){try{return !!ACCT&&BOOT_FUSE_ACCTS.includes(String(ACCT.name).toLowerCase());}catch(e){return false;}}
+let BFU=[];
+function openBootFuse(){
+  if(!bootFuseOpen())return;
+  BFU=BFU.filter(u=>gearById(u));
+  const list=SAVE.gear.filter(g=>g.base===BOOT_FUSE_BASE).sort(gearSort);
+  openModal(`<h3>👢 聖煌之靴合成</h3>
+    <div class="row" style="margin-bottom:8px"><button class="mini" onclick="openGearSwap()">← 回換裝</button></div>
+    <p class="dim small">投入 ${BOOT_FUSE_NEED} 雙聖煌之靴，換 1 雙新的聖煌之靴：基礎數值不變，品質浮動與詞條會重新抽（機率跟掉落的新鞋完全一樣，不會比較好也不會比較差）。投入的鞋子會消失，強化等級不保留。穿在角色身上的要先卸下。</p>
+    <div class="ggrid">${list.map(g=>{const w=gearOwner(g.uid),on=BFU.includes(g.uid);
+      return `<div class="${on?"fitgear sel":""}">${gearCard(g,w?`toast('穿在角色身上，先卸下才能合成')`:`bootFusePick(${g.uid})`)}</div>`;}).join("")||`<span class="dim">沒有聖煌之靴</span>`}</div>
+    <div class="row" style="margin-top:10px"><b style="margin-right:auto;color:${BFU.length===BOOT_FUSE_NEED?"var(--gold)":"inherit"}">已選 ${BFU.length}/${BOOT_FUSE_NEED}</b>
+      <button onclick="BFU=[];openBootFuse()">清除</button>
+      <button class="pri" onclick="doBootFuse()" ${BFU.length===BOOT_FUSE_NEED?"":"disabled"}>合成</button><button onclick="closeModal()">關閉</button></div>`);
+}
+function bootFusePick(uid){
+  const i=BFU.indexOf(uid);
+  if(i>=0)BFU.splice(i,1);
+  else if(BFU.length>=BOOT_FUSE_NEED){toast(`已經選滿 ${BOOT_FUSE_NEED} 雙了`);return;}
+  else BFU.push(uid);
+  SFX.click();openBootFuse();
+}
+function doBootFuse(){
+  if(!bootFuseOpen())return;
+  const gs=BFU.map(gearById).filter(Boolean);
+  if(gs.length!==BOOT_FUSE_NEED||gs.some(g=>g.base!==BOOT_FUSE_BASE||gearOwner(g.uid)))return;
+  const used=new Set(BFU);
+  SAVE.gear=SAVE.gear.filter(x=>!used.has(x.uid));BFU=[];
+  const g=addGear(BOOT_FUSE_BASE);
+  save();SFX.click();render();
+  openModal(`<h3>👢 合成完成</h3><div class="ggrid">${gearCard(g,`openGear(${g.uid})`)}</div>
+    <div class="row" style="margin-top:12px"><button class="pri" onclick="openBootFuse()">繼續合成</button><button onclick="closeModal()">關閉</button></div>`);
 }
 // 強化：成功率依目前等級遞減；幸運符 +10%；保護符防止失敗時掉級。裝備不會因強化失敗而損毀
 // 強化轉移：只轉強化等級，把一件裝備的強化等級完整轉給同品質、同類型、等級比它低的另一件；來源變 +0，目標原本的等級直接蓋掉。詞條（含超頻額外詞條）都不動

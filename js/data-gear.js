@@ -127,9 +127,12 @@ function gearImg(base,cls=""){
   const G=GEAR[base];if(!GEAR_IMG.has(base))return G.icon;
   return `<img class="gimg ${cls}" src="images/equipment/${base}.webp" alt="${G.name}" draggable="false" loading="lazy" onerror="this.outerHTML='${G.icon}'">`;
 }
-const ST_LBL={hp:"❤",atk:"⚔",def:"🛡",spd:"💨",crit:"暴擊",steal:"吸血",dodge:"閃避",dr:"減傷",acc:"命中"};
-const ST_PCT={crit:1,steal:1,dodge:1,dr:1,acc:1};
+const ST_LBL={hp:"❤",atk:"⚔",def:"🛡",spd:"💨",crit:"暴擊",steal:"吸血",dodge:"閃避",dr:"減傷",acc:"命中",pen:"穿透",ccres:"控抗"};
+const ST_PCT={crit:1,steal:1,dodge:1,dr:1,acc:1,pen:1,ccres:1};
 const DR_CAP=30; // 裝備減傷%上限
+// 穿透：攻擊時額外無視對方這個 % 的防禦（上限 PEN_CAP）；控制抗性：被暈眩時有這個 % 的機率完全抵抗（上限 CCRES_CAP）。
+// 兩個都還沒有任何來源（尚未開放取得：不在詞條池、裝備、套裝、魔王），引擎先寫好，之後從 gx 讀；魔王可以直接在 gx 裡填
+const PEN_CAP=30,CCRES_CAP=50;
 const DODGE_CAP=50; // 閃避率上限（%）：裝備詞條、套裝、職業與角色加成加總後最多 50%
 const ENH_MAX=10;
 const ENH_RATE=[100,95,90,80,70,60,50,40,32,25, 10,5,5,4,4,3,3,2,1,1]; // 依目前等級：+0→+1 為 100%；+10 以後是「超頻區」

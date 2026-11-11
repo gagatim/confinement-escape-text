@@ -122,6 +122,7 @@ function validSave(s){
   if(s.train&&!isInt(s.train.best,0,TRAIN_MAX))return "練功房進度異常";
   if(!isInt(s.prog.cleared,0,ABYSS))return "主線進度異常";
   if(s.prog.fatty!=null&&!isInt(s.prog.fatty,0,5))return "肥宅物語進度異常";
+  if(s.prog.s3!=null&&!isInt(s.prog.s3,0,15))return "第三季進度異常";
   if(s.fattyCopies!=null&&!isInt(s.fattyCopies,0,99999))return "肥宅卡片數量異常";
   if(s.junk)for(const k in s.junk)if(!isInt(s.junk[k],0,99999))return "白卡數量異常";
   if(s.run&&!(isInt(s.run.gold,0,5000000)&&isInt(s.run.food,0,9999)))return "遠征資料異常";
@@ -181,6 +182,7 @@ function migrate(s){
   if(!s.skin)s.skin={own:{},worn:{},claimed:{},seen:0}; // 造型（試用）：own 擁有、worn 各角色穿著、claimed 已領過的活動
   if(!s.junk)s.junk={}; // N 白卡數量 {代號:張數}
   if(s.prog&&s.prog.fatty==null)s.prog.fatty=0; // 《肥宅物語》進度（0～5）
+  if(s.prog&&s.prog.s3==null)s.prog.s3=0; // 第三季（主線第 16～30 章）已通關幾章（0～15）
   if(s.fattyCopies==null)s.fattyCopies=s.owned&&s.owned.fatty?s.owned.fatty.stars:0; // 抽到的 SR 肥宅張數（舊存檔用現有星數估）
   if(!s.prog)s.prog={cleared:s.stats&&s.stats.escapes>0?1:0,clears:{},abyssBest:0};
   if(s.run===undefined)s.run=null;

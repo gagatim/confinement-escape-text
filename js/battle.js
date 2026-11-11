@@ -27,7 +27,7 @@ function stat(u,k){
   u.buffs.forEach(b=>{if(b.k===k)v+=b.v;});
   if(k==="atk"&&u.id==="berserker"&&u.hp<u.maxHp/2)v+=Math.round(u.atk*.04);
   if(k==="atk"&&u.id==="warden"&&u.hp<u.maxHp/2)v+=3;
-  if(k==="atk"&&u.id==="reclaimer"&&u.hp<u.maxHp/2)v+=Math.max(2,Math.round(u.atk*.12));
+  if(k==="atk"&&(u.id==="reclaimer"||u.id==="accountant")&&u.hp<u.maxHp/2)v+=Math.max(2,Math.round(u.atk*.12));
   if(k==="atk"&&u.id==="ashen"&&hasBond(u,"qing"))v+=Math.max(1,Math.round(u.atk*.04)); // 羈絆「名冊合照」
   if(k==="def"&&u.id==="chief"&&u.hp<u.maxHp/2)v+=2;
   if(k==="def"&&u.id.startsWith("dinoegg"))v+=(CUR_B&&CUR_B.cfg&&CUR_B.cfg.eggDef)?CUR_B.cfg.eggDef(CUR_B.wave):15; // 恐龍蛋被動「厚實蛋殼」：各區各關的加成由 cfg.eggDef(關數) 決定（見 progress.js 的 DINO_ZONES）
@@ -55,7 +55,9 @@ function poison(B,t,d,turns){
   const p=t.st.poison||{d:0,t:0};
   if(d*turns>p.d*p.t)t.st.poison={d,t:turns,by:((B.casting||B.active)||{}).uid||0}; // 不累加：已經中毒時，整份比「每回合傷害×剩餘回合」，只保留總傷害較高的那一份（一樣就保留原本的），不再把兩份拼成更強的毒
 }
-function stun(B,t,n){t.st.stun=Math.max(t.st.stun||0,n);blog(B,`${nm(t)} 被暈眩了！`);fx(B,t,"暈眩","sk");}
+function stun(B,t,n){
+  if(t.gx&&t.gx.ccres&&rnd()<Math.min(CCRES_CAP,t.gx.ccres)/100){blog(B,`${nm(t)} 抵抗了暈眩！`);fx(B,t,"抵抗","sk");return;} // 控制抗性（尚無來源）
+  t.st.stun=Math.max(t.st.stun||0,n);blog(B,`${nm(t)} 被暈眩了！`);fx(B,t,"暈眩","sk");}
 function cleanse(u){delete u.st.poison;u.buffs=u.buffs.filter(b=>b.v>0);}
 function heal(B,u,n){
   if(!u.alive||n<=0)return 0;
@@ -113,7 +115,7 @@ function hit(B,a,t,mult,o={}){
   if(o.fixed)d=o.fixed;
   else{
     d=stat(a,"atk")*mult*(.9+rnd()*.2);
-    if(!o.pierce&&!o.ignoreDef)d-=stat(t,"def")*.7; // ignoreDef：只無視防禦（不像 pierce 連閃避、防禦姿態、減傷也一起無視）
+    if(!o.pierce&&!o.ignoreDef)d-=stat(t,"def")*.7*(1-Math.min(PEN_CAP,(a.gx&&a.gx.pen)||0)/100); // 穿透：額外無視 pen% 防禦（尚無來源） // ignoreDef：只無視防禦（不像 pierce 連閃避、防禦姿態、減傷也一起無視）
     if(B.casting===a&&clsOf(a)==="mage")d*=1.2;
     let cc=(a.id==="sniper"?.2:a.id==="lucky"?.25:.08)+((a.gx&&a.gx.crit)||0)/100;
     if(clsOf(a)==="ranger")cc+=.12;else if(clsOf(a)==="assassin")cc+=.06;
@@ -125,6 +127,7 @@ function hit(B,a,t,mult,o={}){
   if(t.st.mark)d*=1.5;
   if(t.st.curse)d*=1.15; // 占卜師「厄運宣告」的標記：另一個狀態，和偵探的標記相乘
   if(a.id==="editor"&&t.st.mark)d*=1.25; // 剪輯師「無情剪輯」
+  if(a.id==="scribe"&&t.st.mark)d*=1.25; // 代筆人「白紙黑字」
   if(t.st.guard&&!o.pierce)d*=.5;
   if(t.buffs.some(b=>b.k==="dr"&&b.t>0))d*=.8; // 主人「乖，過來」：受到的傷害 −20%
   if(B.wall[t.side]){const w=B.units.find(x=>x.uid===B.wall[t.side]);if(w&&w.alive)d*=.5;}
@@ -175,6 +178,10 @@ function handleDeath(B,t,killer){
     t.perm.atk=(t.perm.atk||0)+Math.round(t.atk*b2.atk);t.perm.spd=(t.perm.spd||0)+b2.spd;t.cds.fill(0);
     blog(B,`💢 ${nm(t)} 的氣場爆發了！——第二階段！`,"bad");blog(B,`「${DEF(t.id).quote}」`,"big");fx(B,t,"爆氣！","crit");SFX.ssr();return;}
   if(DEF(t.id).revive&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*DEF(t.id).revive);blog(B,`⚖ ${nm(t)} 重新站了起來：「判決，還沒有結束。」`,"big");fx(B,t,"復活","heal");return;}
+  if(t.id==="scribe"&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*.35);blog(B,`🖋️ ${nm(t)} 重新握起了筆：「白紙黑字，不能反悔。」`,"big");fx(B,t,"復活","heal");return;}
+  if(t.id==="youngking"&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*.35);blog(B,`👑 ${nm(t)} 撐著王座站了起來：「我不能倒下……還有人在等我。」`,"big");fx(B,t,"復活","heal");return;}
+  if(t.id==="pathfinder"&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*.3);blog(B,`🗡️ ${nm(t)} 撐著劍站了起來：「後面……有人嗎？」`,"big");fx(B,t,"復活","heal");return;}
+  if(t.id==="emptythrone"&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*.35);blog(B,`🪑 ${nm(t)} 暗了一暗，又亮了起來：「還不夠。……證明給我看。」`,"big");fx(B,t,"復活","heal");return;}
   if(t.id==="host"&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*.3);blog(B,`🎭 ${nm(t)} 拍了拍身上的灰：「我說過，莊家不會輸。」`,"big");fx(B,t,"復活","heal");return;}
   t.hp=0;t.alive=false;t.st={};t.buffs=[];
   if(killer&&killer.side!==t.side)sxOf(killer).kills++;
@@ -406,7 +413,7 @@ async function takeTurn(B,u){
   if(u.id==="mutant")heal(B,u,2);
   if(u.id==="zero")heal(B,u,4);
   if(u.id==="master"){const r=u.hp<u.maxHp*.4?.05:.03;mates(B,u).forEach(m=>heal(B,m,Math.max(1,Math.round(m.maxHp*r))));} // 主人被動「寵愛」
-  if((u.id==="reclaimer"||u.id==="nameless")&&(u.flags.oc||0)<10){u.flags.oc=(u.flags.oc||0)+1;u.perm.atk=(u.perm.atk||0)+Math.max(1,Math.round(u.atk*.03));}
+  if((u.id==="reclaimer"||u.id==="nameless"||u.id==="accountant")&&(u.flags.oc||0)<10){u.flags.oc=(u.flags.oc||0)+1;u.perm.atk=(u.perm.atk||0)+Math.max(1,Math.round(u.atk*.03));}
   if(DEF(u.id).regen)heal(B,u,DEF(u.id).regen);
   if(DEF(u.id).regenp)heal(B,u,Math.round(u.maxHp*DEF(u.id).regenp));
   if(u.id==="babydragon"&&!u.flags.p2&&u.hp<=u.maxHp*.5){ // 寶貝龍「巨龍覺醒」：生命降到一半以下，回合開始時變身成巨龍

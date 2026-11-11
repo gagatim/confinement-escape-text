@@ -118,7 +118,8 @@ function viewBosses(){
   return `<h3>⚔ 魔王討伐（支線・可以不打）</h3>
     <p class="dim small">8 位強度偏高的魔王，打倒一位才會出現下一位。打倒第一條命後魔王會<b style="color:var(--red)">爆氣</b>進入第二階段：換上氣場、回復生命、攻擊和速度上升、技能冷卻縮短。打贏有機會掉落魔王專屬的 <b class="rEX">EX 裝備</b>。</p>
     <div class="bossgrid">${BOSS_LIST.map(bossCard).join("")}</div>
-    ${(()=>{if(!FK.tried){FK.tried=true;fkLoad();}return fkBoardHtml();})()}`;
+    ${(()=>{if(!FK.tried){FK.tried=true;fkLoad();}return fkBoardHtml();})()}
+    ${typeof viewDarkBosses==="function"?viewDarkBosses():""}`; // 黑暗四天王（封存中，js/boss-dark.js）
 }
 function openBoss(id){
   const i=BOSS_LIST.indexOf(id),M=MONSTERS[id],r=bossReward(i),n=SAVE.bosses[id]||0,G=GEAR[BOSS_DROP[id]];

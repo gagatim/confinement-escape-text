@@ -13,7 +13,7 @@ function mkMember(id,stars,extra={}){
 }
 function memberToUnit(m){
   const g=m.gear||{};
-  return {id:m.id,stars:m.stars,scale:m.scale,br:m.br||0,name:m.name,hp:m.hp,maxHp:m.maxHp,atk:memberAtk(m),def:(m.bonus.def||0)+(g.def||0),spd:(m.bonus.spd||0)+(g.spd||0),ally:m.ally,ref:m,gx:{crit:g.crit||0,steal:g.steal||0,dodge:g.dodge||0,dr:g.dr||0,acc:g.acc||0}};
+  return {id:m.id,stars:m.stars,scale:m.scale,br:m.br||0,name:m.name,hp:m.hp,maxHp:m.maxHp,atk:memberAtk(m),def:(m.bonus.def||0)+(g.def||0),spd:(m.bonus.spd||0)+(g.spd||0),ally:m.ally,ref:m,gx:{crit:g.crit||0,steal:g.steal||0,dodge:g.dodge||0,dr:g.dr||0,acc:g.acc||0,pen:g.pen||0,ccres:g.ccres||0}};
 }
 function gasIdx(){return Math.floor((RUN.time-1)*.9)-1;}
 function addGold(n){n=Math.round(n*(hasRun("rich")?1.3:1)*dMul());RUN.gold+=n;return n;}
@@ -30,7 +30,7 @@ function diffName(d){return DIFFS[d||1].name;}
 function dMul(){return RUN&&RUN.ch!==ABYSS?(RUN.diff||1):1;}
 function openDiff(c){
   const C=CHAPTERS[c],dc=(SAVE.prog.dclears||{})[c]||{};
-  openModal(`<h3>${C.icon} ${C.fatty?`肥宅物語 第 ${c-FATTY_FIRST_CH+1} 章`:`第 ${c+1} 章`}　${C.name}</h3><p class="dim small">${C.sub}</p><p>選擇難度：</p>
+  openModal(`<h3>${C.icon} ${C.s3?`第 ${c-S3_FIRST_CH+16} 章`:C.fatty?`肥宅物語 第 ${c-FATTY_FIRST_CH+1} 章`:`第 ${c+1} 章`}　${C.name}</h3><p class="dim small">${C.sub}</p><p>選擇難度：</p>
     <div class="opts">${[1,2,3].map(d=>`<button class="${d===1?"":d===2?"gold":"pri"}" onclick="closeModal();startRun(${c},${d})">${DIFFS[d].icon} ${DIFFS[d].name}${dc[d]?`　✓ 已逃出 ${dc[d]} 次`:""}<br><span class="small dim">${DIFFS[d].desc}</span></button>`).join("")}</div>
     <div class="row" style="margin-top:10px"><button onclick="closeModal()">取消</button></div>`);
 }
@@ -56,7 +56,7 @@ function startRun(c=0,diff=1){
   glog("🚩RUN",`開始：${C.name}（${diffName(diff)}）`);
   RUN={active:true,ch:c,diff,fi:0,time:0,food:3,gold:0,items:[],party:team.map(id=>mkMember(id,SAVE.owned[id].stars,{gear:equipBonus(id),scale:lvScale(id),br:brOf(id)})),
     visited:{},choices:null,scene:null,sel:null,log:[],floors:C.abyss?[{label:"D0"}]:C.floors.map(f=>({label:f.label,rooms:f.rooms}))};
-  (C.mates||[]).forEach(id=>RUN.party.push(storyMate(id))); // 這條故事線已經加入的同伴
+  (C.mates||[]).forEach(id=>{const mt=storyMate(id);if(C.mateNames&&C.mateNames[id])mt.name=C.mateNames[id];RUN.party.push(mt);}); // 這條故事線已經加入的同伴
   if(C.fatty)RUN.party.push(storyMate(fattyMateId())); // 肥宅物語：肥宅本人加入
   const st=SAVE.stash,packed=st.items.map(gainItem);RUN.food+=st.food;
   const intro=[];if(packed.length||st.food)intro.push(`🎒 你們帶上了從商店買的行囊：${packed.join("、")}${st.food?`${packed.length?"、":""}🥫補給+${st.food}`:""}。`);
@@ -464,7 +464,7 @@ const hasStory=id=>!!RUN&&RUN.party.some(m=>!m.ally&&m.id===id); // 劇情版或
 function storyMate(id){
   const t=RUN.party.filter(m=>!m.ally&&!m.story),n=Math.max(1,t.length);
   const avg=f=>t.reduce((a,x)=>a+f(x),0)/n;
-  const gear={};["hp","atk","def","spd","crit","steal","dodge","dr","acc"].forEach(k=>gear[k]=Math.round(avg(x=>(x.gear&&x.gear[k])||0)));
+  const gear={};["hp","atk","def","spd","crit","steal","dodge","dr","acc","pen","ccres"].forEach(k=>gear[k]=Math.round(avg(x=>(x.gear&&x.gear[k])||0)));
   const m=mkMember(id,clamp(Math.round(avg(x=>x.stars)),1,5),{scale:avg(x=>x.scale||1),br:Math.round(avg(x=>x.br||0)),gear});
   m.story=true;m.trust=100;return m;
 }
@@ -755,6 +755,7 @@ function helipad(L){
         CUR_B=null;VIEW="run";
         if(!win||runLost())return endRun(false,[C.lose]);
         RUN.xpNote=runExp(25+effCh()*12);
+        if(C.afterBoss)return C.afterBoss(); // 劇情章節：魔王倒下後自己接後續（例如第三季第 25 章的必敗戰）
         seats();
       }});
   }};
@@ -831,8 +832,8 @@ function endRun(escaped,lines=[]){
   const r=RUN;r.active=false;r.escaped=escaped;SAVE.run=null;SAVE.runCk=null;
   glog("🏁RUN",`${CHAPTERS[r.ch].name}（${diffName(r.diff)}）結束：${escaped?"逃出":"失敗"}，到達 ${r.fi}`);
   const reached=r.fi,C=CHAPTERS[r.ch],abyss=r.ch===ABYSS,P=SAVE.prog;
-  const fat=!!C.fatty,ec=effCh0(r),fk=r.ch-FATTY_FIRST_CH; // 肥宅物語：fk＝第幾章（0～4）
-  const firstClear=!abyss&&escaped&&(fat?(P.fatty||0)<=fk:P.cleared<=r.ch); // 這一章第一次通關
+  const fat=!!C.fatty,s3=!!C.s3,ec=effCh0(r),fk=r.ch-FATTY_FIRST_CH,sk=r.ch-S3_FIRST_CH; // 肥宅物語：fk＝第幾章（0～4）；第三季：sk＝第幾章（0～14）
+  const firstClear=!abyss&&escaped&&(s3?(P.s3||0)<=sk:fat?(P.fatty||0)<=fk:P.cleared<=r.ch); // 這一章第一次通關
   let bonus=0;
   const out=lines.slice();
   if(escaped){
@@ -846,13 +847,20 @@ function endRun(escaped,lines=[]){
       const q=ec>=4?(rnd()<.06?"UR":rnd()<.35?"SSR":"SR"):ec>=2?(rnd()<.12?"SSR":"SR"):(rnd()<.3?"SR":"R");
       for(let k=0;k<dm;k++)out.push(`🎁 ${C.bossRoom}留下了一件裝備：<b>${dropGear(q)}</b>（已放進裝備）`);
       const st=(1+Math.floor(ec/2))*dm;SAVE.charms.stone+=st;out.push(`💎 撿到突破石 ×${st}`);
-      if(fat&&(P.fatty||0)<=fk){
+      if(s3){
+        if((P.s3||0)<=sk){
+          P.s3=sk+1;bonus+=S3_FIRST[sk];
+          out.push(`🏅 首次通關「${C.name}」！額外 🪙${S3_FIRST[sk]}`);
+          if(sk<S3_N-1)out.push(`🔓 解鎖新章節：<b>第 ${sk+17} 章「${CHAPTERS[r.ch+1].name}」</b>`);
+          else out.push(`🎪 <b>主線 30 章全破！</b>黑暗四天王開放時，你已經具備挑戰資格。`);
+        }
+      }else if(fat&&(P.fatty||0)<=fk){
         P.fatty=fk+1;bonus+=FATTY_FIRST[fk];
         if(FRUIT_OPEN){const fk2=pick(Object.keys(FRUITS));SAVE.fruits[fk2]++;out.push(`${FRUITS[fk2].icon} 撿到 <b>${FRUITS[fk2].name}</b> ×1（到「隊伍」點角色就能吃）`);}
         out.push(`🏅 首次通關「${C.name}」！額外 🪙${FATTY_FIRST[fk]}`);
         if(fk<4)out.push(`🔓 解鎖新章節：<b>肥宅物語 第 ${fk+2} 章「${CHAPTERS[r.ch+1].name}」</b>`);
         else if(C.finale)out.push(C.finale);
-      }else if(!fat&&P.cleared<=r.ch){
+      }else if(!fat&&!s3&&P.cleared<=r.ch){
         P.cleared=r.ch+1;bonus+=FIRST_CLEAR[r.ch];
         if(FRUIT_OPEN){const fk=pick(Object.keys(FRUITS));SAVE.fruits[fk]++;out.push(`${FRUITS[fk].icon} 撿到 <b>${FRUITS[fk].name}</b> ×1（到「隊伍」點角色就能吃）`);}
         out.push(`🏅 首次通關「${C.name}」！額外 🪙${FIRST_CLEAR[r.ch]}`);
@@ -878,6 +886,7 @@ function endRun(escaped,lines=[]){
   r.scene={loc:escaped?"夜空":"黑暗",title:escaped?(abyss?"🪜 撤離深淵":`${C.vehIcon} 逃出生天`):"✝ 遠征失敗",lines:out,opts:[{label:"回到主頁",cls:"pri",act(){RUN=null;go("home");}},{label:"再來一次",act(){RUN=null;startRun(r.ch,r.diff);}},
     ...(escaped&&!abyss&&END_VOX[r.ch]?[{label:"🔊 重聽結局",act(){playEndVoice(r.ch);}}]:[]),
     ...(escaped&&!abyss&&!fat&&CHAPTERS[r.ch+1]&&r.ch+1<ABYSS?[{label:`➡ 前往第 ${r.ch+2} 章`,act(){RUN=null;startRun(r.ch+1,r.diff);}}]:[]),
+    ...(escaped&&s3&&sk<S3_N-1?[{label:`➡ 前往第 ${sk+17} 章`,act(){RUN=null;startRun(r.ch+1,r.diff);}}]:[]),
     ...(escaped&&fat&&fk<4?[{label:`➡ 前往肥宅物語 第 ${fk+2} 章`,act(){RUN=null;startRun(r.ch+1,r.diff);}}]:[]),
     ...(escaped&&fat&&fk===4&&fattyCanEvolve()?[{label:"🆙 肥宅進化",cls:"gold",act(){RUN=null;go("home");confirmEvolve();}}]:[])]};
   if(escaped&&C.endPics)r.scene.pics=C.endPics;
@@ -936,6 +945,7 @@ let RUN_TAB="main";
 function setRunTab(k){RUN_TAB=k;SFX.click();render();}
 function runTabs(){
   return `<div class="filters" style="margin-top:0"><button class="${RUN_TAB==="main"?"on":""}" onclick="setRunTab('main')">🪜 主線遠征</button>
+    ${s3Open()?`<button class="${RUN_TAB==="s3"?"on":""}" onclick="setRunTab('s3')">🎪 第三季</button>`:""}
     <button class="${RUN_TAB==="fatty"?"on":""}" onclick="setRunTab('fatty')">🍔 肥宅物語</button>
     <button class="${RUN_TAB==="dino"?"on":""}" onclick="setRunTab('dino')">🥚 恐龍蛋專區</button></div>`;
 }
@@ -944,6 +954,23 @@ function fattyChapterCard(i){
   return `<div class="chap ${ok?"":"lockc"}" ${ok&&SAVE.team.length?`onclick="openDiff(${i})"`:""}><div class="ic">${ok?C.icon:"🔒"}</div>
     <div><b>第 ${k+1} 章　${C.name}</b><div class="dim small">${ok?C.sub:k===0?`通關主線第 ${FATTY_REQ} 章後解鎖`:`通關「${CHAPTERS[i-1].name}」後解鎖`}</div>
     <div class="small" style="color:var(--gold)">${n?`已逃出 ${n} 次`:ok?`首通獎勵 🪙${FATTY_FIRST[k]}`:""}</div></div></div>`;
+}
+// 第三季（主線第 16～30 章，封存中：只有測試帳號看得到）
+function s3ChapterCard(i){
+  const C=CHAPTERS[i],k=i-S3_FIRST_CH,ok=unlocked(i),n=SAVE.prog.clears[i]||0;
+  return `<div class="chap ${ok?"":"lockc"}" ${ok&&SAVE.team.length?`onclick="openDiff(${i})"`:""}><div class="ic">${ok?C.icon:"🔒"}</div>
+    <div><b>第 ${k+16} 章　${C.name}</b><div class="dim small">${ok?C.sub:k===0?`通關主線第 ${S3_REQ} 章後解鎖`:`通關「${CHAPTERS[i-1].name}」後解鎖`}</div>
+    <div class="small" style="color:var(--gold)">${n?`已逃出 ${n} 次`:ok?`首通獎勵 🪙${S3_FIRST[k]}`:""}</div></div></div>`;
+}
+function viewS3Story(){
+  const done=s3Done(),open=SAVE.prog.cleared>=S3_REQ,arcs=["","簽約篇","馬戲團篇","王城篇"];
+  const list=Array.from({length:S3_N},(_,k)=>{const i=S3_FIRST_CH+k,C=CHAPTERS[i];return (k%5===0?`<h3 style="margin-top:14px">${arcs[C.arc]}</h3>`:"")+s3ChapterCard(i);}).join("");
+  return `<h2>逃殺遠征</h2>${runTabs()}
+  <h3>🎪 第三季（主線第 16～30 章・${done}／${S3_N} 章）</h3>
+  <div class="panel small dim">🧪 設計中，目前只有測試帳號看得到。旁白與魔王都還是佔位。通關第 30 章後，開放挑戰黑暗四天王的資格。</div>
+  ${open?"":`<div class="panel dim">通關主線第 ${S3_REQ} 章「${CHAPTERS[S3_REQ-1].name}」後開放。</div>`}
+  <div class="chapters">${list}</div>
+  <h3>出戰隊伍</h3><div class="cardgrid">${SAVE.team.map(id=>cardTile(id,`showCard('${id}')`)).join("")||"<span class='dim'>尚未編隊</span>"}</div>`;
 }
 function viewFattyStory(){
   const P=SAVE.prog,done=P.fatty||0,open=P.cleared>=FATTY_REQ;
@@ -971,10 +998,11 @@ function scenePics(list){
 function viewRun(){
   if(!RUN&&SAVE.run)return `<h2>逃殺遠征</h2><div class="panel"><p>你有一場進行中的遠征：<b>${CHAPTERS[SAVE.run.ch].name}</b>・${SAVE.run.floors[SAVE.run.fi].label}</p>
     <div class="row"><button class="pri" onclick="resumeRun()">▶ 繼續遠征</button><button onclick="SAVE.run=null;save();render()">放棄這場遠征</button></div></div>`;
+  if(!RUN&&RUN_TAB==="s3"&&s3Open())return viewS3Story();
   if(!RUN&&RUN_TAB==="fatty")return viewFattyStory();
   if(!RUN&&RUN_TAB==="dino")return viewDino();
   if(!RUN)return `<h2>逃殺遠征</h2>${runTabs()}
-    <div class="chapters">${CHAPTERS.map((C,i)=>{if(C.fatty)return "";const ok=unlocked(i),n=SAVE.prog.clears[i]||0;
+    <div class="chapters">${CHAPTERS.map((C,i)=>{if(C.fatty||C.s3)return "";const ok=unlocked(i),n=SAVE.prog.clears[i]||0;
       return `<div class="chap ${ok?"":"lockc"}" ${ok&&SAVE.team.length?`onclick="${C.abyss?`startRun(${i})`:`openDiff(${i})`}"`:""}><div class="ic">${ok?C.icon:"🔒"}</div>
         <div><b>${C.abyss?"":`第 ${i+1} 章　`}${C.name}</b><div class="dim small">${ok?C.sub:i===ABYSS?"通關第 1 章後解鎖":`通關「${CHAPTERS[i-1].name}」後解鎖`}</div>
         <div class="small" style="color:var(--gold)">${C.abyss?(SAVE.prog.abyssBest?`最深 D${SAVE.prog.abyssBest}`:""):n?`已逃出 ${n} 次`:ok?`首通獎勵 🪙${FIRST_CLEAR[i]}`:""}</div></div></div>`;}).join("")}</div>

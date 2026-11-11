@@ -20,7 +20,7 @@ function dropGear(q){return gearName(addGear(rollGear(q)))+`（${q}）`;}
 function wornOf(id,eq){return Object.values(eq||{}).map(gearById).filter(g=>g&&lvOk(id,g.base));}
 function setCountsOf(id,eq){const c={};wornOf(id,eq).forEach(g=>{const q=setKeyOf(g.base);c[q]=(c[q]||0)+1;});return c;}
 function bonusOf(id,eq,noStore,noTal){
-  const s={hp:0,atk:0,def:0,spd:0,crit:0,steal:0,dodge:0,dr:0,acc:0};
+  const s={hp:0,atk:0,def:0,spd:0,crit:0,steal:0,dodge:0,dr:0,acc:0,pen:0,ccres:0};
   if(!noTal){const t=talentBonusOf(id);for(const k in t)s[k]=(s[k]||0)+t[k];} // 天賦（測試中；真人對戰不套用）
   if(!noTal){const t=cardBonusOf(id,eq);for(const k in t)s[k]=(s[k]||0)+t[k];} // 王卡（測試中；真人對戰不套用）
   if(!noStore){const t=storeBonusOf(id);for(const k in t)s[k]=(s[k]||0)+t[k];} // 存入角色加成（團隊賽不套用）
@@ -60,7 +60,7 @@ function openSlot(id,sl){
 }
 // 裝備強度（戰力）：把數值（含品質浮動、強化、隨機詞條）加權成一個分數，方便排序比較。
 // 權重：攻擊 3、防禦 3、速度 2.5、生命 0.5、暴擊 1.5、閃避 1.5、吸血 1（每 1% 算 1 點）
-const POWER_W={atk:3,def:3,spd:2.5,hp:.5,crit:1.5,dodge:1.5,steal:1,dr:2,acc:1.5};
+const POWER_W={atk:3,def:3,spd:2.5,hp:.5,crit:1.5,dodge:1.5,steal:1,dr:2,acc:1.5,pen:1.5,ccres:.5};
 function gearPower(g){const t=gearStats(g);let p=0;for(const k in t)p+=(POWER_W[k]||0)*t[k];return Math.round(p);}
 // 排序：強度／稀有度／強化等級／最新獲得；GEAR_ASC 為 true 時由低到高。選擇會記在這台裝置上
 const GEAR_SORTS={power:"強度",rarity:"稀有度",roll:"品質%",lv:"強化等級",new:"最新獲得"};
@@ -99,9 +99,9 @@ function modeToggle(){
 // 角色的最終素質（基礎＋等級＋星數＋突破＋裝備＋套裝）；eq 可以傳入假設的裝備組合來預覽
 function fitStats(id,eq){
   const o=SAVE.owned[id],s=cardStats(id,o.stars,lvScale(id),brOf(id)),b=bonusOf(id,eq);
-  return {hp:s.maxHp+b.hp,atk:s.atk+b.atk,def:s.def+b.def,spd:s.spd+b.spd,crit:b.crit,steal:b.steal,dodge:b.dodge,dr:b.dr,acc:b.acc};
+  return {hp:s.maxHp+b.hp,atk:s.atk+b.atk,def:s.def+b.def,spd:s.spd+b.spd,crit:b.crit,steal:b.steal,dodge:b.dodge,dr:b.dr,acc:b.acc,pen:b.pen,ccres:b.ccres};
 }
-const FIT_ROWS=[["hp","❤ 生命"],["atk","⚔ 攻擊"],["def","🛡 防禦"],["spd","💨 速度"],["crit","🎯 暴擊"],["steal","🩸 吸血"],["dodge","🌀 閃避"],["dr","🧱 減傷"],["acc","🔍 命中"]];
+const FIT_ROWS=[["hp","❤ 生命"],["atk","⚔ 攻擊"],["def","🛡 防禦"],["spd","💨 速度"],["crit","🎯 暴擊"],["steal","🩸 吸血"],["dodge","🌀 閃避"],["dr","🧱 減傷"],["acc","🔍 命中"],["pen","🗡 穿透"],["ccres","🛡 控抗"]];
 function fitStatHtml(cur,nw){
   return `<div class="statgrid">${FIT_ROWS.map(([k,l])=>{
     const pct=ST_PCT[k]?"%":"",c=cur[k],n=nw?nw[k]:c,d=n-c;

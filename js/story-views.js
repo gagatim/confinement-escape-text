@@ -58,6 +58,7 @@ const LAST=()=>RUN.ch===ABYSS?Infinity:RUN.floors.length-1;
 function ensureFloor(i){if(RUN.ch!==ABYSS)return;while(RUN.floors.length<=i)RUN.floors.push({label:"D"+RUN.floors.length});}
 function isBossFloor(i){return RUN.ch===ABYSS?i>0&&i%5===0:i===LAST();}
 function unlocked(c){
+  if(CHAPTERS[c]&&CHAPTERS[c].s3)return s3Open()&&SAVE.prog.cleared>=S3_REQ&&(SAVE.prog.s3||0)>=CHAPTERS[c].s3k; // 第三季（封存中）
   if(CHAPTERS[c]&&CHAPTERS[c].fatty){const k=c-FATTY_FIRST_CH;return SAVE.prog.cleared>=FATTY_REQ&&(SAVE.prog.fatty||0)>=k;}
   return c===ABYSS?SAVE.prog.cleared>=1:SAVE.prog.cleared>=c;}
 function progText(){const c=SAVE.prog.cleared;return c>=ABYSS?"全破":`第 ${c+1} 章「${CHAPTERS[c].name}」`;}

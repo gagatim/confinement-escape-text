@@ -112,6 +112,6 @@ function buyFood(){if(SAVE.stash.food>=FOOD_MAX){toast("補給包已達上限");
 // 我方隊伍成員（含等級與永久裝備加成），競技場、練功房用
 function teamUnit(id,noStore,noTal){
   const o=SAVE.owned[id],e=equipBonus(id,noStore,noTal),sc=lvScale(id),br=brOf(id),s=cardStats(id,o.stars,sc,br);
-  return {id,stars:o.stars,scale:sc,br,maxHp:s.maxHp+e.hp,atk:e.atk,def:e.def,spd:e.spd,gx:{crit:e.crit,steal:e.steal,dodge:e.dodge,dr:e.dr,acc:e.acc}};
+  return {id,stars:o.stars,scale:sc,br,maxHp:s.maxHp+e.hp,atk:e.atk,def:e.def,spd:e.spd,gx:{crit:e.crit,steal:e.steal,dodge:e.dodge,dr:e.dr,acc:e.acc,pen:e.pen,ccres:e.ccres}};
 }
 

@@ -346,10 +346,17 @@ function bootFusePick(uid){
   else BFU.push(uid);
   SFX.click();openBootFuse();
 }
-function doBootFuse(){
+function doBootFuse(sure){
   if(!bootFuseOpen())return;
   const gs=BFU.map(gearById).filter(Boolean);
   if(gs.length!==BOOT_FUSE_NEED||gs.some(g=>g.base!==BOOT_FUSE_BASE||gearOwner(g.uid)))return;
+  const enh=gs.filter(g=>g.lv>0);
+  if(enh.length&&!sure){
+    return openModal(`<h3>⚠️ 有已強化的鞋子</h3>
+      <p>這 ${BOOT_FUSE_NEED} 雙裡有 ${enh.length} 雙已經強化過：${enh.map(g=>`<b style="color:var(--gold)">+${g.lv}</b>`).join("、")}。</p>
+      <p class="dim small">合成後這些鞋子會消失，強化等級與花掉的金條都<b>不會退還</b>，新鞋從 +0 開始。確定要繼續嗎？</p>
+      <div class="row" style="margin-top:12px"><button class="pri" onclick="doBootFuse(true)">確定合成</button><button onclick="openBootFuse()">返回</button></div>`);
+  }
   const used=new Set(BFU);
   SAVE.gear=SAVE.gear.filter(x=>!used.has(x.uid));BFU=[];
   const g=addGear(BOOT_FUSE_BASE);

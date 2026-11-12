@@ -121,9 +121,22 @@ function rollUnknown(){
   const r=rnd();
   return r<.38?"rival":r<.52?"shade":r<.72?"loot":r<.82?"stash":r<.91?"gasleak":"empty";
 }
+// 劇情房：章節資料 midStory:{目標樓層索引:{name,title?,lines,npc?}}（注意：章節的 story 欄位是魔王背景故事，不要混用），走到那一層、選房間之前固定播一次，只說故事、只有「繼續」。
+// 不佔樓層、不扣補給、不流逝時間、不觸發任何房間規則（盟友信任、礦工、毒氣都不算）。
+function storyRoomFor(fi){
+  const C=CH();return C&&C.midStory&&C.midStory[fi]&&!(RUN.storySeen||{})[fi]?C.midStory[fi]:null;
+}
+function storyRoom(fi,S){
+  RUN.storySeen=RUN.storySeen||{};
+  setScene(`${FL()[RUN.fi].label} · ${S.name||"途中"}`,S.title||`📖 ${CH().name}`,S.lines,[
+    {label:"▶ 繼續",cls:"pri",act(){RUN.storySeen[fi]=1;toChoose();}}]);
+  if(S.npc)RUN.scene.npc=S.npc;
+  render();
+}
 function toChoose(){
   if(runLost())return endRun(false);
   const fi=RUN.fi+1;
+  if(RUN.ch!==ABYSS){const S=storyRoomFor(fi);if(S)return storyRoom(fi,S);}
   if(RUN.ch===ABYSS){ensureFloor(fi);RUN.choices=abyssChoices(fi);}
   else{
     const F=FL()[fi];if(!F)return;

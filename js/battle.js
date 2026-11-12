@@ -149,7 +149,7 @@ function hit(B,a,t,mult,o={}){
   blog(B,`${nm(a)} → ${nm(t)}　<b style="color:${crit?"var(--gold)":"#ff8a8a"}">-${d}</b>${crit?" 暴擊！":""}`);
   fx(B,t,(crit?"💥":"")+"-"+d,crit?"crit":"dmg");atkFx(B,a,t,crit);
   if(isBossUnit(a))screenShake(crit||d>=t.maxHp*.25);
-  crit?SFX.crit():SFX.hit();
+  SFX.atk(clsOf(a),crit); // 依攻擊者職業發出不同的命中音（怪物沿用原本的音）
   const lk=leechK(t); // 目標若有「吸血減免」，吸血的回復量打折
   const lh=x=>lk<1?Math.round(x*lk):Math.max(1,Math.round(x)); // 有吸血減免時，不再保底回復 1 點
   if(a.id==="butcher"&&a.alive)heal(B,a,lh(d*.3));

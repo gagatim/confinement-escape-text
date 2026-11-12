@@ -26,6 +26,20 @@ const SFX={
   lose:()=>[330,262,196].forEach((f,i)=>tone(f,.35,"sawtooth",.04,0,i*.18)),
   gas:()=>tone(80,.6,"sawtooth",.04,40)
 };
+// 攻擊命中音：依攻擊者的職業不同（沒有職業的怪物、魔王維持原本的 hit／crit）。暴擊時再疊一層尖音
+const ATK_SFX={
+  tank:()=>tone(95,.16,"square",.07,-45),                                     // 沉重的盾擊
+  warrior:()=>tone(420,.12,"sawtooth",.06,-330),                              // 刀劍劈砍
+  assassin:()=>{tone(1100,.07,"triangle",.04,-700);tone(900,.07,"triangle",.035,-600,.06)}, // 輕快的連續兩劃
+  ranger:()=>tone(1500,.07,"square",.035,-800),                               // 弓弦彈放
+  support:()=>tone(880,.16,"sine",.05,-120),                                  // 輕柔的敲擊
+  mage:()=>{tone(300,.2,"sine",.05,420);tone(1250,.1,"triangle",.025,0,.08)}  // 往上滑的魔法嗡鳴
+};
+SFX.atk=(cls,crit)=>{
+  const f=ATK_SFX[cls];
+  if(!f)return crit?SFX.crit():SFX.hit();
+  f();if(crit)tone(900,.08,"square",.03);
+};
 function toggleMute(){SAVE.muted=!SAVE.muted;save();renderHeader();}
 function toggleBtn3d(){const on=document.body.classList.toggle("btn3d");try{localStorage.setItem("jbts_btn3d",on?"1":"0");}catch(e){}} // 立體按鈕：記在這台裝置（不進存檔），預設關
 try{if(localStorage.getItem("jbts_btn3d")==="1")document.body.classList.add("btn3d");}catch(e){}

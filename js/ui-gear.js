@@ -322,9 +322,9 @@ function doGearSwap(){
   openModal(`<h3>🔄 換裝完成</h3><div class="ggrid">${gearCard(g,`openGear(${g.uid})`)}</div>
     <div class="row" style="margin-top:12px"><button class="pri" onclick="openGearSwap()">繼續換裝</button><button onclick="closeModal()">關閉</button></div>`);
 }
-// 聖煌之靴合成（測試中：只有 BOOT_FUSE_ACCTS 裡的帳號看得到）：投入 3 雙聖煌之靴，換 1 雙新的聖煌之靴（詞條重新抽，抽法與掉落完全相同）
-const BOOT_FUSE_BASE="holyboots",BOOT_FUSE_NEED=3,BOOT_FUSE_ACCTS=["boo12345"];
-function bootFuseOpen(){try{return !!ACCT&&BOOT_FUSE_ACCTS.includes(String(ACCT.name).toLowerCase());}catch(e){return false;}}
+// 聖煌之靴合成（已開放給所有玩家）：投入 3 雙聖煌之靴，換 1 雙新的聖煌之靴（詞條重新抽，抽法與掉落完全相同）
+const BOOT_FUSE_BASE="holyboots",BOOT_FUSE_NEED=3;
+function bootFuseOpen(){return true;}
 let BFU=[];
 function openBootFuse(){
   if(!bootFuseOpen())return;

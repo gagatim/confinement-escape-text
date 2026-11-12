@@ -1,5 +1,5 @@
 "use strict";
-/* ===================== DATA: 黑暗四天王（後期支線魔王，封存中） =====================
+/* ===================== DATA: 小丑系列（後期支線魔王，封存中） =====================
    解鎖：第三季通關第 30 章（s3AllClear）；目前只有 S3_ACCTS 裡的測試帳號看得到。
    強度刻意過強（全部高於第 8 位支線魔王「終焉行者」），這是設計，請勿調弱。可以不打。
    順序：木偶獸 → 機械龍獸 → 海龍獸 → 小丑皇（最後）。獎勵：金條、經驗、突破石（第一版沒有專屬裝備）。
@@ -89,15 +89,15 @@ function darkCard(id,i){
 }
 function viewDarkBosses(){
   if(!s3Open())return "";
-  if(!darkOpen())return `<h3 style="margin-top:18px">🤡 黑暗四天王</h3><div class="panel dim">通關第三季第 30 章「天亮之前」後開放。（測試中，只有測試帳號看得到）</div>`;
-  return `<h3 style="margin-top:18px">🤡 黑暗四天王（後期支線・可以不打）</h3>
+  if(!darkOpen())return `<h3 style="margin-top:18px">🤡 小丑系列</h3><div class="panel dim">通關第三季第 30 章「天亮之前」後開放。（測試中，只有測試帳號看得到）</div>`;
+  return `<h3 style="margin-top:18px">🤡 小丑系列（後期支線・可以不打）</h3>
     <p class="dim small">第三季的結尾，小丑皇留下的邀請。四位魔王的強度都高於前面 8 位，依序討伐，最後一位是小丑皇。打倒第一條命後同樣會<b style="color:var(--red)">爆氣</b>。（測試中，頭像先用表情符號。）</p>
     <div class="bossgrid">${DARK_LIST.map(darkCard).join("")}</div>`;
 }
 function openDark(id){
   const i=DARK_LIST.indexOf(id),M=MONSTERS[id],r=darkReward(i),n=SAVE.bosses[id]||0;
   openModal(`<div class="detail"><div class="av"><span class="emo" style="font-size:64px">${M.emoji}</span></div><div style="flex:1">
-    <div class="rEX">黑暗四天王 ${i+1}／4</div><h2 style="margin:2px 0">${M.name}</h2><div class="small" style="font-style:italic">「${M.quote}」</div>
+    <div class="rEX">小丑系列 ${i+1}／4</div><h2 style="margin:2px 0">${M.name}</h2><div class="small" style="font-style:italic">「${M.quote}」</div>
     <div class="small">❤${M.hp}（爆氣後再 ${Math.round(M.hp*M.boss2.hp)}）　⚔${M.atk}　🛡${M.def}　💨${M.spd}</div></div></div>
     <div class="sk"><b>📜 ${M.name}的故事</b>${DARK_STORY[id].map(p=>`<p style="margin:6px 0">${p}</p>`).join("")}</div>
     ${skillHtml(M)}
@@ -110,7 +110,7 @@ function startDark(id){
   if(!SAVE.team.length)return;
   const M=MONSTERS[id];
   openModal(`<div style="text-align:center"><span class="emo" style="font-size:96px;display:block;filter:drop-shadow(0 0 18px rgba(255,60,60,.55))">${M.emoji}</span>
-    <div class="rEX" style="margin-top:6px">黑暗四天王</div><h2 style="margin:2px 0">${M.name}</h2>
+    <div class="rEX" style="margin-top:6px">小丑系列</div><h2 style="margin:2px 0">${M.name}</h2>
     <p style="font-size:18px;font-style:italic;margin:14px 8px;line-height:1.6;text-shadow:0 0 12px rgba(229,72,77,.6)">「${M.quote}」</p>
     <div class="row" style="justify-content:center"><button class="pri" onclick="beginDark('${id}')">⚔ 開戰</button><button onclick="closeModal()">撤退</button></div></div>`);
 }
@@ -118,7 +118,7 @@ function beginDark(id){
   if(!SAVE.team.length)return;
   closeModal();
   const i=DARK_LIST.indexOf(id),M=MONSTERS[id],r=darkReward(i),ids=SAVE.team.slice();
-  startBattle({title:`黑暗四天王・${M.name}`,home:"boss",maxRound:200,A:ids.map(teamUnit),B:[{id,stars:1,gx:M.gx}].concat(darkMinions(id)),bgm:BOSS_BGM[id],
+  startBattle({title:`小丑系列・${M.name}`,home:"boss",maxRound:200,A:ids.map(teamUnit),B:[{id,stars:1,gx:M.gx}].concat(darkMinions(id)),bgm:BOSS_BGM[id],
     intro:`「${M.quote}」（${DARK_MINION[id].name} ×2 站到了他的身後）`,
     resultNote:B=>B.over==="A"?`${M.name} 倒下了。`:"天王太強了……升級、升星、換裝備後再來。",
     onEnd(win,B){
@@ -130,7 +130,7 @@ function beginDark(id){
         if(first){SAVE.gold+=r.first;SAVE.charms.stone+=r.stone;notes.push(`🏅 首次討伐：🪙+${r.first}、💎突破石 ×${r.stone}`);}
         notes.push(expLine(r.exp,gainExp(ids,r.exp,dead)));
         if(i+1<DARK_LIST.length&&first)notes.push(`🔓 下一位天王出現了：<b>${MONSTERS[DARK_LIST[i+1]].name}</b>`);
-        if(i+1===DARK_LIST.length&&first)notes.push("🎬 <b>黑暗四天王全部討伐完成！</b>米的那一幕，你們替她討回來了。");
+        if(i+1===DARK_LIST.length&&first)notes.push("🎬 <b>小丑系列全部討伐完成！</b>米的那一幕，你們替她討回來了。");
       }
       save();CUR_B=null;VIEW="boss";render();
       if(win)openModal(`<h3>⚔ 討伐成功：${M.name}</h3><div class="detail"><div class="av"><span class="emo" style="font-size:56px">${M.emoji2||M.emoji}</span></div><div><p>${notes.join("<br>")}</p></div></div>

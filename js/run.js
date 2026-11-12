@@ -865,7 +865,7 @@ function endRun(escaped,lines=[]){
           P.s3=sk+1;bonus+=S3_FIRST[sk];
           out.push(`🏅 首次通關「${C.name}」！額外 🪙${S3_FIRST[sk]}`);
           if(sk<S3_N-1)out.push(`🔓 解鎖新章節：<b>第 ${sk+17} 章「${CHAPTERS[r.ch+1].name}」</b>`);
-          else out.push(`🎪 <b>主線 30 章全破！</b>黑暗四天王開放時，你已經具備挑戰資格。`);
+          else out.push(`🎪 <b>主線 30 章全破！</b>小丑系列開放時，你已經具備挑戰資格。`);
         }
       }else if(fat&&(P.fatty||0)<=fk){
         P.fatty=fk+1;bonus+=FATTY_FIRST[fk];
@@ -980,7 +980,7 @@ function viewS3Story(){
   const list=Array.from({length:S3_N},(_,k)=>{const i=S3_FIRST_CH+k,C=CHAPTERS[i];return (k%5===0?`<h3 style="margin-top:14px">${arcs[C.arc]}</h3>`:"")+s3ChapterCard(i);}).join("");
   return `<h2>逃殺遠征</h2>${runTabs()}
   <h3>🎪 第三季（主線第 16～30 章・${done}／${S3_N} 章）</h3>
-  <div class="panel small dim">🧪 設計中，目前只有測試帳號看得到。旁白與魔王都還是佔位。通關第 30 章後，開放挑戰黑暗四天王的資格。</div>
+  <div class="panel small dim">🧪 設計中，目前只有測試帳號看得到。旁白與魔王都還是佔位。通關第 30 章後，開放挑戰小丑系列的資格。</div>
   ${open?"":`<div class="panel dim">通關主線第 ${S3_REQ} 章「${CHAPTERS[S3_REQ-1].name}」後開放。</div>`}
   <div class="chapters">${list}</div>
   <h3>出戰隊伍</h3><div class="cardgrid">${SAVE.team.map(id=>cardTile(id,`showCard('${id}')`)).join("")||"<span class='dim'>尚未編隊</span>"}</div>`;

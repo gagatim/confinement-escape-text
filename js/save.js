@@ -104,16 +104,25 @@ function validSave(s){
     const fx=g.fx||[];if(fx.length>GEAR_FX_SANE||new Set(fx.map(f=>f.k)).size!==fx.length)return `${G.name} 詞條異常`;
     for(const f of fx){const A=AFFIX[f.k];if(!A||!isInt(f.v,1,Math.ceil(affixSpan(f.k,G.q,G.slot)[1]*1.5)+2))return `${G.name} 詞條數值異常`;}
   }
-  if(s.bcards!=null){ // 王卡庫存與已插入的卡：格式、數量檢查（插入的張數不能超過庫存）
-    if(typeof s.bcards!=="object"||Array.isArray(s.bcards))return "王卡資料異常";
+  if(s.punch!=null){ // 打洞器庫存：品階 0～6 的數量
+    if(typeof s.punch!=="object"||Array.isArray(s.punch))return "打洞器資料異常";
+    for(const k in s.punch)if(!isInt(+k,0,HT.length-1)||!isInt(s.punch[k],0,99999))return "打洞器資料異常";
+  }
+  { // 王卡庫存與已插入的卡：格式、數量檢查（插入的張數不能超過庫存）；洞：數量不能超過稀有度上限、卡的品階不能高於洞
+    const bc=s.bcards==null?{}:s.bcards;
+    if(typeof bc!=="object"||Array.isArray(bc))return "王卡資料異常";
     const used={};
-    for(const k in s.bcards)if(!BCARD[k]||!isInt(s.bcards[k],0,99999))return "王卡資料異常";
-    for(const g of s.gear||[])if(g.cards!=null){
-      if(!Array.isArray(g.cards)||g.cards.length>3||g.cards.some(k=>!BCARD[k])||new Set(g.cards).size!==g.cards.length)return `${GEAR[g.base].name} 卡槽資料異常`;
-      g.cards.forEach(k=>used[k]=(used[k]||0)+1);
+    for(const k in bc)if(!BCARD[k]||!isInt(bc[k],0,99999))return "王卡資料異常";
+    for(const g of s.gear||[])if(g.cards!=null||g.holes!=null){
+      const cs=g.cards||[],hs=g.holes||cs.map(k=>BCARD[k]&&BCARD[k].t!=null?BCARD[k].t:0); // 舊存檔沒有 holes：依卡片品階補
+      if(!Array.isArray(cs)||!Array.isArray(hs)||hs.length>holeMax(g)||hs.some(x=>!isInt(x,0,HT.length-1))||cs.length>hs.length)return `${GEAR[g.base].name} 洞資料異常`;
+      const keys=cs.filter(Boolean);
+      if(keys.some(k=>!BCARD[k])||new Set(keys).size!==keys.length)return `${GEAR[g.base].name} 卡槽資料異常`;
+      if(cs.some((k,i)=>k&&BCARD[k].t!=null&&BCARD[k].t>hs[i]))return `${GEAR[g.base].name} 卡片品階高於洞`;
+      keys.forEach(k=>used[k]=(used[k]||0)+1);
     }
-    for(const k in used)if(used[k]>(s.bcards[k]||0))return "王卡資料異常";
-  }else if((s.gear||[]).some(g=>g.cards&&g.cards.length))return "王卡資料異常";
+    for(const k in used)if(used[k]>(bc[k]||0))return "王卡資料異常";
+  }
   for(const k in s.charms)if(!isInt(s.charms[k],0,99999))return "強化道具數量異常";
   if(s.fruits)for(const k in s.fruits)if(!isInt(s.fruits[k],0,99999))return "能力果實數量異常";
   if(s.gfruits)for(const k in s.gfruits)if(!isInt(s.gfruits[k],0,99999))return "金色果實數量異常";

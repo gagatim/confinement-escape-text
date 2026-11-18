@@ -96,22 +96,35 @@ function bcRemove(uid,i){
   if(!pay(BCARD_UNSLOT))return;
   g.cards[i]="";save();SFX.click();toast("已拆下，卡片回到庫存");openGear(uid);render();
 }
-// 打洞：選一種打洞器，在裝備上新增一個同品階的洞
+// 打洞：用哪一種打洞器，就打出同品階的洞。可以「新增一個洞」（洞數沒滿時），也可以「覆蓋」一個品階比打洞器低的洞，把它升級成打洞器的品階（洞裡的卡會留著）
 function bcPunchAsk(uid){
   const g=gearById(uid);if(!cardOpen()||!g)return;
-  const n=holesOf(g).length,mx=holeMax(g);
-  if(n>=mx){toast("這件裝備的洞已經打滿了");return;}
-  const btns=HT.map((_,t)=>`<button class="mini ${punchHave(t)?"gold":""}" ${punchHave(t)?"":"disabled"} onclick="bcPunch(${uid},${t})">${htTag(t)}色打洞器　×${punchHave(t)}</button>`).join("");
-  openModal(`<h3>🔩 打洞</h3><p class="dim small">用哪一種打洞器，就會打出同品階的洞（${n}／${mx}）。洞打出來就不能移除，也不能改品階。</p>
-    <div class="row" style="flex-wrap:wrap;gap:6px">${btns}</div>
+  const hs=holesOf(g),mx=holeMax(g),full=hs.length>=mx;
+  const addBtns=HT.map((_,t)=>`<button class="mini ${punchHave(t)?"gold":""}" ${punchHave(t)&&!full?"":"disabled"} onclick="bcPunch(${uid},${t})">${htTag(t)}色打洞器　×${punchHave(t)}</button>`).join("");
+  const upRows=hs.map((ht,i)=>{
+    const ups=HT.map((_,p)=>p>ht&&punchHave(p)?`<button class="mini gold" onclick="bcPunch(${uid},${p},${i})">${htTag(p)}色打洞器　×${punchHave(p)}</button>`:"").join("");
+    return `<div style="margin-top:6px"><span class="small">第 ${i+1} 個洞（${htTag(ht)}色${g.cards[i]?`，已插 ${bcStr(g.cards[i])}`:"，空"}）：</span>${ups||`<span class="dim small">${ht>=HT.length-1?"已是最高品階":"沒有更高品階的打洞器"}</span>`}</div>`;
+  }).join("");
+  openModal(`<h3>🔩 打洞</h3><p class="dim small">用哪一種打洞器，就打出同品階的洞。洞數 ${hs.length}／${mx}。洞打出來就不能移除。高品階的打洞器也可以覆蓋既有的低品階洞，升級成更高品階（洞裡的卡會留著）。</p>
+    <b class="small">新增一個洞${full?`<span class="dim">（洞已打滿）</span>`:""}</b>
+    <div class="row" style="flex-wrap:wrap;gap:6px;margin-top:4px">${addBtns}</div>
+    ${hs.length?`<b class="small" style="display:block;margin-top:10px">覆蓋既有的洞（升級品階）</b>${upRows}`:""}
     <div class="row" style="margin-top:10px"><button onclick="openGear(${uid})">返回</button></div>`);
 }
-function bcPunch(uid,t){
+// i 沒給＝新增一個洞；給了＝覆蓋第 i 個洞（打洞器品階必須比原本的洞高）
+function bcPunch(uid,t,i){
   const g=gearById(uid);if(!cardOpen()||!g||!(t>=0&&t<HT.length))return;
   const hs=holesOf(g);
-  if(hs.length>=holeMax(g)){toast("這件裝備的洞已經打滿了");return;}
   if(punchHave(t)<=0){toast("沒有這種打洞器");return;}
-  punchInv()[t]--;hs.push(t);g.cards.push("");save();SFX.click();toast(`打出了一個${HT[t]}色的洞`);openGear(uid);render();
+  if(i==null){
+    if(hs.length>=holeMax(g)){toast("這件裝備的洞已經打滿了");return;}
+    punchInv()[t]--;hs.push(t);g.cards.push("");save();SFX.click();toast(`打出了一個${HT[t]}色的洞`);
+  }else{
+    if(hs[i]==null){toast("沒有這個洞");return;}
+    if(t<=hs[i]){toast("要用更高品階的打洞器才能覆蓋");return;}
+    punchInv()[t]--;const old=hs[i];hs[i]=t;save();SFX.click();toast(`第 ${i+1} 個洞從${HT[old]}色升級成${HT[t]}色`);
+  }
+  openGear(uid);render();
 }
 // 裝備詳細頁的洞區塊
 function cardSlotsHtml(g){
@@ -122,9 +135,9 @@ function cardSlotsHtml(g){
     ?`<button class="mini pri" style="flex:1;min-width:120px;border-color:${HT_COLOR[t]}" onclick="bcRemoveAsk(${g.uid},${i})">${htTag(t)}色洞<br>${bcStr(cs[i])}<br><span class="small">${bcEff(cs[i])}</span><br><span class="small dim">點擊拆下</span></button>`
     :`<button class="mini" style="flex:1;min-width:120px;border-color:${HT_COLOR[t]}" onclick="bcInsertAsk(${g.uid},${i})">${htTag(t)}色洞<br>＋ 插卡</button>`).join("");
   return `<div class="sk"><b>🕳 洞</b> <span class="dim small">（測試中）${hs.length}／${mx}</span>
-    ${hs.length<mx?`<button class="mini" style="margin-left:8px" onclick="bcPunchAsk(${g.uid})">🔩 打洞</button>`:""}
+    ${hs.length<mx||hs.some(x=>x<HT.length-1)?`<button class="mini" style="margin-left:8px" onclick="bcPunchAsk(${g.uid})">🔩 打洞</button>`:""}
     <div class="row" style="margin-top:6px;gap:6px">${cells||`<span class="dim small">還沒有洞，需要打洞器才能打</span>`}</div>
-    <div class="dim small" style="margin-top:4px">${htTag(0)}洞只能插${htTag(0)}卡；${htTag(1)}洞可以插${htTag(0)}、${htTag(1)}卡，依此類推。卡片可以拆下重用（🪙${BCARD_UNSLOT}），洞會保留。同一個角色身上同名卡只能插 1 張。</div></div>`;
+    <div class="dim small" style="margin-top:4px">${htTag(0)}洞只能插${htTag(0)}卡；${htTag(1)}洞可以插${htTag(0)}、${htTag(1)}卡，依此類推。卡片可以拆下重用（🪙${BCARD_UNSLOT}），洞會保留。高品階的打洞器可以覆蓋低品階的洞，升級品階。同一個角色身上同名卡只能插 1 張。</div></div>`;
 }
 // 裝備頁的王卡與打洞器庫存
 function cardInvHtml(){

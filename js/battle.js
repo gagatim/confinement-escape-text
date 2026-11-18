@@ -105,24 +105,28 @@ function hit(B,a,t,mult,o={}){
       if(g&&rnd()<.4){blog(B,`${nm(g)} 撲過去替 ${nm(t)} 擋刀！`);t=g;}
     }
   }
-  const evadeChance=Math.min(DODGE_CAP/100,(t.id==="lucky"?.15:(DEF(t.id).evade||0))+((t.gx&&t.gx.dodge)||0)/100+(clsOf(t)==="assassin"?.05:0)); // 刺客職業特色：閃避率 +5%；閃避率總和上限 DODGE_CAP
+  const evadeChance=Math.min(DODGE_CAP/100,(t.id==="lucky"?.15:(DEF(t.id).evade||0))+(t.id==="tianye"?.15:0)+((t.gx&&t.gx.dodge)||0)/100+(clsOf(t)==="assassin"?.05:0)); // 刺客職業特色：閃避率 +5%；閃避率總和上限 DODGE_CAP
   const evadeEff=Math.max(0,evadeChance-((a.gx&&a.gx.acc)||0)/100); // 攻擊者的「命中」：先套上限、再從目標的閃避率扣掉（最低 0）；目前還沒有任何來源（尚未開放取得）
   if(!o.fixed&&!o.pierce&&((t.st.evade||0)>0||rnd()<evadeEff)){
     if(t.st.evade>0)t.st.evade--;
-    blog(B,`${nm(a)} 的攻擊被 ${nm(t)} 閃過了。`);fx(B,t,"MISS","miss");SFX.miss();return 0;
+    blog(B,`${nm(a)} 的攻擊被 ${nm(t)} 閃過了。`);fx(B,t,"MISS","miss");SFX.miss();
+    if(t.id==="tianye"&&!t.flags.leaf){t.flags.leaf=1;blog(B,`🍃 ${nm(t)} 的葉影閃過，下一次攻擊傷害提高了。`);} // 天幻葉被動「葉影」
+    return 0;
   }
   let d,crit=false;
   if(o.fixed)d=o.fixed;
   else{
     d=stat(a,"atk")*mult*(.9+rnd()*.2);
-    if(!o.pierce&&!o.ignoreDef)d-=stat(t,"def")*.7*(1-Math.min(PEN_CAP,(a.gx&&a.gx.pen)||0)/100); // 穿透：額外無視 pen% 防禦（尚無來源） // ignoreDef：只無視防禦（不像 pierce 連閃避、防禦姿態、減傷也一起無視）
+    if(!o.pierce&&!o.ignoreDef)d-=stat(t,"def")*.7*(1-Math.min(PEN_CAP,(a.gx&&a.gx.pen)||0)/100)*(1-(o.defIgn||0)); // o.defIgn：這次攻擊額外無視對方這個比例的防禦（天幻葉「幻葉亂舞」） // 穿透：額外無視 pen% 防禦（尚無來源） // ignoreDef：只無視防禦（不像 pierce 連閃避、防禦姿態、減傷也一起無視）
     if(B.casting===a&&clsOf(a)==="mage")d*=1.2;
     let cc=(a.id==="sniper"?.2:a.id==="lucky"?.25:.08)+((a.gx&&a.gx.crit)||0)/100;
     if(clsOf(a)==="ranger")cc+=.12;else if(clsOf(a)==="assassin")cc+=.06;
+    if(a.id==="tianye")cc+=.15; // 天幻葉被動「柳葉」
     if(a.id==="detective"&&t.st.mark)cc+=.3;
     if(o.crit||rnd()<cc){crit=true;d*=1.5;}
     if(a.id==="arsonist"&&t.st.poison)d+=2;
   }
+  if(a.id==="tianye"&&a.flags.leaf)d*=1.15; // 天幻葉被動「葉影」：閃避成功後，下一次攻擊（普通攻擊或整個技能）傷害 +15%
   if(a.flags&&a.flags.frenzy)d*=1.1; // 激動模式
   if(t.st.mark)d*=1.5;
   if(t.st.curse)d*=1.15; // 占卜師「厄運宣告」的標記：另一個狀態，和偵探的標記相乘
@@ -168,8 +172,32 @@ function hit(B,a,t,mult,o={}){
   }
   return d;
 }
+// 天幻葉：幻葉亂舞的兩次攻擊（ign＝額外無視的防禦比例）
+function tianyeDance(B,u,t,ign){
+  hit(B,u,t,1,{defIgn:ign});
+  if(t.alive)hit(B,u,t,1,{defIgn:ign});
+}
+// 主人（同隊、活著）在場時，天幻葉的羈絆「主人的寵愛」生效
+const tianyeBond=(B,u)=>B.units.some(x=>x.side===u.side&&x.alive&&x.id==="master");
+// 解放技「幻葉解放」：主人死亡時立刻發動——攻擊 ×2，立刻對隨機 1 名敵人使用「幻葉亂舞」（無視 70% 防禦），然後消耗所有血量倒下、不可被復活；每場一次
+function tianyeFree(B,u){
+  if(u.flags.freed||!u.alive)return;
+  u.flags.freed=1;
+  blog(B,`🍃 ${nm(u)}：「……主人。」——幻葉解放！`,"big");fx(B,u,"幻葉解放","crit");SFX.ssr();
+  u.perm.atk=(u.perm.atk||0)+stat(u,"atk"); // 攻擊力 ×2
+  const fs=foes(B,u);
+  if(fs.length){
+    const t=pick(fs);
+    blog(B,`✦ ${nm(u)} 發動【幻葉亂舞】`);fx(B,u,"幻葉亂舞","sk");castFx(B,u);
+    B.casting=u;tianyeDance(B,u,t,.7);B.casting=null;
+  }
+  u.flags.noRevive=1;
+  blog(B,`${nm(u)} 耗盡了所有的生命……`,"bad");
+  u.hp=0;handleDeath(B,u,null);
+}
 function handleDeath(B,t,killer){
   if(!t.alive)return;
+  if(t.flags&&t.flags.noRevive){finishDeath(B,t,killer);return;}
   const pm=B.units.find(x=>x.side===t.side&&x.alive&&x.id==="paramedic"&&x!==t);
   if(pm&&!B.flags["pm"+t.side]){B.flags["pm"+t.side]=1;t.hp=1;blog(B,`🚑 ${nm(pm)} 的黃金十分鐘！${nm(t)} 撐住了最後一口氣。`,"big");return;}
   if(t.id==="exorcist"&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*.3);t.perm.def=(t.perm.def||0)+15;blog(B,`${nm(t)} 的臨終祝禱生效，從死亡中歸來！（本場防禦+15）`,"big");fx(B,t,"復活","heal");return;}
@@ -183,11 +211,16 @@ function handleDeath(B,t,killer){
   if(t.id==="pathfinder"&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*.3);blog(B,`🗡️ ${nm(t)} 撐著劍站了起來：「後面……有人嗎？」`,"big");fx(B,t,"復活","heal");return;}
   if(t.id==="emptythrone"&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*.35);blog(B,`🪑 ${nm(t)} 暗了一暗，又亮了起來：「還不夠。……證明給我看。」`,"big");fx(B,t,"復活","heal");return;}
   if(t.id==="host"&&!t.flags.revived){t.flags.revived=1;t.hp=Math.ceil(t.maxHp*.3);blog(B,`🎭 ${nm(t)} 拍了拍身上的灰：「我說過，莊家不會輸。」`,"big");fx(B,t,"復活","heal");return;}
+  finishDeath(B,t,killer);
+}
+// 真正倒下（不再復活）後的處理；t.flags.noRevive＝不可被復活，直接走這裡（天幻葉解放技）
+function finishDeath(B,t,killer){
   t.hp=0;t.alive=false;t.st={};t.buffs=[];
   if(killer&&killer.side!==t.side)sxOf(killer).kills++;
   blog(B,`✝ ${nm(t)} 倒下了。`,"bad");SFX.death();
   B.units.forEach(x=>{
     if(!x.alive||x===t)return;
+    if(x.id==="tianye"&&t.id==="master"&&x.side===t.side&&!x.flags.freed)tianyeFree(B,x); // 天幻葉解放技「幻葉解放」：主人死亡時立刻發動
     if(x.id==="shade"){heal(B,x,Math.max(1,Math.round(x.maxHp*.05)));x.perm.atk=(x.perm.atk||0)+Math.max(1,Math.round(x.atk*.03));}
     if(x.id==="mediocre"&&x.side===t.side){x.perm.atk=(x.perm.atk||0)+2;fx(B,x,"+2攻","sk");}
     if(x.id==="janitor"&&x.side!==t.side)heal(B,x,3);
@@ -450,6 +483,7 @@ function endTurn(u){
   ["taunt","mark","curse","counter"].forEach(k=>{if(u.st[k]>0)u.st[k]--;});
 }
 function doAction(B,u,a){
+  const tianAct=u.id==="tianye"&&(a.type==="attack"||a.type==="skill"); // 天幻葉「葉影」：這一次攻擊／技能結束後，加成用掉
   if(a.type==="attack"){if(a.target){hit(B,u,a.target,1);if(u.id==="diviner"&&a.target.alive)poison(B,a.target,5,3);if(u.id==="venomfrog"&&a.target.alive)poison(B,a.target,Math.max(1,Math.round(stat(u,"atk")*.15)),2);}} // 占卜師、毒蛙被動「毒傷」（技能的毒寫在技能裡）
   else if(a.type==="skill"){
     const si=a.i||0,sk=skillsOf(u.id)[si];
@@ -458,6 +492,7 @@ function doAction(B,u,a){
   }
   else if(a.type==="guard"){u.st.guard=1;blog(B,`${nm(u)} 擺出防禦架勢（受到傷害減半）。`);heal(B,u,1);}
   else if(a.type==="item")useBattleItem(B,u,a.idx,a.target);
+  if(tianAct)u.flags.leaf=0;
 }
 function useBattleItem(B,u,idx,t){
   const id=B.items[idx];B.items.splice(idx,1);

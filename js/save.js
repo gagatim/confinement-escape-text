@@ -187,6 +187,7 @@ function exportBackup(i){
 function checkIntegrity(){if(!SAVE||STALE)return true;const why=validSave(SAVE);if(why){wipeTampered(why);return false;}return true;}
 // 舊存檔補欄位：已逃出過禁閉室就算通關第1章
 function migrate(s){
+  (s.gear||[]).forEach(g=>{if(g.cards&&!g.holes){g.holes=[];delete g.cards;}}); // 打洞系統上線前的舊卡槽：所有裝備洞歸零，卡片自動回到庫存
   if(!Array.isArray(s.stored))s.stored=[null,null,null,null,null]; // 存入角色（第 N 格加成給出戰第 N 位）
   if(!s.skin)s.skin={own:{},worn:{},claimed:{},seen:0}; // 造型（試用）：own 擁有、worn 各角色穿著、claimed 已領過的活動
   if(!s.junk)s.junk={}; // N 白卡數量 {代號:張數}

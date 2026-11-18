@@ -16,9 +16,9 @@ const htTag=t=>`<span style="color:${HT_COLOR[t]};font-weight:bold">${HT[t]}</sp
 // 一件裝備最多能打幾個洞（依稀有度）
 const HOLE_MAX={N:1,R:1,SR:2,SSR:3,UR:3,EX:3};
 const holeMax=g=>HOLE_MAX[GEAR[g.base].q]||0;
-// 取得這件裝備的洞（g.holes[i]＝品階）；舊存檔只有 g.cards 沒有 g.holes 時，依卡片品階補出洞。g.cards[i] 是插在第 i 個洞的卡（空洞為 ""）
+// 取得這件裝備的洞（g.holes[i]＝品階，預設沒有洞）。g.cards[i] 是插在第 i 個洞的卡（空洞為 ""）。舊卡槽的存檔在 migrate 時洞歸零、卡回庫存
 function holesOf(g){
-  if(!g.holes){g.holes=(g.cards||[]).map(k=>Math.max(0,cardT(k)));}
+  if(!g.holes)g.holes=[]; // 新裝備預設 0 個洞
   if(!g.cards)g.cards=g.holes.map(()=>"");
   while(g.cards.length<g.holes.length)g.cards.push("");
   return g.holes;

@@ -21,7 +21,7 @@ function mkUnit(o){
 const nm=u=>`<b class="s${u.side}">${u.name}</b>`;
 const mates=(B,u)=>B.units.filter(x=>x.side===u.side&&x.alive);
 const foes=(B,u)=>B.units.filter(x=>x.side!==u.side&&x.alive);
-const deadMates=(B,u)=>B.units.filter(x=>x.side===u.side&&!x.alive);
+const deadMates=(B,u)=>B.units.filter(x=>x.side===u.side&&!x.alive&&!(x.flags&&x.flags.noRevive)); // 不可被復活的（天幻葉解放技後）不算在可復活的名單裡
 function stat(u,k){
   let v=u[k]+(u.perm[k]||0);
   u.buffs.forEach(b=>{if(b.k===k)v+=b.v;});
